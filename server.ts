@@ -1265,6 +1265,9 @@ app.put("/api/employees/:employeeId", async (req, res) => {
 app.delete("/api/employees/:employeeId", async (req, res) => {
   try {
     const eid = decodeURIComponent(req.params.employeeId);
+    if (shouldRefreshSheetBackedData(false, readEmployees().length)) {
+      await fetchEmployeesFromGas(proxyToGas);
+    }
     if (!deleteEmployee(eid)) return res.status(404).json({ error: "Employee not found" });
     if (GAS_WEBAPP_URL) {
       await persistEmployeeToGas(
@@ -1328,6 +1331,9 @@ app.put("/api/inventory/:itemId", async (req, res) => {
 app.delete("/api/inventory/:itemId", async (req, res) => {
   try {
     const id = decodeURIComponent(req.params.itemId);
+    if (shouldRefreshSheetBackedData(false, readInventory().length)) {
+      await fetchInventoryFromGas(proxyToGas);
+    }
     if (!deleteInventoryItem(id)) return res.status(404).json({ error: "Inventory item not found" });
     if (GAS_WEBAPP_URL) {
       await persistInventoryToGas(
@@ -1463,7 +1469,10 @@ app.post("/api/missing-items", async (req, res) => {
 app.post("/api/missing-items/:recordId/recover", async (req, res) => {
   try {
     const recordId = decodeURIComponent(req.params.recordId);
-    const list = readMissingItems();
+    let list = readMissingItems();
+    if (shouldRefreshSheetBackedData(false, list.length)) {
+      list = await fetchMissingItemsFromGas(proxyToGas);
+    }
     const existing = list.find((e) => e["Record ID"] === recordId);
     if (!existing) return res.status(404).json({ error: "Record not found" });
     const saved = upsertMissingItem({
