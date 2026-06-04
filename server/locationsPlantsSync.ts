@@ -11,14 +11,26 @@ function gasError(result: unknown): string | null {
 }
 
 export async function fetchLocationsPlantsFromGas(
-  proxyToGas: GasProxy
+  proxyToGas: GasProxy,
+  gasWebappUrl?: string
 ): Promise<{ locations: string[]; plants: PlantRecord[] } | null> {
   try {
-    const result = await proxyToGas({ action: "list_locations_plants" }, 30000);
+    let result = await proxyToGas({ action: "list_locations_plants" }, 30000);
     const err = gasError(result);
     if (err) {
-      console.warn("list_locations_plants:", err);
-      return null;
+      if (!gasWebappUrl) {
+        console.warn("list_locations_plants:", err);
+        return null;
+      }
+      const url = `${gasWebappUrl}${gasWebappUrl.includes("?") ? "&" : "?"}action=list_locations_plants`;
+      const response = await fetch(url);
+      const text = await response.text();
+      result = JSON.parse(text);
+      const getErr = gasError(result);
+      if (getErr) {
+        console.warn("list_locations_plants:", getErr);
+        return null;
+      }
     }
     const r = result as { locations?: string[]; plants?: PlantRecord[] };
     const locations = Array.isArray(r.locations)

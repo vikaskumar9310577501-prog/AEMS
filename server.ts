@@ -943,11 +943,11 @@ app.get("/api/settings", async (req, res) => {
     const data = readAppData();
     const force = req.query.refresh === "1";
 
-    if (GAS_WEBAPP_URL && force) {
-      const fromGas = await fetchLocationsPlantsFromGas(proxyToGas);
+    if (GAS_WEBAPP_URL && (force || process.env.VERCEL || process.env.NETLIFY || data.settings.locations.length === 0)) {
+      const fromGas = await fetchLocationsPlantsFromGas(proxyToGas, GAS_WEBAPP_URL);
       if (fromGas) {
-        if (fromGas.locations.length > 0) data.settings.locations = fromGas.locations;
-        if (fromGas.plants.length > 0) data.settings.plants = fromGas.plants;
+        data.settings.locations = fromGas.locations;
+        data.settings.plants = fromGas.plants;
         writeAppData(data);
       }
     }
@@ -988,6 +988,14 @@ app.post("/api/settings", async (req, res) => {
         proxyToGas
       );
       if (!gas.ok) sheetWarning = gas.error || "Could not save to Locations / Plants sheets";
+      if (gas.ok) {
+        const fromGas = await fetchLocationsPlantsFromGas(proxyToGas, GAS_WEBAPP_URL);
+        if (fromGas) {
+          data.settings.locations = fromGas.locations;
+          data.settings.plants = fromGas.plants;
+          writeAppData(data);
+        }
+      }
     }
 
     res.json({ success: true, settings: data.settings, sheetWarning });
