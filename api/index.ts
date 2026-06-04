@@ -1,10 +1,7 @@
-let appPromise: Promise<any> | null = null;
+import app from '../server';
 
 export default async function handler(req: any, res: any) {
   try {
-    appPromise ||= import('../server.ts').then((mod) => mod.default);
-    const app = await appPromise;
-
     return app(req, res, (err?: unknown) => {
       if (err) {
         const message = err instanceof Error ? err.message : String(err);
