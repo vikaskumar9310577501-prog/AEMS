@@ -149,9 +149,14 @@ app.use(express.json({ limit: '50mb' }));
 const GAS_WEBAPP_URL = process.env.GAS_WEBAPP_URL;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const USERS_SHEET_GID = process.env.USERS_SHEET_GID || "1792788791";
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.NETLIFY);
 
 if (!GAS_WEBAPP_URL) {
   console.error("CRITICAL ERROR: GAS_WEBAPP_URL is not defined in .env");
+}
+
+function shouldRefreshSheetBackedData(force: boolean, localCount: number) {
+  return Boolean(GAS_WEBAPP_URL && (force || IS_SERVERLESS || localCount === 0));
 }
 
 // Proxy Helper (with timeout so UI never hangs on "Loading users...")
@@ -1142,7 +1147,7 @@ app.get("/api/employees", async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     let list = readEmployees();
-    if (force && GAS_WEBAPP_URL) {
+    if (shouldRefreshSheetBackedData(force, list.length)) {
       list = await fetchEmployeesFromGas(proxyToGas);
     }
     res.json(list);
@@ -1278,7 +1283,7 @@ app.get("/api/inventory", async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     let list = readInventory();
-    if (force && GAS_WEBAPP_URL) {
+    if (shouldRefreshSheetBackedData(force, list.length)) {
       list = await fetchInventoryFromGas(proxyToGas);
     }
     res.json(list);
@@ -1431,7 +1436,7 @@ app.get("/api/missing-items", async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     let items = readMissingItems();
-    if (force && GAS_WEBAPP_URL) {
+    if (shouldRefreshSheetBackedData(force, items.length)) {
       items = await fetchMissingItemsFromGas(proxyToGas);
     }
     res.json({ items });
@@ -1482,7 +1487,7 @@ app.get("/api/damaged-items", async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     let items = readDamagedItems();
-    if (force && GAS_WEBAPP_URL) {
+    if (shouldRefreshSheetBackedData(force, items.length)) {
       items = await fetchDamagedItemsFromGas(proxyToGas);
     }
     res.json({ items });
