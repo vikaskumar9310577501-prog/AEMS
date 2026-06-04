@@ -2,7 +2,7 @@ let appPromise: Promise<any> | null = null;
 
 export default async function handler(req: any, res: any) {
   try {
-    appPromise ||= import('../server').then((mod) => mod.default);
+    appPromise ||= import('../server.js').then((mod) => mod.default);
     const app = await appPromise;
 
     return app(req, res, (err?: unknown) => {
