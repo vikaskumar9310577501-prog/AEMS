@@ -14,7 +14,7 @@ export async function parseJsonResponse<T = unknown>(res: Response): Promise<T> 
     return JSON.parse(trimmed) as T;
   } catch {
     throw new Error(
-      trimmed.length > 120 ? `${trimmed.slice(0, 120)}…` : trimmed || `Invalid JSON (${res.status})`
+      trimmed.length > 120 ? `${trimmed.slice(0, 120)}...` : trimmed || `Invalid JSON (${res.status})`
     );
   }
 }

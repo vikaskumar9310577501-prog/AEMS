@@ -14,7 +14,7 @@ export function buildOtpEmailHtml(otp: string, minutesValid: number): string {
           <tr>
             <td style="background:linear-gradient(135deg,#2563eb,#4f46e5);padding:28px 32px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:800;letter-spacing:-0.5px;">AssetVault</h1>
-              <p style="margin:8px 0 0;color:#dbeafe;font-size:13px;font-weight:600;">IT Asset Management — Secure Login</p>
+              <p style="margin:8px 0 0;color:#dbeafe;font-size:13px;font-weight:600;">IT Asset Management - Secure Login</p>
             </td>
           </tr>
           <tr>

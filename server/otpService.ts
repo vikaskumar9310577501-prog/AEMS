@@ -89,7 +89,7 @@ export async function requestOtp(email: string): Promise<{ ok: boolean; error?: 
     await transporter.sendMail({
       from: getFromAddress(),
       to: normalized,
-      subject: `${otp} — Your AssetVault login code`,
+      subject: `${otp} - Your AssetVault login code`,
       html: buildOtpEmailHtml(otp, Math.floor(OTP_EXPIRY_MS / 60000)),
       text: `Your AssetVault login code is ${otp}. It expires in ${Math.floor(OTP_EXPIRY_MS / 60000)} minutes.`,
     });

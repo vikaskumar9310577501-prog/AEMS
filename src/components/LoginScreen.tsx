@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { normalizeUser, useApp } from '../context/AppProvider';
+import { parseJsonResponse } from '../lib/apiFetch';
 
 export default function LoginScreen() {
   const { loginSuccess } = useApp();
@@ -22,12 +23,8 @@ export default function LoginScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail }),
       });
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error(`Unable to connect to the server (Expected JSON, received HTML). \n\nAttempted URL: ${targetUrl}\n\nPlease check if VITE_API_BASE_URL is set correctly and the backend is running.`);
-      }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await parseJsonResponse<{ error?: string }>(res);
+      if (!res.ok) throw new Error(data.error || 'Failed to request OTP');
       setOtpSent(true);
       toast.success('OTP sent to your email!');
     } catch (err: unknown) {
@@ -54,12 +51,8 @@ export default function LoginScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, otp: loginOtp }),
       });
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error(`Unable to connect to the server (Expected JSON, received HTML). \n\nAttempted URL: ${targetUrl}\n\nPlease check backend connection.`);
-      }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await parseJsonResponse<{ error?: string; user?: Record<string, unknown> }>(res);
+      if (!res.ok) throw new Error(data.error || 'Failed to verify OTP');
       const userData = normalizeUser(data.user);
       loginSuccess(userData);
       toast.success(`Welcome, ${userData.role}!`);
@@ -102,13 +95,13 @@ export default function LoginScreen() {
                   disabled={loginLoading || !loginEmail.trim()}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs uppercase tracking-widest py-3.5 rounded-xl shadow hover:-translate-y-0.5 disabled:opacity-50 transition-all"
                 >
-                  {loginLoading ? 'Sending OTP...' : 'Request OTP →'}
+                  {loginLoading ? 'Sending OTP...' : 'Request OTP ->'}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 <label className="text-xs font-medium text-gray-700 uppercase tracking-widest">
-                  Enter 6‑Digit OTP
+                  Enter 6-Digit OTP
                 </label>
                 <input
                   type="text"
@@ -117,7 +110,7 @@ export default function LoginScreen() {
                   onChange={(e) => setLoginOtp(e.target.value)}
                   maxLength={6}
                   className="w-full bg-gray-50 border border-gray-300 rounded-xl text-center tracking-[0.5em] font-black text-2xl py-3.5 px-4 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                  placeholder="• • • • • •"
+                  placeholder="0 0 0 0 0 0"
                 />
                 {loginError && (
                   <p className="text-red-500 text-xs font-bold text-center mt-2">{loginError}</p>
@@ -137,14 +130,14 @@ export default function LoginScreen() {
                   }}
                   className="w-full text-xs text-blue-600 font-bold mt-1 text-center hover:text-blue-800 transition-colors"
                 >
-                  ← Change Email
+                  Back to Email
                 </button>
               </div>
             )}
           </form>
         </div>
         <p className="text-center text-gray-500 text-xs mt-6 uppercase tracking-widest">
-          © {new Date().getFullYear()} {APP_NAME} • Secure Login
+          (c) {new Date().getFullYear()} {APP_NAME} - Secure Login
         </p>
       </div>
     </div>

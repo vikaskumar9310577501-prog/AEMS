@@ -553,7 +553,7 @@ async function fetchHeaders(): Promise<string[]> {
     const response = await fetch(GAS_WEBAPP_URL);
     const text = await response.text();
     if (text.trim().startsWith("<")) {
-      throw new Error("Database returned HTML instead of JSON — redeploy the backend script");
+      throw new Error("Database returned HTML instead of JSON - redeploy the backend script");
     }
     let headers = parseHeaders(JSON.parse(text));
     if (headers.length > 0) return headers;
