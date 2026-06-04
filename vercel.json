@@ -8,8 +8,12 @@
   },
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "/api/[...path].ts"
+    },
+    {
       "source": "/scan/:path*",
-      "destination": "/api/scan/:path*"
+      "destination": "/api/[...path].ts"
     },
     {
       "source": "/:path*",
