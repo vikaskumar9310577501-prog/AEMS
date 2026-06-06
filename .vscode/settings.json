@@ -1,0 +1,17 @@
+{
+  "javascript.validate.enable": false,
+  "files.exclude": {
+    "**/data/cache": true,
+    "**/dist": true,
+    "**/scratch": true,
+    "**/server.js": true,
+    "**/uploads": true
+  },
+  "search.exclude": {
+    "**/data/cache": true,
+    "**/dist": true,
+    "**/scratch": true,
+    "**/server.js": true,
+    "**/uploads": true
+  }
+}
