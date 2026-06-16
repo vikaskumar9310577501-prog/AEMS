@@ -152,7 +152,7 @@ import {
 } from "./server/auditLogsStore.js";
 import { getDefaultAssetHeaders } from "./server/sheetHeaders.js";
 import { logAssetMappingAudit } from "./server/sheetRowMapper.js";
-import { getDb, insertAssetLocal, updateAssetLocal, deleteAssetLocal } from "./server/sqlDb.js";
+import { getDb, insertAssetLocal, updateAssetLocal, deleteAssetLocal, isLocalSqliteEnabled } from "./server/sqlDb.js";
 import {
   setSessionCookie,
   clearSessionCookie,
@@ -170,8 +170,10 @@ import { resolveRequestUser } from "./server/requestUser.js";
 
 dotenv.config();
 
-// Initialize Local SQLite Database
-getDb().then(() => console.log("SQLite: DB Initialized")).catch(err => console.error("SQLite Init Error:", err));
+// Initialize local SQLite only for non-serverless development. Vercel uses Google Sheets/cache.
+if (isLocalSqliteEnabled()) {
+  getDb().then(() => console.log("SQLite: DB Initialized")).catch(err => console.error("SQLite Init Error:", err));
+}
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;

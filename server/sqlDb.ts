@@ -1,5 +1,4 @@
-import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
+import type { Database } from "sqlite";
 import path from "path";
 import fs from "fs";
 import { CATEGORY_HEADERS, IT_EXTRA_HEADERS } from "./sheetHeaders.js";
@@ -25,14 +24,26 @@ export function sanitizeSqlName(name: string): string {
 
 let dbInstance: Database | null = null;
 
+export function isLocalSqliteEnabled(): boolean {
+  return !process.env.VERCEL && !process.env.NETLIFY && process.env.DISABLE_SQLITE !== "true";
+}
+
 export async function getDb(): Promise<Database> {
   if (dbInstance) return dbInstance;
+  if (!isLocalSqliteEnabled()) {
+    throw new Error("Local SQLite is disabled in this serverless environment.");
+  }
 
   const dataDir = path.join(process.cwd(), "data");
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
   const dbPath = path.join(dataDir, "assets.db");
+
+  const [{ default: sqlite3 }, { open }] = await Promise.all([
+    import("sqlite3"),
+    import("sqlite"),
+  ]);
 
   const db = await open({
     filename: dbPath,
@@ -75,6 +86,7 @@ export async function ensureColumnsExist(tableName: string, headersList: string[
 
 export async function insertAssetLocal(category: string, mappedRow: any[], headersList: string[]) {
   try {
+    if (!isLocalSqliteEnabled()) return;
     const db = await getDb();
     const tableName = sanitizeSqlName(category);
     
@@ -96,6 +108,7 @@ export async function insertAssetLocal(category: string, mappedRow: any[], heade
 
 export async function updateAssetLocal(category: string, assetId: string, mappedRow: any[], headersList: string[]) {
   try {
+    if (!isLocalSqliteEnabled()) return;
     const db = await getDb();
     const tableName = sanitizeSqlName(category);
 
@@ -123,6 +136,7 @@ export async function updateAssetLocal(category: string, assetId: string, mapped
 
 export async function deleteAssetLocal(assetId: string) {
   try {
+    if (!isLocalSqliteEnabled()) return;
     const db = await getDb();
     const idColumn = sanitizeSqlName("Asset ID");
     
@@ -140,6 +154,7 @@ export async function deleteAssetLocal(assetId: string) {
 
 export async function syncBulkAssetsLocal(category: string, rows: any[][], headersList: string[]) {
   try {
+    if (!isLocalSqliteEnabled()) return;
     const db = await getDb();
     const tableName = sanitizeSqlName(category);
 
