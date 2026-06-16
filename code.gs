@@ -1295,7 +1295,7 @@ function saveAssetDetails_(assetId, details) {
   }
   if (rows.length > 0) {
     var start = sh.getLastRow() + 1;
-    sh.getRange(start, 1, start + rows.length - 1, 4).setValues(rows);
+    sh.getRange(start, 1, rows.length, 4).setValues(rows);
   }
 }
 
@@ -1346,7 +1346,7 @@ function saveTypeDefinitions_(types) {
     rows.push([String(typeObj.id), JSON.stringify(typeObj)]);
   }
   if (rows.length > 0) {
-    sh.getRange(2, 1, 1 + rows.length, 2).setValues(rows);
+    sh.getRange(2, 1, rows.length, 2).setValues(rows);
   }
 }
 

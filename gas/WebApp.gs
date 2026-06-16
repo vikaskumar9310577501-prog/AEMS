@@ -1220,7 +1220,7 @@ function saveAssetDetails_(assetId, details) {
   }
   if (rows.length > 0) {
     var start = sh.getLastRow() + 1;
-    sh.getRange(start, 1, start + rows.length - 1, 4).setValues(rows);
+    sh.getRange(start, 1, rows.length, 4).setValues(rows);
   }
 }
 
@@ -1340,7 +1340,7 @@ function saveTypeDefinitions_(types) {
     rows.push([String(typeObj.id), JSON.stringify(typeObj)]);
   }
   if (rows.length > 0) {
-    sh.getRange(2, 1, 1 + rows.length, 2).setValues(rows);
+    sh.getRange(2, 1, rows.length, 2).setValues(rows);
   }
 }
 
@@ -1383,10 +1383,41 @@ function findEmployeeRow_(employeeId) {
   if (!sh) return -1;
   var idStr = normalizeId_(employeeId);
   var data = sh.getDataRange().getValues();
+  if (data.length < 1) return -1;
+  var headers = data[0];
+  var idIdx = indexOfNormalized_(headers, "Employee ID");
+  if (idIdx === -1) idIdx = 0;
   for (var i = 1; i < data.length; i++) {
-    if (normalizeId_(data[i][0]) === idStr) return i + 1;
+    if (normalizeId_(data[i][idIdx]) === idStr) return i + 1;
   }
   return -1;
+}
+
+function employeeRowFromObject_(headers, emp, createdAt, updatedAt) {
+  var out = new Array(headers.length);
+  var map = {
+    "employeeid": String(emp.employeeId || "").trim().toUpperCase(),
+    "name": String(emp.name || "").trim(),
+    "email": String(emp.email || "").trim().toLowerCase(),
+    "mailid": String(emp.email || "").trim().toLowerCase(),
+    "phone": String(emp.phone || "").trim(),
+    "mobile": String(emp.phone || "").trim(),
+    "contactnumber": String(emp.phone || "").trim(),
+    "department": String(emp.department || "").trim(),
+    "location": String(emp.location || "").trim(),
+    "designation": String(emp.designation || "").trim(),
+    "plantcode": String(emp.plant || "").trim(),
+    "plant": String(emp.plant || "").trim(),
+    "plantlocation": String(emp.plant || "").trim(),
+    "status": emp.status === "Inactive" ? "Inactive" : "Active",
+    "createddate": createdAt,
+    "updateddate": updatedAt
+  };
+  for (var h = 0; h < headers.length; h++) {
+    var norm = String(headers[h] || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    out[h] = map[norm] !== undefined ? map[norm] : "";
+  }
+  return out;
 }
 
 function addEmployee_(emp) {
@@ -1397,19 +1428,8 @@ function addEmployee_(emp) {
   if (!id) return { error: "Employee ID required" };
   if (findEmployeeRow_(id) !== -1) return { error: "User already exists" };
   var now = new Date().toISOString();
-  sh.appendRow([
-    id,
-    String(emp.name || "").trim(),
-    String(emp.email || "").trim().toLowerCase(),
-    String(emp.phone || "").trim(),
-    String(emp.department || "").trim(),
-    String(emp.location || "").trim(),
-    String(emp.designation || "").trim(),
-    String(emp.plant || "").trim(),
-    emp.status === "Inactive" ? "Inactive" : "Active",
-    now,
-    now
-  ]);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.appendRow(employeeRowFromObject_(headers, emp, now, now));
   return { success: true, employee: emp };
 }
 
@@ -1419,19 +1439,10 @@ function updateEmployee_(emp) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName("Employees");
   var now = new Date().toISOString();
-  sh.getRange(row, 1, 1, 11).setValues([[
-    String(emp.employeeId || "").trim().toUpperCase(),
-    String(emp.name || "").trim(),
-    String(emp.email || "").trim().toLowerCase(),
-    String(emp.phone || "").trim(),
-    String(emp.department || "").trim(),
-    String(emp.location || "").trim(),
-    String(emp.designation || "").trim(),
-    String(emp.plant || "").trim(),
-    emp.status === "Inactive" ? "Inactive" : "Active",
-    sh.getRange(row, 10).getValue() || now,
-    now
-  ]]);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var createdIdx = indexOfNormalized_(headers, "Created Date");
+  var createdAt = createdIdx !== -1 ? (sh.getRange(row, createdIdx + 1).getValue() || now) : now;
+  sh.getRange(row, 1, 1, headers.length).setValues([employeeRowFromObject_(headers, emp, createdAt, now)]);
   return { success: true, employee: emp };
 }
 
@@ -1683,11 +1694,13 @@ function findRowIndexByKeyValue_(sheetName, keyName, keyValue) {
   if (!sh) return -1;
   var data = sh.getDataRange().getValues();
   var headers = data[0];
-  var keyColIndex = headers.indexOf(keyName);
+  var keyColIndex = indexOfNormalized_(headers, keyName);
   if (keyColIndex === -1) return -1;
   var targetVal = String(keyValue || "").trim().toLowerCase();
+  var targetId = normalizeId_(keyValue);
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][keyColIndex] || "").trim().toLowerCase() === targetVal) {
+    var cellVal = String(data[i][keyColIndex] || "").trim().toLowerCase();
+    if (cellVal === targetVal || normalizeId_(data[i][keyColIndex]) === targetId) {
       return i + 1;
     }
   }
@@ -1715,6 +1728,9 @@ function addRedesignedRow_(sheetName, rowData, primaryKeyName) {
   }
 
   sh.appendRow(newRow);
+  if (sheetName === "Assets") {
+    syncLocationAndPlantAssetSheets_(ss);
+  }
   return { success: true, message: "Row added to " + sheetName };
 }
 
@@ -1739,6 +1755,9 @@ function updateRedesignedRow_(sheetName, primaryKeyValue, rowData, primaryKeyNam
   }
 
   sh.getRange(rowNum, 1, 1, headers.length).setValues([rowValues]);
+  if (sheetName === "Assets") {
+    syncLocationAndPlantAssetSheets_(ss);
+  }
   return { success: true, message: "Row updated in " + sheetName };
 }
 
@@ -1751,6 +1770,9 @@ function deleteRedesignedRow_(sheetName, primaryKeyValue, primaryKeyName) {
   if (rowNum === -1) return { error: "Row not found in " + sheetName };
 
   sh.deleteRow(rowNum);
+  if (sheetName === "Assets") {
+    syncLocationAndPlantAssetSheets_(ss);
+  }
   return { success: true, message: "Row deleted from " + sheetName };
 }
 
@@ -1878,6 +1900,11 @@ function collectMirrorAssetRows_(ss) {
     appendAssetsFromSheet_(sh, masterHeaders, allAssets, seenKeys, canonicalMain);
   }
 
+  var redesigned = ss.getSheetByName("Assets");
+  if (redesigned && redesigned.getLastRow() > 1) {
+    appendAssetsFromSheet_(redesigned, masterHeaders, allAssets, seenKeys, null);
+  }
+
   for (var r = 1; r < allAssets.length; r++) {
     rows.push(allAssets[r]);
   }
@@ -1929,6 +1956,7 @@ function syncLocationAndPlantAssetSheets_(ss) {
   var masterHeaders = collected.masterHeaders;
   var assetLocIdx = indexOfNormalized_(mirrorHeaders, "Location");
   var assetPlantNameIdx = indexOfNormalized_(mirrorHeaders, "Plant Name");
+  if (assetPlantNameIdx === -1) assetPlantNameIdx = indexOfNormalized_(mirrorHeaders, "Plant Code");
 
   var syncTab = function (tabName, filterFn, headerColor) {
     var sanitizedName = sanitizeSheetName_(tabName);
@@ -1968,7 +1996,7 @@ function syncLocationAndPlantAssetSheets_(ss) {
     if (assetPlantNameIdx !== -1 && row[assetPlantNameIdx] !== undefined) {
       return String(row[assetPlantNameIdx] || "").trim();
     }
-    return masterVal_(row, masterHeaders, "Plant Name");
+    return masterVal_(row, masterHeaders, "Plant Name") || masterVal_(row, masterHeaders, "Plant Code");
   };
 
   for (var l = 0; l < locs.length; l++) {

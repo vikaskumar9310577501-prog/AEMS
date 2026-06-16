@@ -48,7 +48,7 @@ export function validateEmployeePayload(
   const emailErr = validateEmployeeEmail(String(payload.email || ''));
   if (emailErr) return emailErr;
   if (!String(payload.department || '').trim()) return 'Department is required';
-  const phoneErr = validateEmployeePhone(String(payload.phone || ''), options?.requirePhone ?? true);
+  const phoneErr = validateEmployeePhone(String(payload.phone || ''), options?.requirePhone);
   if (phoneErr) return phoneErr;
   return null;
 }

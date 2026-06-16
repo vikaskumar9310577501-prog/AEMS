@@ -94,7 +94,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
     const emailErr = validateEmployeeEmail(form.email);
     if (emailErr) return toast.error(emailErr);
 
-    const phoneErr = validateEmployeePhone(form.phone, true);
+    const phoneErr = validateEmployeePhone(form.phone);
     if (phoneErr) return toast.error(phoneErr);
 
     if (!isEdit) {
