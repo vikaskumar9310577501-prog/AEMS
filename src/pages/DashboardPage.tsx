@@ -531,7 +531,10 @@ export default function DashboardPage() {
             </button>
 
             {/* View settings: Card / Grid / Table */}
-            <div className="relative shrink-0 z-[60]" ref={viewMenuRef}>
+            <div
+              className={`relative shrink-0 z-[60] ${viewingQR ? 'invisible pointer-events-none' : ''}`}
+              ref={viewMenuRef}
+            >
               <button
                 type="button"
                 onClick={() => setViewMenuOpen((o) => !o)}
