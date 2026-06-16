@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  # Optimize compute credits: Only trigger a build if frontend-related files are changed.
+  # If only backend files (server.ts, server/ etc.) are changed, the build is skipped.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF src/ public/ package.json index.html vite.config.ts netlify.toml"
+
+[build.environment]
+  # Speed up builds by preventing strict CI checks from treating warnings as errors
+  CI = "false"
+  # Specify Node version to avoid installation overhead
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

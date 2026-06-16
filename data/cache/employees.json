@@ -1,0 +1,72 @@
+[
+  {
+    "employeeId": "NGM0138",
+    "name": "Himanshu",
+    "email": "verify.software2040@pgel.in",
+    "phone": "9034812153",
+    "department": "IT",
+    "location": "BHIWADI",
+    "designation": "GET",
+    "plant": "NGM-4020",
+    "status": "Active",
+    "syncSheet": true,
+    "updatedAt": "2026-06-15T20:25:19.813Z",
+    "createdAt": "2026-06-15T20:25:19.813Z"
+  },
+  {
+    "employeeId": "NGM00867",
+    "name": "NITIN",
+    "email": "nitintest.9@pgel.in",
+    "phone": "9638527410",
+    "department": "Security",
+    "location": "BHIWADI",
+    "designation": "EMPLOY",
+    "plant": "NGM-4020",
+    "status": "Active",
+    "syncSheet": true,
+    "updatedAt": "2026-06-16T04:44:43.005Z",
+    "createdAt": "2026-06-16T04:44:43.005Z"
+  },
+  {
+    "employeeId": "PGTL00432",
+    "name": "BHANU",
+    "email": "pgtltest.1@pgel.in",
+    "phone": "9876543255",
+    "department": "IT",
+    "location": "BHIWADI",
+    "designation": "EMPLOY",
+    "plant": "PGTL-2040",
+    "status": "Active",
+    "syncSheet": true,
+    "updatedAt": "2026-06-16T04:52:37.069Z",
+    "createdAt": "2026-06-16T04:52:37.069Z"
+  },
+  {
+    "employeeId": "PGTL00454",
+    "name": "LALIT",
+    "email": "lalittest.8@pgel.in",
+    "phone": "8527896646",
+    "department": "IT",
+    "location": "BHIWADI",
+    "designation": "EMPLOY",
+    "plant": "PGTL-2040",
+    "status": "Active",
+    "syncSheet": true,
+    "updatedAt": "2026-06-16T05:24:20.547Z",
+    "createdAt": "2026-06-16T05:24:20.547Z"
+  },
+  {
+    "employeeId": "NGM00645",
+    "name": "BADAL",
+    "email": "badaltest.10@pgel.in",
+    "phone": "9876543215",
+    "department": "IT",
+    "location": "BHIWADI",
+    "designation": "SOFTWARE ENGINEER",
+    "plant": "NGM-4020",
+    "status": "Active",
+    "syncSheet": true,
+    "updatedAt": "2026-06-16T06:48:37.434Z",
+    "createdAt": "2026-06-16T06:48:37.434Z"
+  }
+]
