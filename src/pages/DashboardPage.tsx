@@ -532,7 +532,7 @@ export default function DashboardPage() {
 
             {/* View settings: Card / Grid / Table */}
             <div
-              className={`relative shrink-0 z-[60] ${viewingQR ? 'invisible pointer-events-none' : ''}`}
+              className={`relative shrink-0 z-[60] ${viewingQR ? 'hidden' : ''}`}
               ref={viewMenuRef}
             >
               <button
