@@ -70,6 +70,17 @@ export function deleteDamagedItem(recordId: string): boolean {
   return true;
 }
 
+export function deleteDamagedItemsForAsset(assetId: string): number {
+  const id = String(assetId || "").replace(/^0+/, "").trim().toLowerCase();
+  const list = readDamagedItems();
+  const next = list.filter((e) => {
+    const itemAssetId = String(e["Asset ID"] || "").replace(/^0+/, "").trim().toLowerCase();
+    return itemAssetId !== id;
+  });
+  writeDamagedItems(next);
+  return list.length - next.length;
+}
+
 export async function fetchDamagedItemsFromGas(
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>
 ): Promise<DamagedItemRecord[]> {

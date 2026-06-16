@@ -69,6 +69,17 @@ export function deleteExtraItem(recordId: string): boolean {
   return true;
 }
 
+export function deleteExtraItemsForAsset(assetId: string): number {
+  const id = String(assetId || "").replace(/^0+/, "").trim().toLowerCase();
+  const list = readExtraItems();
+  const next = list.filter((e) => {
+    const parent = String(e["Parent Asset ID"] || "").replace(/^0+/, "").trim().toLowerCase();
+    return parent !== id;
+  });
+  writeExtraItems(next);
+  return list.length - next.length;
+}
+
 export async function fetchExtraItemsFromGas(
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>
 ): Promise<AssetExtraItemRecord[]> {

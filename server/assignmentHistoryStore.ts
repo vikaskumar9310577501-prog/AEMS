@@ -164,6 +164,14 @@ export function deleteAssignmentHistoryEntry(id: string): boolean {
   return true;
 }
 
+export function deleteAssignmentHistoryForAsset(assetId: string): number {
+  const aid = normalizeAssetId(assetId);
+  const list = readAssignmentHistory();
+  const next = list.filter((h) => normalizeAssetId(h.assetId) !== aid);
+  writeAssignmentHistory(next);
+  return list.length - next.length;
+}
+
 export async function deleteHistoryEntryFromGas(
   id: string,
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>

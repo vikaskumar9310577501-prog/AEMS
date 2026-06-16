@@ -77,6 +77,17 @@ export function deleteMissingItem(recordId: string): boolean {
   return true;
 }
 
+export function deleteMissingItemsForAsset(assetId: string): number {
+  const id = String(assetId || "").replace(/^0+/, "").trim().toLowerCase();
+  const list = readMissingItems();
+  const next = list.filter((e) => {
+    const parent = String(e["Parent Asset ID"] || "").replace(/^0+/, "").trim().toLowerCase();
+    return parent !== id;
+  });
+  writeMissingItems(next);
+  return list.length - next.length;
+}
+
 export async function fetchMissingItemsFromGas(
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>
 ): Promise<MissingItemRecord[]> {

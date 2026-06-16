@@ -106,6 +106,7 @@ import {
   fetchHistoryFromGas,
   normalizeHistoryForUi,
   deleteAssignmentHistoryEntry,
+  deleteAssignmentHistoryForAsset,
   deleteHistoryEntryRemote,
   readAssignmentHistory,
   clearAllAssignmentHistory,
@@ -122,6 +123,7 @@ import {
   readExtraItems,
   upsertExtraItem,
   deleteExtraItem,
+  deleteExtraItemsForAsset,
   fetchExtraItemsFromGas,
   persistExtraItemToGas,
 } from "./server/extraItemsStore.js";
@@ -129,6 +131,7 @@ import {
   readDamagedItems,
   upsertDamagedItem,
   deleteDamagedItem,
+  deleteDamagedItemsForAsset,
   fetchDamagedItemsFromGas,
   persistDamagedItemToGas,
 } from "./server/damagedStore.js";
@@ -136,6 +139,7 @@ import {
   readMissingItems,
   upsertMissingItem,
   deleteMissingItem,
+  deleteMissingItemsForAsset,
   fetchMissingItemsFromGas,
   persistMissingItemToGas,
 } from "./server/missingStore.js";
@@ -3143,6 +3147,10 @@ app.delete("/api/assets/:id", async (req, res) => {
 
     deleteDetailsForAsset(id);
     if (GAS_WEBAPP_URL) void deleteDetailsFromGas(id, proxyToGas);
+    deleteAssignmentHistoryForAsset(id);
+    deleteExtraItemsForAsset(id);
+    deleteMissingItemsForAsset(id);
+    deleteDamagedItemsForAsset(id);
     await deleteAssetLocal(id);
 
     addAuditLog(

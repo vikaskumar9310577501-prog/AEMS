@@ -526,7 +526,7 @@ function doPost(e) {
       return json_(updateRedesignedRow_("Assets", body.id, body.row, "Asset ID"));
     }
     if (action === "delete_asset_redesigned") {
-      return json_(deleteRedesignedRow_("Assets", body.id, "Asset ID"));
+      return json_(deleteAssetEverywhere_(ss, body.id));
     }
     if (action === "add_category") {
       return json_(addRedesignedRow_("Categories", body.row, "Category Name"));
@@ -748,25 +748,9 @@ function doPost(e) {
 
     if (action === "delete") {
       var id = String(body.id);
-      deleteAssetDetails_(id);
-      var deletedCount = 0;
-      var idStr = normalizeId_(id);
-      for (var c = 0; c < CATEGORIES.length; c++) {
-        var catName = CATEGORIES[c];
-        var sh = ss.getSheetByName(catName);
-        if (sh) {
-          var data = sh.getDataRange().getValues();
-          for (var i = 1; i < data.length; i++) {
-            if (data[i][0] && normalizeId_(data[i][0]) === idStr) {
-              sh.deleteRow(i + 1);
-              deletedCount++;
-              break;
-            }
-          }
-        }
-      }
-      if (deletedCount === 0) return { error: "Asset not found" };
-      return json_({ success: true, message: "Asset deleted from category sheet" });
+      var deleteResult = deleteAssetEverywhere_(ss, id);
+      if (!deleteResult.deletedRows) return json_({ error: "Asset not found" });
+      return json_(deleteResult);
     }
 
     if (action === "add_user" || action === "addUser" || action === "append_user") {
@@ -1664,11 +1648,13 @@ function findRowIndexByKeyValue_(sheetName, keyName, keyValue) {
   if (!sh) return -1;
   var data = sh.getDataRange().getValues();
   var headers = data[0];
-  var keyColIndex = headers.indexOf(keyName);
+  var keyColIndex = indexOfNormalized_(headers, keyName);
   if (keyColIndex === -1) return -1;
   var targetVal = String(keyValue || "").trim().toLowerCase();
+  var targetId = normalizeId_(keyValue);
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][keyColIndex] || "").trim().toLowerCase() === targetVal) {
+    var cellVal = String(data[i][keyColIndex] || "").trim().toLowerCase();
+    if (cellVal === targetVal || normalizeId_(data[i][keyColIndex]) === targetId) {
       return i + 1;
     }
   }
@@ -1742,6 +1728,98 @@ function deleteRedesignedRow_(sheetName, primaryKeyValue, primaryKeyName) {
     syncLocationAndPlantAssetSheets_(ss);
   }
   return { success: true, message: "Row deleted from " + sheetName };
+}
+
+function addAssetIdentifier_(idMap, value) {
+  var norm = normalizeId_(value);
+  if (norm) idMap[norm] = true;
+}
+
+function addAssetIdentifierFromRow_(idMap, headers, row) {
+  var names = ["Asset ID", "S No", "ID", "Asset Code", "Unique Code"];
+  for (var n = 0; n < names.length; n++) {
+    var idx = indexOfNormalized_(headers, names[n]);
+    if (idx !== -1) addAssetIdentifier_(idMap, row[idx]);
+  }
+}
+
+function assetRowMatchesIdentifiers_(headers, row, idMap) {
+  var names = ["Asset ID", "S No", "ID", "Asset Code", "Unique Code"];
+  for (var n = 0; n < names.length; n++) {
+    var idx = indexOfNormalized_(headers, names[n]);
+    if (idx !== -1 && idMap[normalizeId_(row[idx])]) return true;
+  }
+  return false;
+}
+
+function collectAssetIdentifiers_(ss, assetId) {
+  var idMap = {};
+  addAssetIdentifier_(idMap, assetId);
+  var changed = true;
+  while (changed) {
+    changed = false;
+    var beforeCount = Object.keys(idMap).length;
+    var sheets = listAssetDataSheets_(ss);
+    for (var s = 0; s < sheets.length; s++) {
+      var sh = sheets[s];
+      if (!sh || sh.getLastRow() < 2) continue;
+      var data = sh.getDataRange().getValues();
+      var headers = data[0];
+      if (!sheetHasAssetHeaders_(headers)) continue;
+      for (var r = 1; r < data.length; r++) {
+        if (assetRowMatchesIdentifiers_(headers, data[r], idMap)) {
+          addAssetIdentifierFromRow_(idMap, headers, data[r]);
+        }
+      }
+    }
+    changed = Object.keys(idMap).length > beforeCount;
+  }
+  return idMap;
+}
+
+function deleteRowsByIdentifierColumns_(sh, idMap, columnNames) {
+  if (!sh || sh.getLastRow() < 2) return 0;
+  var data = sh.getDataRange().getValues();
+  var headers = data[0];
+  var cols = [];
+  for (var c = 0; c < columnNames.length; c++) {
+    var idx = indexOfNormalized_(headers, columnNames[c]);
+    if (idx !== -1) cols.push(idx);
+  }
+  if (cols.length === 0) return 0;
+  var deleted = 0;
+  for (var r = data.length - 1; r >= 1; r--) {
+    var match = false;
+    for (var i = 0; i < cols.length; i++) {
+      if (idMap[normalizeId_(data[r][cols[i]])]) {
+        match = true;
+        break;
+      }
+    }
+    if (match) {
+      sh.deleteRow(r + 1);
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
+function deleteAssetEverywhere_(ss, assetId) {
+  var idMap = collectAssetIdentifiers_(ss, assetId);
+  var deleted = 0;
+  var sheets = listAssetDataSheets_(ss);
+  for (var s = 0; s < sheets.length; s++) {
+    deleted += deleteRowsByIdentifierColumns_(sheets[s], idMap, ["Asset ID", "S No", "ID", "Asset Code", "Unique Code"]);
+  }
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Asset_Details"), idMap, ["Asset ID"]);
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Asset_Extra_Items"), idMap, ["Parent Asset ID", "Asset ID"]);
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Assignments"), idMap, ["Asset ID", "Item ID", "Asset/Inventory ID"]);
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Inventory"), idMap, ["Item ID", "Asset Code", "Asset ID"]);
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Missing_Items"), idMap, ["Parent Asset ID", "Asset ID"]);
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Damaged_Items"), idMap, ["Asset ID"]);
+  deleted += deleteRowsByIdentifierColumns_(ss.getSheetByName("Assignment_History"), idMap, ["Asset ID"]);
+  syncLocationAndPlantAssetSheets_(ss);
+  return { success: true, message: "Asset deleted everywhere", deletedRows: deleted };
 }
 
 function ensureLocationsPlantsSheets_(ss) {
