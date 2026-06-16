@@ -1210,7 +1210,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            className="fixed inset-0 bg-slate-900/80 z-[120] flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
             onClick={() => setViewingQR(null)}
           >
             <motion.div
