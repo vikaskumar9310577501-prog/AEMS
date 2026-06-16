@@ -361,8 +361,7 @@ app.post("/api/auth/request-otp", async (req, res) => {
             /* ignore */
           }
           return res.status(403).json({
-            error:
-              `Your email (${email}) is not in the Users tab of the connected Google Sheet.${hint} Ask IT Admin to add it.`,
+            error: "Invalid email ID. Contact your IT admin.",
           });
         }
         if (/no users configured|users sheet not found|email column missing/i.test(gasErr)) {
