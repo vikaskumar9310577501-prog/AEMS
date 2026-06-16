@@ -184,14 +184,20 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
     return (
       <div className="flex items-center gap-2">
         <button
-          onClick={() => onViewQR(asset)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewQR(asset);
+          }}
           className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
           title="View QR Code"
         >
           <QrCode size={16} />
         </button>
         <button
-          onClick={() => onEdit(asset)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(asset);
+          }}
           className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
           title="Edit Asset"
         >
@@ -199,7 +205,10 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
         </button>
         {role === 'IT Admin' && (
           <button
-            onClick={() => asset.id && onDelete(asset.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (asset.id) onDelete(asset.id);
+            }}
             className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
             title="Delete Asset"
           >
@@ -731,14 +740,20 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-3">
                         <button
-                          onClick={() => onViewQR(asset)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewQR(asset);
+                          }}
                           className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                           title="View QR Code"
                         >
                           <QrCode size={18} />
                         </button>
                         <button
-                          onClick={() => onEdit(asset)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(asset);
+                          }}
                           className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
                           title="Edit Asset"
                         >
@@ -746,7 +761,10 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                         </button>
                         {role === 'IT Admin' && (
                           <button
-                            onClick={() => asset.id && onDelete(asset.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (asset.id) onDelete(asset.id);
+                            }}
                             className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                             title="Delete Asset"
                           >
