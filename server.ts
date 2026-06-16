@@ -8,6 +8,7 @@ import {
   writeAppData,
   type AppSettings,
 } from "./server/dataStore.js";
+import { mergeCatalog } from "./server/assetCatalogDefaults.js";
 import {
   fetchAllAssets,
   findAssetByScanId,
@@ -1503,10 +1504,11 @@ app.post("/api/settings", async (req, res) => {
       assetFields: Array.isArray(incoming.assetFields)
         ? incoming.assetFields
         : data.settings.assetFields,
-      catalog:
+      catalog: mergeCatalog(
         incoming.catalog && typeof incoming.catalog === "object"
           ? incoming.catalog
-          : data.settings.catalog,
+          : data.settings.catalog
+      ),
       typeDefinitions:
         incoming.typeDefinitions && typeof incoming.typeDefinitions === "object"
           ? incoming.typeDefinitions

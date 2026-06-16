@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import type { TypeDefinitionsConfig } from "../src/types/categoryTypes.js";
+import { defaultCatalog, mergeCatalog } from "./assetCatalogDefaults.js";
 
 export interface PlantRecord {
   code: string;
@@ -77,6 +78,7 @@ const DEFAULT_DATA: AppData = {
     locations: [],
     plants: [],
     assetFields: DEFAULT_ASSET_FIELDS,
+    catalog: defaultCatalog(),
   },
 };
 
@@ -103,7 +105,7 @@ export function readAppData(): AppData {
           parsed.settings?.assetFields?.length
             ? parsed.settings.assetFields
             : DEFAULT_ASSET_FIELDS,
-        catalog: parsed.settings?.catalog,
+        catalog: mergeCatalog(parsed.settings?.catalog),
         typeDefinitions: parsed.settings?.typeDefinitions,
         dbMode: parsed.settings?.dbMode,
       },

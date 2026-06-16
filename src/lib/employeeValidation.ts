@@ -40,14 +40,15 @@ export function normalizeEmployeePhoneInput(value: string): string {
 }
 
 export function validateEmployeePayload(
-  payload: Partial<{ employeeId: string; name: string; email: string; phone: string }>,
+  payload: Partial<{ employeeId: string; name: string; email: string; phone: string; department: string }>,
   options?: { requirePhone?: boolean }
 ): string | null {
   if (!String(payload.employeeId || '').trim()) return 'Employee ID is required';
   if (!String(payload.name || '').trim()) return 'Name is required';
   const emailErr = validateEmployeeEmail(String(payload.email || ''));
   if (emailErr) return emailErr;
-  const phoneErr = validateEmployeePhone(String(payload.phone || ''), options?.requirePhone);
+  if (!String(payload.department || '').trim()) return 'Department is required';
+  const phoneErr = validateEmployeePhone(String(payload.phone || ''), options?.requirePhone ?? true);
   if (phoneErr) return phoneErr;
   return null;
 }

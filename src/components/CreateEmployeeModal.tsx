@@ -87,11 +87,14 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
     if (!form.employeeId.trim() || !form.name.trim() || !form.email.trim()) {
       return toast.error('Employee ID, name and email are required');
     }
+    if (!form.department.trim()) {
+      return toast.error('Department is required');
+    }
 
     const emailErr = validateEmployeeEmail(form.email);
     if (emailErr) return toast.error(emailErr);
 
-    const phoneErr = validateEmployeePhone(form.phone);
+    const phoneErr = validateEmployeePhone(form.phone, true);
     if (phoneErr) return toast.error(phoneErr);
 
     if (!isEdit) {
@@ -213,7 +216,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
           </div>
 
           <SmartSelect
-            label="Department"
+            label="Department *"
             value={form.department}
             options={optionsWithValue(departments, form.department)}
             onChange={(department) => setForm((f) => ({ ...f, department }))}
