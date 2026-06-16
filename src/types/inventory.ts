@@ -17,3 +17,20 @@ export interface InventoryItem {
   updatedAt?: string;
   [key: string]: any;
 }
+
+export const EMPTY_INVENTORY_ITEM = (): InventoryItem => ({
+  itemId: '',
+  assetCode: '',
+  itemName: '',
+  brandName: '',
+  model: '',
+  serialNumber: '',
+  category: 'IT Assets',
+  status: 'Available',
+  quantity: 0,
+  minStock: 0,
+  employeeId: '',
+  assigneeName: '',
+  assigneeEmail: '',
+  assigneeMobile: '',
+});
