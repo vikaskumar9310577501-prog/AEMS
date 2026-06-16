@@ -189,7 +189,6 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
             onViewQR(asset);
           }}
           className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-          title="View QR Code"
         >
           <QrCode size={16} />
         </button>
@@ -745,7 +744,6 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                             onViewQR(asset);
                           }}
                           className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                          title="View QR Code"
                         >
                           <QrCode size={18} />
                         </button>
