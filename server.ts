@@ -167,8 +167,23 @@ import {
 } from "./server/securityMiddleware.js";
 import { gasGetUrl } from "./server/gasClient.js";
 import { resolveRequestUser } from "./server/requestUser.js";
+import { getEnv, maskValue, setCleanEnv } from "./server/env.js";
 
 dotenv.config();
+[
+  "GAS_WEBAPP_URL",
+  "SPREADSHEET_ID",
+  "USERS_SHEET_GID",
+  "APP_URL",
+  "SMTP_EMAIL",
+  "SMTP_PASSWORD",
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "OTP_FROM_EMAIL",
+  "OTP_USE_SMTP",
+  "SESSION_SECRET",
+  "GEMINI_API_KEY",
+].forEach(setCleanEnv);
 
 // Initialize local SQLite only for non-serverless development. Vercel uses Google Sheets/cache.
 if (isLocalSqliteEnabled()) {
@@ -184,17 +199,21 @@ app.use(rateLimitAuth);
 app.use(express.json({ limit: "25mb" }));
 app.use(requireApiAuth);
 
-const GAS_WEBAPP_URL = process.env.GAS_WEBAPP_URL;
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const USERS_SHEET_GID = process.env.USERS_SHEET_GID?.trim() || "";
+const GAS_WEBAPP_URL = getEnv("GAS_WEBAPP_URL");
+const SPREADSHEET_ID = getEnv("SPREADSHEET_ID");
+const USERS_SHEET_GID = getEnv("USERS_SHEET_GID");
 const USERS_SHEET_GID_VALID =
   USERS_SHEET_GID && USERS_SHEET_GID !== "0" ? USERS_SHEET_GID : "";
 const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.NETLIFY);
 
 if (!GAS_WEBAPP_URL) {
   console.error("CRITICAL ERROR: GAS_WEBAPP_URL is not defined in .env");
+} else if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_WEBAPP_URL)) {
+  console.error("[Config] GAS_WEBAPP_URL does not look like a deployed Apps Script /exec URL:", GAS_WEBAPP_URL);
+} else {
+  console.log("[Config] GAS_WEBAPP_URL configured:", maskValue(GAS_WEBAPP_URL, 18));
 }
-if (!process.env.SESSION_SECRET?.trim()) {
+if (!getEnv("SESSION_SECRET")) {
   console.warn("[Security] SESSION_SECRET is not set — using insecure dev default. Set a 32+ char secret before production.");
 }
 
@@ -286,8 +305,36 @@ function gasAuthError(result: unknown): string | null {
 
 /** OTP email is sent by Google Apps Script (GmailApp) from verify.software2040@pgel.in */
 function otpUsesSheetMail(): boolean {
-  return !!GAS_WEBAPP_URL && process.env.OTP_USE_SMTP !== "true";
+  return !!GAS_WEBAPP_URL && getEnv("OTP_USE_SMTP") !== "true";
 }
+
+app.get("/api/health/config", async (_req, res) => {
+  const result: Record<string, unknown> = {
+    ok: true,
+    serverless: IS_SERVERLESS,
+    gasConfigured: Boolean(GAS_WEBAPP_URL),
+    gasUrl: maskValue(GAS_WEBAPP_URL, 18),
+    spreadsheetId: maskValue(SPREADSHEET_ID, 6),
+    usersSheetGid: USERS_SHEET_GID_VALID || null,
+  };
+
+  if (GAS_WEBAPP_URL) {
+    try {
+      const gasResult = await proxyToGas({ action: "list_users" }, 15000);
+      const gasErr = gasAuthError(gasResult);
+      result.gasOk = !gasErr;
+      result.gasError = gasErr || null;
+      result.userCount = Array.isArray((gasResult as { users?: unknown[] }).users)
+        ? (gasResult as { users: unknown[] }).users.length
+        : null;
+    } catch (error) {
+      result.gasOk = false;
+      result.gasError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  res.json(result);
+});
 
 app.post("/api/auth/request-otp", async (req, res) => {
   try {
@@ -326,8 +373,7 @@ app.post("/api/auth/request-otp", async (req, res) => {
         const detail = gasFail instanceof Error ? gasFail.message : String(gasFail);
         console.error("GAS OTP request failed:", detail);
         return res.status(503).json({
-          error:
-            "Could not send OTP via Database mail. Deploy the latest WebApp.gs and confirm GAS_WEBAPP_URL in .env.",
+          error: `Could not send OTP via Database mail: ${detail}`,
         });
       }
     }
@@ -386,7 +432,7 @@ app.post("/api/auth/verify-otp", async (req, res) => {
         const detail = gasFail instanceof Error ? gasFail.message : String(gasFail);
         console.error("GAS verify OTP failed:", detail);
         return res.status(503).json({
-          error: "Could not verify OTP via Database. Check GAS_WEBAPP_URL and WebApp deployment.",
+          error: `Could not verify OTP via Database: ${detail}`,
         });
       }
     }
@@ -454,7 +500,8 @@ app.post("/api/auth/logout", (_req, res) => {
 });
 
 function getBaseUrl(req: express.Request): string {
-  if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/$/, "");
+  const configuredBaseUrl = getEnv("APP_BASE_URL") || getEnv("APP_URL");
+  if (configuredBaseUrl) return configuredBaseUrl.replace(/\/$/, "");
   const host = req.get("host") || `localhost:${PORT}`;
   const proto = req.protocol || "http";
   return `${proto}://${host}`;

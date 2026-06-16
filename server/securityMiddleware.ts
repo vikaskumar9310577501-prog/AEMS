@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { getSessionFromRequest, type SessionUser } from "./sessionAuth.js";
+import { getEnv } from "./env.js";
 
 declare global {
   namespace Express {
@@ -13,10 +14,10 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 export function buildAllowedOrigins(): string[] {
   const origins = [
-    process.env.FRONTEND_URL?.trim(),
-    process.env.NETLIFY_URL?.trim(),
-    process.env.APP_BASE_URL?.trim(),
-    process.env.APP_URL?.trim(),
+    getEnv("FRONTEND_URL"),
+    getEnv("NETLIFY_URL"),
+    getEnv("APP_BASE_URL"),
+    getEnv("APP_URL"),
   ].filter(Boolean) as string[];
   return [...new Set(origins)];
 }
@@ -31,6 +32,7 @@ function originAllowed(origin: string, allowedOrigins: string[]): boolean {
 
 export function isPublicApiRoute(req: Request): boolean {
   const path = req.path;
+  if (req.method === "GET" && path === "/api/health/config") return true;
   if (req.method === "GET" && path === "/api/auth/session") return true;
   if (req.method === "POST" && path === "/api/auth/logout") return true;
   if (req.method === "POST" && path === "/api/auth/request-otp") return true;

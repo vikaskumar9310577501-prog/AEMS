@@ -10,6 +10,7 @@ import {
   listEmployeesFromGoogleSheet,
   updateEmployeeInGoogleSheet,
 } from "./employeesSheet.js";
+import { getEnv } from "./env.js";
 
 function normalizePhoneForStorage(phone: string): string {
   return String(phone || "").replace(/\D/g, "").slice(0, 10);
@@ -161,7 +162,7 @@ export async function fetchEmployeesFromGas(
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>,
   spreadsheetId?: string
 ): Promise<Employee[]> {
-  const gasUrl = process.env.GAS_WEBAPP_URL?.trim();
+  const gasUrl = getEnv("GAS_WEBAPP_URL");
   if (gasUrl) {
     try {
       const result = (await proxyToGas({ action: "list_employees" })) as {
@@ -207,7 +208,7 @@ export async function persistEmployeeToGas(
   spreadsheetId?: string
 ): Promise<{ ok: boolean; error?: string }> {
   let gasError: string | undefined;
-  const gasUrl = process.env.GAS_WEBAPP_URL?.trim();
+  const gasUrl = getEnv("GAS_WEBAPP_URL");
 
   if (gasUrl) {
     try {

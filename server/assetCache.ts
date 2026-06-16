@@ -4,6 +4,7 @@ import { readCache, readCacheStale, writeCache, deleteCache, getCacheAge, touchC
 import { readAppData } from "./dataStore.js";
 import { deleteAssetLocal } from "./sqlDb.js";
 import { deleteDetailsForAsset } from "./assetDetailsStore.js";
+import { getEnv } from "./env.js";
 import {
   assetSyncKey,
   buildAssetSyncKeySet,
@@ -123,7 +124,7 @@ export async function getAssetsWithCache(
   gasUrl: string,
   force = false
 ): Promise<{ assets: MappedAsset[]; fromCache: boolean; syncing: boolean }> {
-  const spreadsheetId = process.env.SPREADSHEET_ID?.trim();
+  const spreadsheetId = getEnv("SPREADSHEET_ID");
   if (spreadsheetId && isCacheForDifferentSpreadsheet(spreadsheetId)) {
     deleteCache(CACHE_KEY);
     force = true;

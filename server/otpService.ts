@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { readAppData } from "./dataStore.js";
 import { APP_NAME, APP_SHORT_NAME } from "../src/lib/constants.js";
 import { buildOtpEmailHtml } from "./emailTemplates.js";
+import { getEnv } from "./env.js";
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
@@ -28,21 +29,21 @@ function generateOtp(): string {
 }
 
 function getMailer() {
-  const user = process.env.SMTP_EMAIL?.trim();
-  const pass = process.env.SMTP_PASSWORD?.trim();
+  const user = getEnv("SMTP_EMAIL");
+  const pass = getEnv("SMTP_PASSWORD");
   if (!user || !pass) return null;
 
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST?.trim() || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: process.env.SMTP_SECURE === "true",
+    host: getEnv("SMTP_HOST") || "smtp.gmail.com",
+    port: parseInt(getEnv("SMTP_PORT") || "587", 10),
+    secure: getEnv("SMTP_SECURE") === "true",
     auth: { user, pass },
   });
 }
 
 function getFromAddress() {
   const from =
-    process.env.OTP_FROM_EMAIL?.trim() || "verify.software2040@pgel.in";
+    getEnv("OTP_FROM_EMAIL") || "verify.software2040@pgel.in";
   return `"${APP_NAME}" <${from}>`;
 }
 

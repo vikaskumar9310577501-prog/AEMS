@@ -4,6 +4,7 @@ import {
   extractDriveFileId,
   toDriveDirectUrl,
 } from "./driveUrls.js";
+import { getEnv } from "./env.js";
 export type FetchedFile = {
   bytes: Uint8Array;
   contentType: string;
@@ -130,9 +131,10 @@ export async function fetchRemoteFile(url: string): Promise<FetchedFile | null> 
     const fileId = extractDriveFileId(trimmed);
     if (!fileId && !isAllowedRemoteUrl(trimmed)) return null;
 
-    if (fileId && process.env.GAS_WEBAPP_URL) {
+    const gasUrl = getEnv("GAS_WEBAPP_URL");
+    if (fileId && gasUrl) {
       try {
-        const response = await fetch(process.env.GAS_WEBAPP_URL, {
+        const response = await fetch(gasUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "get_file_base64", fileId }),

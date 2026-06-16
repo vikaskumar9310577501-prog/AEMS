@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import type { Request, Response } from "express";
+import { getEnv } from "./env.js";
 
 export const SESSION_COOKIE = "aems_session";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -10,7 +11,7 @@ export interface SessionUser {
 }
 
 function getSecret(): string {
-  const secret = process.env.SESSION_SECRET?.trim();
+  const secret = getEnv("SESSION_SECRET");
   if (secret && secret.length >= 32) return secret;
   if (process.env.NODE_ENV === "production") {
     throw new Error("SESSION_SECRET must be set (minimum 32 characters) in production");
