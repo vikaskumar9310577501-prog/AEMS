@@ -1462,24 +1462,31 @@ function listEmployees_() {
   var data = sh.getDataRange().getValues();
   var headers = data[0];
   var list = [];
+  var seen = {};
+  var getByNames = function (row, names) {
+    for (var n = 0; n < names.length; n++) {
+      var idx = indexOfNormalized_(headers, names[n]);
+      if (idx !== -1) return String(row[idx] || "").trim();
+    }
+    return "";
+  };
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    var item = {};
-    for (var h = 0; h < headers.length; h++) {
-      item[headers[h]] = row[h];
-    }
+    var employeeId = getByNames(row, ["Employee ID", "Emp ID", "Employee Code"]).toUpperCase();
+    if (!employeeId || seen[employeeId]) continue;
+    seen[employeeId] = true;
     list.push({
-      employeeId: String(item["Employee ID"] || "").trim().toUpperCase(),
-      name: String(item["Name"] || "").trim(),
-      email: String(item["Email"] || "").trim().toLowerCase(),
-      phone: String(item["Phone"] || "").trim(),
-      department: String(item["Department"] || "").trim(),
-      location: String(item["Location"] || "").trim(),
-      designation: String(item["Designation"] || "").trim(),
-      plant: String(item["Plant Code"] || item["Plant / Location"] || item["Plant"] || "").trim(),
-      status: String(item["Status"] || "Active").trim() === "Inactive" ? "Inactive" : "Active",
-      createdAt: String(item["Created Date"] || ""),
-      updatedAt: String(item["Updated Date"] || "")
+      employeeId: employeeId,
+      name: getByNames(row, ["Name", "Employee Name", "Full Name"]),
+      email: getByNames(row, ["Email", "Email ID", "Mail ID"]).toLowerCase(),
+      phone: getByNames(row, ["Phone", "Mobile", "Contact Number"]),
+      department: getByNames(row, ["Department", "Dept"]),
+      location: getByNames(row, ["Location", "Location Name"]),
+      designation: getByNames(row, ["Designation", "Role Title"]),
+      plant: getByNames(row, ["Plant Code", "Plant / Location", "Plant"]),
+      status: getByNames(row, ["Status"]) === "Inactive" ? "Inactive" : "Active",
+      createdAt: getByNames(row, ["Created Date", "Created At"]),
+      updatedAt: getByNames(row, ["Updated Date", "Updated At"])
     });
   }
   return list;

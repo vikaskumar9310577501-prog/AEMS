@@ -1344,24 +1344,31 @@ function listEmployees_() {
   var data = sh.getDataRange().getValues();
   var headers = data[0];
   var list = [];
+  var seen = {};
+  var getByNames = function (row, names) {
+    for (var n = 0; n < names.length; n++) {
+      var idx = indexOfNormalized_(headers, names[n]);
+      if (idx !== -1) return String(row[idx] || "").trim();
+    }
+    return "";
+  };
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    var item = {};
-    for (var h = 0; h < headers.length; h++) {
-      item[headers[h]] = row[h];
-    }
+    var employeeId = getByNames(row, ["Employee ID", "Emp ID", "Employee Code"]).toUpperCase();
+    if (!employeeId || seen[employeeId]) continue;
+    seen[employeeId] = true;
     list.push({
-      employeeId: String(item["Employee ID"] || "").trim().toUpperCase(),
-      name: String(item["Name"] || "").trim(),
-      email: String(item["Email"] || "").trim().toLowerCase(),
-      phone: String(item["Phone"] || "").trim(),
-      department: String(item["Department"] || "").trim(),
-      location: String(item["Location"] || "").trim(),
-      designation: String(item["Designation"] || "").trim(),
-      plant: String(item["Plant Code"] || item["Plant / Location"] || item["Plant"] || "").trim(),
-      status: String(item["Status"] || "Active").trim() === "Inactive" ? "Inactive" : "Active",
-      createdAt: String(item["Created Date"] || ""),
-      updatedAt: String(item["Updated Date"] || "")
+      employeeId: employeeId,
+      name: getByNames(row, ["Name", "Employee Name", "Full Name"]),
+      email: getByNames(row, ["Email", "Email ID", "Mail ID"]).toLowerCase(),
+      phone: getByNames(row, ["Phone", "Mobile", "Contact Number"]),
+      department: getByNames(row, ["Department", "Dept"]),
+      location: getByNames(row, ["Location", "Location Name"]),
+      designation: getByNames(row, ["Designation", "Role Title"]),
+      plant: getByNames(row, ["Plant Code", "Plant / Location", "Plant"]),
+      status: getByNames(row, ["Status"]) === "Inactive" ? "Inactive" : "Active",
+      createdAt: getByNames(row, ["Created Date", "Created At"]),
+      updatedAt: getByNames(row, ["Updated Date", "Updated At"])
     });
   }
   return list;
@@ -1373,10 +1380,41 @@ function findEmployeeRow_(employeeId) {
   if (!sh) return -1;
   var idStr = normalizeId_(employeeId);
   var data = sh.getDataRange().getValues();
+  if (data.length < 1) return -1;
+  var headers = data[0];
+  var idIdx = indexOfNormalized_(headers, "Employee ID");
+  if (idIdx === -1) idIdx = 0;
   for (var i = 1; i < data.length; i++) {
-    if (normalizeId_(data[i][0]) === idStr) return i + 1;
+    if (normalizeId_(data[i][idIdx]) === idStr) return i + 1;
   }
   return -1;
+}
+
+function employeeRowFromObject_(headers, emp, createdAt, updatedAt) {
+  var out = new Array(headers.length);
+  var map = {
+    "employeeid": String(emp.employeeId || "").trim().toUpperCase(),
+    "name": String(emp.name || "").trim(),
+    "email": String(emp.email || "").trim().toLowerCase(),
+    "mailid": String(emp.email || "").trim().toLowerCase(),
+    "phone": String(emp.phone || "").trim(),
+    "mobile": String(emp.phone || "").trim(),
+    "contactnumber": String(emp.phone || "").trim(),
+    "department": String(emp.department || "").trim(),
+    "location": String(emp.location || "").trim(),
+    "designation": String(emp.designation || "").trim(),
+    "plantcode": String(emp.plant || "").trim(),
+    "plant": String(emp.plant || "").trim(),
+    "plantlocation": String(emp.plant || "").trim(),
+    "status": emp.status === "Inactive" ? "Inactive" : "Active",
+    "createddate": createdAt,
+    "updateddate": updatedAt
+  };
+  for (var h = 0; h < headers.length; h++) {
+    var norm = String(headers[h] || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    out[h] = map[norm] !== undefined ? map[norm] : "";
+  }
+  return out;
 }
 
 function addEmployee_(emp) {
@@ -1387,19 +1425,8 @@ function addEmployee_(emp) {
   if (!id) return { error: "Employee ID required" };
   if (findEmployeeRow_(id) !== -1) return { error: "Employee ID already exists" };
   var now = new Date().toISOString();
-  sh.appendRow([
-    id,
-    String(emp.name || "").trim(),
-    String(emp.email || "").trim().toLowerCase(),
-    String(emp.phone || "").trim(),
-    String(emp.department || "").trim(),
-    String(emp.location || "").trim(),
-    String(emp.designation || "").trim(),
-    String(emp.plant || "").trim(),
-    emp.status === "Inactive" ? "Inactive" : "Active",
-    now,
-    now
-  ]);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.appendRow(employeeRowFromObject_(headers, emp, now, now));
   return { success: true, employee: emp };
 }
 
@@ -1409,19 +1436,10 @@ function updateEmployee_(emp) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName("Employees");
   var now = new Date().toISOString();
-  sh.getRange(row, 1, 1, 11).setValues([[
-    String(emp.employeeId || "").trim().toUpperCase(),
-    String(emp.name || "").trim(),
-    String(emp.email || "").trim().toLowerCase(),
-    String(emp.phone || "").trim(),
-    String(emp.department || "").trim(),
-    String(emp.location || "").trim(),
-    String(emp.designation || "").trim(),
-    String(emp.plant || "").trim(),
-    emp.status === "Inactive" ? "Inactive" : "Active",
-    sh.getRange(row, 10).getValue() || now,
-    now
-  ]]);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var createdIdx = indexOfNormalized_(headers, "Created Date");
+  var createdAt = createdIdx !== -1 ? (sh.getRange(row, createdIdx + 1).getValue() || now) : now;
+  sh.getRange(row, 1, 1, headers.length).setValues([employeeRowFromObject_(headers, emp, createdAt, now)]);
   return { success: true, employee: emp };
 }
 

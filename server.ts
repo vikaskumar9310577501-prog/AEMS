@@ -1682,7 +1682,7 @@ app.get("/api/employees", async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     let list = readEmployees();
-    if (shouldRefreshSheetBackedData(force, list.length)) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(force, list.length)) {
       list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
     res.json(list);
@@ -1696,7 +1696,7 @@ app.get("/api/employees/lookup", async (req, res) => {
     const employeeId = String(req.query.employeeId || "");
     const email = String(req.query.email || "");
     let list = readEmployees();
-    if (GAS_WEBAPP_URL && (list.length === 0 || employeeId)) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID || list.length === 0 || employeeId) {
       try {
         list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
       } catch {
@@ -1881,7 +1881,7 @@ app.put("/api/employees/:employeeId", async (req, res) => {
 app.delete("/api/employees/:employeeId", async (req, res) => {
   try {
     const eid = decodeURIComponent(req.params.employeeId);
-    if (shouldRefreshSheetBackedData(false, readEmployees().length)) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(false, readEmployees().length)) {
       await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
     if (!deleteEmployee(eid)) return res.status(404).json({ error: "Employee not found" });

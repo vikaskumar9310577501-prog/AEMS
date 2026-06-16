@@ -30,43 +30,73 @@ function normalizePhone(phone: string): string {
 }
 
 function rowToEmployee(row: string[], headerMap: Record<string, number>): Employee {
-  const get = (key: string) => String(row[headerMap[key]] ?? "").trim();
+  const get = (...keys: string[]) => {
+    for (const key of keys) {
+      const idx = headerMap[normalizeHeaderName(key)];
+      if (idx !== undefined) return String(row[idx] ?? "").trim();
+    }
+    return "";
+  };
   return {
-    employeeId: normalizeEmployeeId(get("Employee ID")),
-    name: get("Name"),
-    email: normalizeEmail(get("Email")),
-    phone: normalizePhone(get("Phone")),
-    department: get("Department"),
-    location: get("Location"),
-    designation: get("Designation"),
-    plant: get("Plant Code") || get("Plant / Location") || get("Plant"),
+    employeeId: normalizeEmployeeId(get("Employee ID", "Emp ID", "Employee Code")),
+    name: get("Name", "Employee Name", "Full Name"),
+    email: normalizeEmail(get("Email", "Mail ID", "Email ID")),
+    phone: normalizePhone(get("Phone", "Mobile", "Contact Number")),
+    department: get("Department", "Dept"),
+    location: get("Location", "Location Name"),
+    designation: get("Designation", "Role Title"),
+    plant: get("Plant Code", "Plant / Location", "Plant"),
     status: isInactiveEmployeeStatus(get("Status")) ? "Inactive" : "Active",
-    createdAt: get("Created Date"),
-    updatedAt: get("Updated Date"),
+    createdAt: get("Created Date", "Created At"),
+    updatedAt: get("Updated Date", "Updated At"),
   };
 }
 
-function employeeToRow(employee: Employee, createdAt?: string): string[] {
+function normalizeHeaderName(header: string): string {
+  return String(header || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function employeeValueForHeader(header: string, employee: Employee, createdAt?: string): string {
   const now = new Date().toISOString();
-  return [
-    normalizeEmployeeId(employee.employeeId),
-    String(employee.name || "").trim(),
-    normalizeEmail(employee.email),
-    normalizePhone(employee.phone),
-    String(employee.department || "").trim(),
-    String(employee.location || "").trim(),
-    String(employee.designation || "").trim(),
-    String(employee.plant || "").trim(),
-    isInactiveEmployeeStatus(employee.status) ? "Inactive" : "Active",
-    createdAt || employee.createdAt || now,
-    now,
-  ];
+  const norm = normalizeHeaderName(header);
+  const values: Record<string, string> = {
+    employeeid: normalizeEmployeeId(employee.employeeId),
+    empid: normalizeEmployeeId(employee.employeeId),
+    employeecode: normalizeEmployeeId(employee.employeeId),
+    name: String(employee.name || "").trim(),
+    employeename: String(employee.name || "").trim(),
+    fullname: String(employee.name || "").trim(),
+    email: normalizeEmail(employee.email),
+    emailid: normalizeEmail(employee.email),
+    mailid: normalizeEmail(employee.email),
+    phone: normalizePhone(employee.phone),
+    mobile: normalizePhone(employee.phone),
+    contactnumber: normalizePhone(employee.phone),
+    department: String(employee.department || "").trim(),
+    dept: String(employee.department || "").trim(),
+    location: String(employee.location || "").trim(),
+    locationname: String(employee.location || "").trim(),
+    designation: String(employee.designation || "").trim(),
+    plantcode: String(employee.plant || "").trim(),
+    plantlocation: String(employee.plant || "").trim(),
+    plant: String(employee.plant || "").trim(),
+    status: isInactiveEmployeeStatus(employee.status) ? "Inactive" : "Active",
+    createddate: createdAt || employee.createdAt || now,
+    createdat: createdAt || employee.createdAt || now,
+    updateddate: now,
+    updatedat: now,
+  };
+  return values[norm] ?? "";
+}
+
+function employeeToRowForHeaders(employee: Employee, headers: string[], createdAt?: string): string[] {
+  return headers.map((header) => employeeValueForHeader(header, employee, createdAt));
 }
 
 function buildHeaderMap(headers: string[]): Record<string, number> {
   const map: Record<string, number> = {};
   headers.forEach((h, i) => {
-    map[String(h).trim()] = i;
+    map[normalizeHeaderName(h)] = i;
   });
   return map;
 }
@@ -111,7 +141,7 @@ export async function listEmployeesFromGoogleSheet(
     await ensureEmployeesSheet(sheets, spreadsheetId);
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${SHEET_NAME}'!A:K`,
+      range: `'${SHEET_NAME}'!A:Z`,
     });
     const rows = res.data.values || [];
     if (rows.length < 2) return [];
@@ -143,21 +173,24 @@ export async function addEmployeeToGoogleSheet(
     await ensureEmployeesSheet(sheets, spreadsheetId);
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${SHEET_NAME}'!A:A`,
+      range: `'${SHEET_NAME}'!A:Z`,
     });
     const rows = res.data.values || [];
+    const headers = rows[0]?.map(String) || HEADERS.slice();
+    const headerMap = buildHeaderMap(headers);
+    const idCol = headerMap[normalizeHeaderName("Employee ID")] ?? 0;
     for (let i = 1; i < rows.length; i++) {
-      if (normalizeEmployeeId(String(rows[i][0] || "")) === id) {
+      if (normalizeEmployeeId(String(rows[i][idCol] || "")) === id) {
         return { ok: false, error: "User already exists" };
       }
     }
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `'${SHEET_NAME}'!A:K`,
+      range: `'${SHEET_NAME}'!A:${String.fromCharCode(64 + Math.min(headers.length, 26))}`,
       valueInputOption: "RAW",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [employeeToRow(employee)] },
+      requestBody: { values: [employeeToRowForHeaders(employee, headers)] },
     });
     return { ok: true };
   } catch (err: unknown) {
@@ -179,24 +212,28 @@ export async function updateEmployeeInGoogleSheet(
     await ensureEmployeesSheet(sheets, spreadsheetId);
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${SHEET_NAME}'!A:K`,
+      range: `'${SHEET_NAME}'!A:Z`,
     });
     const rows = res.data.values || [];
+    const headers = rows[0]?.map(String) || HEADERS.slice();
+    const headerMap = buildHeaderMap(headers);
+    const idCol = headerMap[normalizeHeaderName("Employee ID")] ?? 0;
+    const createdCol = headerMap[normalizeHeaderName("Created Date")];
     let rowIndex = -1;
     let createdAt = "";
     for (let i = 1; i < rows.length; i++) {
-      if (normalizeEmployeeId(String(rows[i][0] || "")) === id) {
+      if (normalizeEmployeeId(String(rows[i][idCol] || "")) === id) {
         rowIndex = i + 1;
-        createdAt = String(rows[i][9] || "");
+        createdAt = createdCol === undefined ? "" : String(rows[i][createdCol] || "");
         break;
       }
     }
 
-    const row = employeeToRow(employee, createdAt);
+    const row = employeeToRowForHeaders(employee, headers, createdAt);
     if (rowIndex === -1) {
       await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `'${SHEET_NAME}'!A:K`,
+        range: `'${SHEET_NAME}'!A:${String.fromCharCode(64 + Math.min(headers.length, 26))}`,
         valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
         requestBody: { values: [row] },
@@ -204,7 +241,7 @@ export async function updateEmployeeInGoogleSheet(
     } else {
       await sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: `'${SHEET_NAME}'!A${rowIndex}:K${rowIndex}`,
+        range: `'${SHEET_NAME}'!A${rowIndex}:${String.fromCharCode(64 + Math.min(headers.length, 26))}${rowIndex}`,
         valueInputOption: "RAW",
         requestBody: { values: [row] },
       });
@@ -235,13 +272,16 @@ export async function deleteEmployeeFromGoogleSheet(
 
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${SHEET_NAME}'!A:A`,
+      range: `'${SHEET_NAME}'!A:Z`,
     });
     const rows = res.data.values || [];
+    const headers = rows[0]?.map(String) || HEADERS.slice();
+    const headerMap = buildHeaderMap(headers);
+    const idCol = headerMap[normalizeHeaderName("Employee ID")] ?? 0;
 
     let rowIndex = -1;
     for (let i = 1; i < rows.length; i++) {
-      if (normalizeEmployeeId(String(rows[i][0] || "")) === id) {
+      if (normalizeEmployeeId(String(rows[i][idCol] || "")) === id) {
         rowIndex = i;
         break;
       }
