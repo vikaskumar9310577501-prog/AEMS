@@ -3121,10 +3121,13 @@ app.post("/api/assets/bulk", async (req, res) => {
 app.delete("/api/assets/:id", async (req, res) => {
   try {
     const user = resolveRequestUser(req);
-    if (!user) {
+    const sessionUser = req.authUser;
+    const actorEmail = user?.email || sessionUser?.email || "";
+    const actorRole = user?.role || sessionUser?.role || "";
+    if (!actorEmail) {
       return res.status(403).json({ error: "Authentication required." });
     }
-    if (!isItAdminRole(user.role)) {
+    if (!isItAdminRole(actorRole)) {
       return res.status(403).json({ error: "You do not have permission to delete assets." });
     }
 
@@ -3159,7 +3162,7 @@ app.delete("/api/assets/:id", async (req, res) => {
     await deleteAssetLocal(id);
 
     addAuditLog(
-      user.email,
+      actorEmail,
       "DELETE_ASSET",
       id,
       existing ? JSON.stringify(existing) : "",

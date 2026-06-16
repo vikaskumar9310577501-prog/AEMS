@@ -9,11 +9,14 @@ export function useEmployees(opts?: { autoLoad?: boolean }) {
   const refresh = useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const url = force ? '/api/employees?refresh=1' : '/api/employees';
-      const res = await fetch(url);
+      const base = import.meta.env.VITE_API_BASE_URL || '';
+      const url = force ? `${base}/api/employees?refresh=1` : `${base}/api/employees`;
+      const res = await fetch(url, { credentials: 'include' });
       if (res.ok) {
         const data = await parseJsonResponse<Employee[] | { employees?: Employee[] }>(res);
         setEmployees(Array.isArray(data) ? data : data.employees || []);
+      } else {
+        setEmployees([]);
       }
     } catch {
       /* keep cache */
