@@ -253,7 +253,7 @@ function shouldRefreshSheetBackedData(force: boolean, localCount: number) {
 
 async function loadEmployeesWithSheetSync(): Promise<Employee[]> {
   let list = readEmployees();
-  if (!GAS_WEBAPP_URL) return list;
+  if (!GAS_WEBAPP_URL && !SPREADSHEET_ID) return list;
   try {
     list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
   } catch (error) {
@@ -1731,7 +1731,7 @@ app.get("/api/employees/:employeeId", async (req, res) => {
     const eid = decodeURIComponent(req.params.employeeId);
     let list = readEmployees();
     let employee = findEmployeeById(list, eid);
-    if (!employee && GAS_WEBAPP_URL) {
+    if (!employee && (GAS_WEBAPP_URL || SPREADSHEET_ID)) {
       list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
       employee = findEmployeeById(list, eid);
     }
@@ -1828,14 +1828,14 @@ app.post("/api/employees", async (req, res) => {
 
     const saved = createEmployee(body);
     let sheetWarning: string | undefined;
-    if (body.syncSheet !== false && (GAS_WEBAPP_URL || SPREADSHEET_ID)) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
       const gas = await persistEmployeeToGas("add", saved, proxyToGas, SPREADSHEET_ID);
       if (!gas.ok) {
+        deleteEmployee(saved.employeeId);
         if (isEmployeeIdExistsError(gas.error)) {
-          deleteEmployee(saved.employeeId);
           return res.status(409).json({ error: EMPLOYEE_ID_EXISTS_MESSAGE });
         }
-        sheetWarning = gas.error || "Database sync failed";
+        return res.status(502).json({ error: gas.error || "Database sync failed; employee was not saved locally." });
       }
     }
     res.json({ success: true, employee: saved, sheetWarning });
@@ -1859,18 +1859,22 @@ app.put("/api/employees/:employeeId", async (req, res) => {
     }
 
     let list = readEmployees();
-    if (shouldRefreshSheetBackedData(false, list.length)) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(false, list.length)) {
       list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
     if (!findEmployeeById(list, body.employeeId)) {
       return res.status(404).json({ error: "Employee not found" });
     }
 
+    const beforeUpdate = readEmployees();
     const saved = updateEmployee(body);
     let sheetWarning: string | undefined;
-    if (body.syncSheet !== false && (GAS_WEBAPP_URL || SPREADSHEET_ID)) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
       const gas = await persistEmployeeToGas("update", saved, proxyToGas, SPREADSHEET_ID);
-      if (!gas.ok) sheetWarning = gas.error || "Database sync failed";
+      if (!gas.ok) {
+        writeEmployees(beforeUpdate);
+        return res.status(502).json({ error: gas.error || "Database sync failed; employee update was reverted locally." });
+      }
     }
     res.json({ success: true, employee: saved, sheetWarning });
   } catch (error: any) {
@@ -1884,15 +1888,18 @@ app.delete("/api/employees/:employeeId", async (req, res) => {
     if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(false, readEmployees().length)) {
       await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
-    if (!deleteEmployee(eid)) return res.status(404).json({ error: "Employee not found" });
     if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
-      await persistEmployeeToGas(
+      const gas = await persistEmployeeToGas(
         "delete",
         { employeeId: eid, name: "", email: "", phone: "", department: "", location: "", designation: "", plant: "", status: "Inactive" },
         proxyToGas,
         SPREADSHEET_ID
       );
+      if (!gas.ok) {
+        return res.status(502).json({ error: gas.error || "Database delete failed; employee was not deleted locally." });
+      }
     }
+    if (!deleteEmployee(eid)) return res.status(404).json({ error: "Employee not found" });
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to delete employee" });
@@ -2920,24 +2927,23 @@ app.post("/api/assets", async (req, res) => {
 
     const dbMode = readAppData().settings.dbMode;
     let result;
+    const masterHeaders = getDefaultAssetHeaders();
+    let localCategory = String(assetData.mainCategory || "IT Assets");
+    let localRow: string[];
     if (dbMode === "redesigned") {
       const row = buildRedesignedAssetRow(assetData, assetId, String(assetData.qrCodeText ?? ""));
       result = await proxyToGas({ action: "add_asset_redesigned", row });
-      
-      const masterHeaders = getDefaultAssetHeaders();
-      const sqliteRow = buildMasterAssetRow(assetData);
-      await insertAssetLocal(String(assetData.mainCategory || "IT Assets"), sqliteRow, masterHeaders);
+      localRow = buildMasterAssetRow(assetData);
     } else {
-      const masterHeaders = getDefaultAssetHeaders();
       const row = buildMasterAssetRow(assetData);
       logAssetMappingAudit("sheet-write-add", assetData as Record<string, unknown>, masterHeaders, row);
       console.log("[AMS] Sheet row payload (add):", row.length, "columns");
       result = await proxyToGas({ action: "add", row });
-
-      await insertAssetLocal(String(assetData.mainCategory || "IT Assets"), row, masterHeaders);
+      localRow = row;
     }
 
     if (result.error) throw new Error(result.error);
+    await insertAssetLocal(localCategory, localRow, masterHeaders);
 
     console.log("[AMS] POST /api/assets — response:", { id: assetId, success: true });
 
@@ -3006,13 +3012,13 @@ app.put("/api/assets/:id", async (req, res) => {
 
     const dbMode = readAppData().settings.dbMode;
     let result;
+    const masterHeaders = getDefaultAssetHeaders();
+    let localCategory = String(assetData.mainCategory || "IT Assets");
+    let localRow: string[];
     if (dbMode === "redesigned") {
       const row = buildRedesignedAssetRow(assetData, String(id), String(assetData.qrCodeText ?? ""));
       result = await proxyToGas({ action: "update_asset_redesigned", id, row });
-
-      const masterHeaders = getDefaultAssetHeaders();
-      const sqliteRow = buildMasterAssetRow(assetData);
-      await updateAssetLocal(String(assetData.mainCategory || "IT Assets"), String(id), sqliteRow, masterHeaders);
+      localRow = buildMasterAssetRow(assetData);
     } else {
       const sheet = await fetchSheetData();
       if (!sheet.length) return res.status(500).json({ error: "Sheet has no data" });
@@ -3031,15 +3037,14 @@ app.put("/api/assets/:id", async (req, res) => {
 
       const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
       const updatedRow = buildMasterAssetRow(assetData, existingMaster);
-      const masterHeaders = getDefaultAssetHeaders();
       logAssetMappingAudit("sheet-write-update", assetData as Record<string, unknown>, masterHeaders, updatedRow);
       console.log("[AMS] Sheet row payload (update):", updatedRow.length, "columns for id", id);
       result = await proxyToGas({ action: "update", id, row: updatedRow, rowIndex: rowIndex + 2 });
-
-      await updateAssetLocal(String(assetData.mainCategory || "IT Assets"), String(id), updatedRow, masterHeaders);
+      localRow = updatedRow;
     }
 
     if (result.error) throw new Error(result.error);
+    await updateAssetLocal(localCategory, String(id), localRow, masterHeaders);
 
     await persistAssetDynamicDetails(String(id), assetData);
 

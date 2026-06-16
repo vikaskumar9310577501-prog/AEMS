@@ -53,6 +53,26 @@ export function writeEmployees(list: Employee[]) {
   fs.writeFileSync(EMPLOYEES_FILE, JSON.stringify(list, null, 2), "utf-8");
 }
 
+function mergeEmployeesById(local: Employee[], remote: Employee[]): Employee[] {
+  const merged = [...local];
+  for (const employee of remote) {
+    const id = normalizeEmployeeId(employee.employeeId);
+    if (!id) continue;
+    const normalized = normalizeEmployeeRecord(employee);
+    const idx = merged.findIndex((e) => normalizeEmployeeId(e.employeeId) === id);
+    if (idx >= 0) {
+      merged[idx] = {
+        ...merged[idx],
+        ...normalized,
+        createdAt: normalized.createdAt || merged[idx].createdAt,
+      };
+    } else {
+      merged.push(normalized);
+    }
+  }
+  return merged;
+}
+
 export function findEmployeeById(list: Employee[], employeeId: string): Employee | undefined {
   const id = normalizeEmployeeId(employeeId);
   if (!id) return undefined;
@@ -170,9 +190,10 @@ export async function fetchEmployeesFromGas(
         error?: string;
       };
       if (result?.employees && Array.isArray(result.employees)) {
-        writeEmployees(result.employees);
+        const merged = mergeEmployeesById(readEmployees(), result.employees);
+        writeEmployees(merged);
         if (spreadsheetId) touchCacheSpreadsheetId(spreadsheetId);
-        return result.employees;
+        return merged;
       }
     } catch (e) {
       console.warn("fetchEmployeesFromGas:", e);
@@ -182,9 +203,10 @@ export async function fetchEmployeesFromGas(
   if (spreadsheetId) {
     const fromSheet = await listEmployeesFromGoogleSheet(spreadsheetId);
     if (fromSheet) {
-      writeEmployees(fromSheet);
+      const merged = mergeEmployeesById(readEmployees(), fromSheet);
+      writeEmployees(merged);
       touchCacheSpreadsheetId(spreadsheetId);
-      return fromSheet;
+      return merged;
     }
   }
 

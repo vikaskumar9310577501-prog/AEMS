@@ -1,12 +1,17 @@
 import { fetchAllAssets, type MappedAsset } from "./assetHelpers.js";
 import { healMisalignedAssetFields } from "../src/lib/healAssetFields.js";
-import { readCache, readCacheStale, writeCache, deleteCache, getCacheAge, touchCacheSpreadsheetId, isCacheForDifferentSpreadsheet } from "./cacheStore.js";
+import {
+  readCache,
+  readCacheStale,
+  writeCache,
+  deleteCache,
+  getCacheAge,
+  touchCacheSpreadsheetId,
+  isCacheForDifferentSpreadsheet,
+} from "./cacheStore.js";
 import { readAppData } from "./dataStore.js";
-import { deleteAssetLocal } from "./sqlDb.js";
-import { deleteDetailsForAsset } from "./assetDetailsStore.js";
 import { getEnv } from "./env.js";
 import {
-  assetSyncKey,
   buildAssetSyncKeySet,
   computeAssetsFingerprint,
   isAssetOnSheet,
@@ -36,7 +41,22 @@ function healAssetsList(assets: MappedAsset[]): MappedAsset[] {
   return assets.map((a) => healMisalignedAssetFields(a));
 }
 
-async function reconcileSheetDeletions(sheetAssets: MappedAsset[]): Promise<number> {
+function mergeAssetsBySyncKey(previous: MappedAsset[], incoming: MappedAsset[]): MappedAsset[] {
+  const merged = [...previous];
+  for (const raw of incoming) {
+    const asset = healMisalignedAssetFields(raw);
+    const keys = buildAssetSyncKeySet([asset]);
+    const idx = merged.findIndex((existing) => isAssetOnSheet(existing, keys));
+    if (idx >= 0) {
+      merged[idx] = { ...merged[idx], ...asset };
+    } else {
+      merged.push(asset);
+    }
+  }
+  return merged;
+}
+
+function reconcileSheetDeletions(sheetAssets: MappedAsset[]): number {
   const previous = readCacheStale<MappedAsset[]>(CACHE_KEY) || [];
   if (previous.length === 0) return 0;
 
@@ -50,22 +70,14 @@ async function reconcileSheetDeletions(sheetAssets: MappedAsset[]): Promise<numb
   });
 
   if (guard.block) {
-    console.warn(`[AMS] Sheet sync: deletion reconcile blocked — ${guard.reason}`);
+    console.warn(`[AMS] Sheet sync: deletion reconcile blocked - ${guard.reason}`);
     return 0;
   }
 
-  if (removed.length === 0) return 0;
-
-  for (const asset of removed) {
-    try {
-      await deleteAssetLocal(asset.id);
-      deleteDetailsForAsset(asset.id);
-      console.log(
-        `[AMS] Sheet sync: removed local asset ${assetSyncKey(asset)} (${asset.mainCategory}) — deleted from sheet`
-      );
-    } catch (err) {
-      console.warn(`[AMS] Sheet sync: failed to remove local asset ${asset.id}:`, err);
-    }
+  if (removed.length > 0) {
+    console.warn(
+      `[AMS] Sheet sync: preserving ${removed.length} local/cache assets missing from sheet response; delete only happens via explicit delete.`
+    );
   }
 
   return removed.length;
@@ -83,12 +95,12 @@ async function pullFromSheet(gasUrl: string): Promise<MappedAsset[]> {
   });
 
   if (emptyGuard.block) {
-    console.warn(`[AMS] Sheet sync: keeping previous cache — ${emptyGuard.reason}`);
+    console.warn(`[AMS] Sheet sync: keeping previous cache - ${emptyGuard.reason}`);
     return previous;
   }
 
-  lastRemovedCount = await reconcileSheetDeletions(sheetAssets);
-  return healAssetsList(sheetAssets);
+  lastRemovedCount = reconcileSheetDeletions(sheetAssets);
+  return mergeAssetsBySyncKey(previous, sheetAssets);
 }
 
 export function getAssetsSyncMeta(): AssetsSyncMeta {
