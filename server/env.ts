@@ -19,6 +19,23 @@ export function setCleanEnv(name: string): string {
   return clean;
 }
 
+export function resolveEnv(names: string[]): { name: string; value: string } {
+  for (const name of names) {
+    const value = getEnv(name);
+    if (value) return { name, value };
+  }
+  return { name: names[0] || "", value: "" };
+}
+
+export function setCleanEnvAlias(
+  canonicalName: string,
+  aliases: string[] = []
+): { name: string; value: string } {
+  const resolved = resolveEnv([canonicalName, ...aliases]);
+  if (resolved.value) process.env[canonicalName] = resolved.value;
+  return resolved;
+}
+
 export function maskValue(value: string, visible = 8): string {
   if (!value) return "";
   if (value.length <= visible * 2) return `${value.slice(0, 3)}...`;

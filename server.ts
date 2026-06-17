@@ -172,11 +172,20 @@ import {
 } from "./server/securityMiddleware.js";
 import { gasGetUrl } from "./server/gasClient.js";
 import { resolveRequestUser } from "./server/requestUser.js";
-import { getEnv, maskValue, setCleanEnv } from "./server/env.js";
+import { getEnv, maskValue, setCleanEnv, setCleanEnvAlias } from "./server/env.js";
 
 dotenv.config();
+const GAS_ENV = setCleanEnvAlias("GAS_WEBAPP_URL", [
+  "GAS_URL",
+  "GOOGLE_APPS_SCRIPT_URL",
+  "GOOGLE_SCRIPT_URL",
+  "APPS_SCRIPT_URL",
+]);
 [
-  "GAS_WEBAPP_URL",
+  "GAS_URL",
+  "GOOGLE_APPS_SCRIPT_URL",
+  "GOOGLE_SCRIPT_URL",
+  "APPS_SCRIPT_URL",
   "SPREADSHEET_ID",
   "USERS_SHEET_GID",
   "APP_URL",
@@ -204,7 +213,7 @@ app.use(rateLimitAuth);
 app.use(express.json({ limit: "25mb" }));
 app.use(requireApiAuth);
 
-const GAS_WEBAPP_URL = getEnv("GAS_WEBAPP_URL");
+const GAS_WEBAPP_URL = GAS_ENV.value;
 const SPREADSHEET_ID = getEnv("SPREADSHEET_ID");
 const USERS_SHEET_GID = getEnv("USERS_SHEET_GID");
 const USERS_SHEET_GID_VALID =
@@ -212,11 +221,19 @@ const USERS_SHEET_GID_VALID =
 const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.NETLIFY);
 
 if (!GAS_WEBAPP_URL) {
-  console.error("CRITICAL ERROR: GAS_WEBAPP_URL is not defined in .env");
+  console.error(
+    "[Config] GAS_WEBAPP_URL is not configured. Set GAS_WEBAPP_URL to the deployed Google Apps Script /exec URL in .env or in your hosting environment."
+  );
 } else if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_WEBAPP_URL)) {
-  console.error("[Config] GAS_WEBAPP_URL does not look like a deployed Apps Script /exec URL:", GAS_WEBAPP_URL);
+  console.error(
+    `[Config] ${GAS_ENV.name} does not look like a deployed Apps Script /exec URL:`,
+    GAS_WEBAPP_URL
+  );
 } else {
-  console.log("[Config] GAS_WEBAPP_URL configured:", maskValue(GAS_WEBAPP_URL, 18));
+  console.log(
+    `[Config] GAS_WEBAPP_URL configured from ${GAS_ENV.name}:`,
+    maskValue(GAS_WEBAPP_URL, 18)
+  );
 }
 if (!getEnv("SESSION_SECRET")) {
   console.warn("[Security] SESSION_SECRET is not set — using insecure dev default. Set a 32+ char secret before production.");
@@ -318,6 +335,7 @@ app.get("/api/health/config", async (_req, res) => {
     ok: true,
     serverless: IS_SERVERLESS,
     gasConfigured: Boolean(GAS_WEBAPP_URL),
+    gasEnvName: GAS_WEBAPP_URL ? GAS_ENV.name : null,
     gasUrl: maskValue(GAS_WEBAPP_URL, 18),
     spreadsheetId: maskValue(SPREADSHEET_ID, 6),
     usersSheetGid: USERS_SHEET_GID_VALID || null,
