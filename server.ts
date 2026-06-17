@@ -1118,6 +1118,113 @@ function prepareAssetPayload(
   return mapped;
 }
 
+const ALWAYS_PRESERVE_ASSET_EDIT_FIELDS = [
+  "location",
+  "plantCode",
+  "department",
+  "make",
+  "model",
+  "serialNumber",
+  "assetCode",
+  "accountAssetCode",
+  "vendorName",
+  "warrantyStartDate",
+  "warrantyEndDate",
+  "contactName",
+  "contactEmail",
+  "contactMobile",
+  "documentUrl",
+  "imageUrl",
+  "assetName",
+  "mainCategory",
+  "subCategory",
+  "quantity",
+  "employeeId",
+  "purchaseDate",
+  "purchaseCost",
+  "invoiceNumber",
+  "condition",
+  "status",
+  "maintenanceRequired",
+  "lastMaintenanceDate",
+  "nextMaintenanceDate",
+  "createdBy",
+  "createdDate",
+  "extraItems",
+  "missingItems",
+  "assignedDate",
+  "returnDate",
+  "amcVendor",
+  "amcStartDate",
+  "amcEndDate",
+  "amcCost",
+];
+
+const TYPE_SPECIFIC_PRESERVE_ASSET_EDIT_FIELDS = [
+  "ram",
+  "ssd",
+  "cpu",
+  "windowsVersion",
+  "macAddress",
+  "ipAddress",
+  "hostName",
+  "monitorSerial",
+  "monitorAssetCode",
+  "keyboardSerial",
+  "keyboardAssetCode",
+  "mouseSerial",
+  "mouseAssetCode",
+  "upsSerial",
+  "upsAssetCode",
+  "additionalItems",
+  "assetType",
+  "assetTypeId",
+];
+
+function isBlankValue(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === "object") return Object.keys(value as Record<string, unknown>).length === 0;
+  return String(value).trim() === "";
+}
+
+function sameAssetEditShape(
+  incoming: Record<string, unknown>,
+  existing: Record<string, unknown>
+): boolean {
+  return ["mainCategory", "subCategory", "assetType", "assetTypeId"].every((key) => {
+    const next = String(incoming[key] || "").trim().toLowerCase();
+    const prev = String(existing[key] || "").trim().toLowerCase();
+    return !next || !prev || next === prev;
+  });
+}
+
+function mergeAssetEditPayload(
+  incoming: Record<string, unknown>,
+  existing?: Record<string, unknown>
+): Record<string, unknown> {
+  if (!existing) return incoming;
+  const merged = { ...incoming };
+  const preserveKeys = sameAssetEditShape(merged, existing)
+    ? [...ALWAYS_PRESERVE_ASSET_EDIT_FIELDS, ...TYPE_SPECIFIC_PRESERVE_ASSET_EDIT_FIELDS]
+    : ALWAYS_PRESERVE_ASSET_EDIT_FIELDS;
+
+  for (const key of preserveKeys) {
+    if (isBlankValue(merged[key]) && !isBlankValue(existing[key])) {
+      merged[key] = existing[key];
+    }
+  }
+
+  if (
+    sameAssetEditShape(merged, existing) &&
+    isBlankValue(merged.dynamicDetails) &&
+    !isBlankValue(existing.dynamicDetails)
+  ) {
+    merged.dynamicDetails = existing.dynamicDetails;
+  }
+
+  return merged;
+}
+
 async function persistAssetDynamicDetails(assetId: string, assetData: Record<string, unknown>) {
   const details = (assetData.dynamicDetails as Record<string, string>) || {};
   saveDetailsForAsset(assetId, details);
@@ -3018,7 +3125,8 @@ app.put("/api/assets/:id", async (req, res) => {
     const id = req.params.id;
     const assets = await getAssetsForOps();
     const existing = assets.find(a => String(a.id).replace(/^0+/, "") === String(id).replace(/^0+/, ""));
-    const assetData = prepareAssetPayload({ ...req.body, id } as Record<string, unknown>, existing);
+    const mergedInput = mergeAssetEditPayload({ ...req.body, id } as Record<string, unknown>, existing as unknown as Record<string, unknown> | undefined);
+    const assetData = prepareAssetPayload(mergedInput, existing);
     await assertAssetUnique(assetData, String(id));
 
     if (existing && existing.employeeId && assetData.employeeId && String(existing.employeeId).trim() !== "" && String(existing.employeeId).trim() !== String(assetData.employeeId).trim()) {

@@ -19,7 +19,7 @@ import {
   normAssetId,
   patchAssetsList,
 } from '../lib/optimisticAssets';
-import { buildCleanedSubmitPayload } from '../lib/submitAssetPayload';
+import { buildCleanedSubmitPayload, preserveExistingEditValues } from '../lib/submitAssetPayload';
 import { isItAdminRole } from '../lib/userPermissions';
 import {
   ASSETS_CACHE_KEY,
@@ -440,7 +440,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleSubmit = useCallback(
     async (formData: AssetFormData, editingAsset: Asset | null) => {
-      const cleanedData = buildCleanedSubmitPayload(formData);
+      const inputData = editingAsset
+        ? preserveExistingEditValues(formData, editingAsset)
+        : formData;
+      const cleanedData = buildCleanedSubmitPayload(inputData);
       const previousSnapshot = [...assetsRef.current];
 
       const optimistic = formDataToOptimisticAsset(
