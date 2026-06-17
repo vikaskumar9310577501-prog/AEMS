@@ -503,6 +503,9 @@ function doPost(e) {
     if (action === "list_users" || action === "get_users" || action === "read_users") {
       return json_(listUsersFromSheet_());
     }
+    if (action === "list_employees" || action === "get_employees" || action === "read_employees") {
+      return json_({ success: true, employees: listEmployees_() });
+    }
     if (action === "setup") {
       setupSheets();
       return json_({ success: true, message: "Sheets setup complete" });

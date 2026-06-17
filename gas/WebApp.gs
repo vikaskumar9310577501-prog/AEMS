@@ -576,6 +576,7 @@ function doPost(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (action === "list_users" || action === "get_users" || action === "read_users") return json_(listUsersFromSheet_());
+    if (action === "list_employees" || action === "get_employees" || action === "read_employees") return json_({ success: true, employees: listEmployees_() });
     if (action === "read_all_assets") return json_(readAllAssetsForApi_());
     if (action === "setup") {
       var setupMsg = setupSheets();

@@ -11,6 +11,7 @@ import {
   updateEmployeeInGoogleSheet,
 } from "./employeesSheet.js";
 import { getEnv } from "./env.js";
+import { gasGet } from "./gasClient.js";
 
 function normalizePhoneForStorage(phone: string): string {
   return String(phone || "").replace(/\D/g, "").slice(0, 10);
@@ -185,6 +186,21 @@ export async function fetchEmployeesFromGas(
   const gasUrl = getEnv("GAS_WEBAPP_URL");
   if (gasUrl) {
     try {
+      const result = (await gasGet(gasUrl, { action: "list_employees" }, 20000)) as {
+        employees?: Employee[];
+        error?: string;
+      };
+      if (result?.employees && Array.isArray(result.employees)) {
+        const merged = mergeEmployeesById(readEmployees(), result.employees);
+        writeEmployees(merged);
+        if (spreadsheetId) touchCacheSpreadsheetId(spreadsheetId);
+        return merged;
+      }
+    } catch (e) {
+      console.warn("fetchEmployeesFromGas GET:", e);
+    }
+
+    try {
       const result = (await proxyToGas({ action: "list_employees" })) as {
         employees?: Employee[];
         error?: string;
@@ -196,7 +212,7 @@ export async function fetchEmployeesFromGas(
         return merged;
       }
     } catch (e) {
-      console.warn("fetchEmployeesFromGas:", e);
+      console.warn("fetchEmployeesFromGas POST:", e);
     }
   }
 
@@ -242,6 +258,11 @@ export async function persistEmployeeToGas(
       gasError = e instanceof Error ? e.message : "GAS failed";
       console.warn(`Employee ${op} via GAS failed:`, gasError);
     }
+
+    return {
+      ok: false,
+      error: gasError || "Database sync failed",
+    };
   }
 
   if (spreadsheetId) {
