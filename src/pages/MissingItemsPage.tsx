@@ -135,6 +135,15 @@ export default function MissingItemsPage() {
     });
   };
 
+  const openMissingParentAsset = (record: MissingItemRecord) => {
+    const parentAsset = findAssetByAnyId(assets, record['Parent Asset ID']);
+    if (parentAsset) {
+      navigate(`/assets/${assetRouteId(parentAsset)}`);
+    } else if (record['Parent Asset ID']) {
+      navigate(`/assets/${encodeURIComponent(record['Parent Asset ID'])}`);
+    }
+  };
+
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
@@ -208,7 +217,16 @@ export default function MissingItemsPage() {
             {filtered.map((it) => (
               <div
                 key={it['Record ID']}
-                className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all"
+                role="button"
+                tabIndex={0}
+                onClick={() => openMissingParentAsset(it)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openMissingParentAsset(it);
+                  }
+                }}
+                className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-black text-slate-900">{it['Missing Item Name']}</p>
@@ -229,14 +247,15 @@ export default function MissingItemsPage() {
                 <p className="text-[10px] font-mono text-slate-400 mt-1">{it['Missing Date']?.slice(0, 10) || '—'}</p>
                 <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-100">
                   {it.Status === 'Missing' && (
-                    <button type="button" onClick={() => markRecovered(it)} className="text-xs font-black text-emerald-700">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); markRecovered(it); }} className="text-xs font-black text-emerald-700">
                       Mark recovered
                     </button>
                   )}
                   {it.Status === 'Recovered' && (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedItemForReassign(it);
                         setReassignModalOpen(true);
                       }}
@@ -246,7 +265,7 @@ export default function MissingItemsPage() {
                     </button>
                   )}
                   {user?.email && (
-                    <button type="button" onClick={() => deleteRecord(it)} className="text-xs font-black text-red-600">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); deleteRecord(it); }} className="text-xs font-black text-red-600">
                       Delete
                     </button>
                   )}

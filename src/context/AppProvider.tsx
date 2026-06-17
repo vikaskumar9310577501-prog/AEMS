@@ -64,6 +64,10 @@ interface AppContextValue {
   visibleCategories: string[];
   fetchAssets: (opts?: { silent?: boolean; force?: boolean }) => Promise<void>;
   handleSubmit: (formData: AssetFormData, editingAsset: Asset | null) => Promise<void>;
+  deassignAsset: (
+    asset: Asset,
+    opts?: { remarks?: string; updatedBy?: string }
+  ) => Promise<Asset>;
   executeDelete: (id: number | string) => Promise<void>;
   handleLogout: () => void;
   loginSuccess: (user: AppSessionUser) => void;
@@ -502,6 +506,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [fetchAssets, persistAssets]
   );
 
+  const deassignAsset = useCallback(
+    async (asset: Asset, opts?: { remarks?: string; updatedBy?: string }): Promise<Asset> => {
+      const assetId = asset.id ?? asset.assetCode ?? asset.uniqueCode;
+      if (assetId == null || String(assetId).trim() === '') {
+        throw new Error('Asset ID is required');
+      }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || ''}/api/assets/${encodeURIComponent(String(assetId))}/deassign`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            updatedBy: opts?.updatedBy || user?.email || user?.role || 'System',
+            remarks: opts?.remarks || 'Asset returned / deassigned',
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || 'Failed to deassign asset');
+      }
+
+      const saved = (data as { asset?: Record<string, unknown> }).asset
+        ? mapAssetsFromApi([(data as { asset: Record<string, unknown> }).asset])[0]
+        : null;
+
+      if (saved) {
+        persistAssets(patchAssetsList(assetsRef.current, saved, asset));
+        void fetchAssets({ silent: true, force: true }).catch(() => {});
+        return saved;
+      }
+
+      await fetchAssets({ silent: true, force: true });
+      const current = assetsRef.current.find((a) => normAssetId(a.id) === normAssetId(assetId));
+      return current || asset;
+    },
+    [fetchAssets, persistAssets, user?.email, user?.role]
+  );
+
   const executeDelete = useCallback(
     (id: number | string): Promise<void> => {
       if (!user) return Promise.reject(new Error('Not authenticated'));
@@ -548,6 +593,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       visibleCategories,
       fetchAssets,
       handleSubmit,
+      deassignAsset,
       executeDelete,
       handleLogout,
       loginSuccess,
@@ -561,6 +607,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       visibleCategories,
       fetchAssets,
       handleSubmit,
+      deassignAsset,
       executeDelete,
       handleLogout,
       loginSuccess,

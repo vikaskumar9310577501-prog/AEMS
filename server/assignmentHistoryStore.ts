@@ -55,7 +55,7 @@ export function getHistoryByAssetId(assetId: string): AssignmentHistoryEntry[] {
   const aid = normalizeAssetId(assetId);
   return readAssignmentHistory()
     .filter((h) => normalizeAssetId(h.assetId) === aid)
-    .sort((a, b) => String(b.assignedDate).localeCompare(String(a.assignedDate)));
+    .sort((a, b) => String(b.returnedDate || b.assignedDate).localeCompare(String(a.returnedDate || a.assignedDate)));
 }
 
 export function getHistoryByEmployeeId(employeeId: string): AssignmentHistoryEntry[] {
@@ -66,7 +66,7 @@ export function getHistoryByEmployeeId(employeeId: string): AssignmentHistoryEnt
         normalizeEmployeeId(h.employeeId) === eid ||
         normalizeEmployeeId(h.fromEmployeeId || "") === eid
     )
-    .sort((a, b) => String(b.assignedDate).localeCompare(String(a.assignedDate)));
+    .sort((a, b) => String(b.returnedDate || b.assignedDate).localeCompare(String(a.returnedDate || a.assignedDate)));
 }
 
 export interface AssigneeSnapshot {
@@ -246,11 +246,40 @@ export async function fetchHistoryFromGas(
 
 /** Map sheet fields to UI shape (contactName, next/previous snapshots). */
 export function normalizeHistoryForUi(entries: AssignmentHistoryEntry[]) {
+  const byAsset = new Map<string, AssignmentHistoryEntry[]>();
+  for (const entry of entries) {
+    const key = normalizeAssetId(entry.assetId);
+    const list = byAsset.get(key) || [];
+    list.push(entry);
+    byAsset.set(key, list);
+  }
+  for (const list of byAsset.values()) {
+    list.sort((a, b) => String(a.assignedDate).localeCompare(String(b.assignedDate)));
+  }
+
+  const inferAssignmentStart = (h: AssignmentHistoryEntry): string => {
+    if (h.action !== "Return") return h.assignedDate || "";
+    const assetEntries = byAsset.get(normalizeAssetId(h.assetId)) || [];
+    const idx = assetEntries.findIndex((entry) => String(entry.id || "") === String(h.id || ""));
+    const before = (idx >= 0 ? assetEntries.slice(0, idx) : assetEntries).reverse();
+    const employeeId = normalizeEmployeeId(h.employeeId || "");
+    const match = before.find((entry) => {
+      if (entry.action === "Return") return false;
+      const sameEmployee = employeeId
+        ? normalizeEmployeeId(entry.employeeId || "") === employeeId
+        : String(entry.employeeName || "").trim().toLowerCase() === String(h.employeeName || "").trim().toLowerCase();
+      return sameEmployee && !!String(entry.assignedDate || "").trim();
+    });
+    return match?.assignedDate || h.assignedDate || "";
+  };
+
   return entries.map((h) => {
     const action = h.action || "Assign";
+    const assignmentStart = inferAssignmentStart(h);
     const base = {
       ...h,
-      date: h.assignedDate || "",
+      date: h.returnedDate || h.assignedDate || "",
+      assignmentStartDate: assignmentStart || h.assignedDate || "",
       contactName: h.employeeName || "",
     };
     if (action === "Transfer") {

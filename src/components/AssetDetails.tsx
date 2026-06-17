@@ -1,5 +1,5 @@
-import { X, Cpu, Monitor, ShieldCheck, User, Info, Edit2, Trash2, Settings, Link as LinkIcon, ExternalLink, ChevronDown, History } from "lucide-react";
-import { Asset, AssetFormData } from "../types";
+import { X, Cpu, Monitor, ShieldCheck, User, Info, Edit2, Trash2, Settings, Link as LinkIcon, ExternalLink, ChevronDown, History, RotateCcw } from "lucide-react";
+import { Asset, type AssetFormData } from "../types";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
@@ -36,17 +36,18 @@ export default function AssetDetails({
   const scanUrl = buildScanUrl(asset);
   const isPage = layout === "page";
 
-  const { handleSubmit } = useApp();
+  const { handleSubmit, deassignAsset, fetchAssets, user } = useApp();
   const { employees } = useEmployees({ autoLoad: true });
   
   const [showDropdown, setShowDropdown] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [deassigning, setDeassigning] = useState(false);
 
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  useEffect(() => {
+  const loadHistory = useCallback(() => {
     if (!asset.id) return;
     setHistoryLoading(true);
     fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/assets/${encodeURIComponent(asset.id)}/history`)
@@ -57,6 +58,35 @@ export default function AssetDetails({
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
   }, [asset.id]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const isAssignedAsset = !!(
+    asset.employeeId?.trim() ||
+    asset.contactName?.trim() ||
+    asset.contactEmail?.trim()
+  );
+
+  const currentHolderSince = useMemo(() => {
+    if (!isAssignedAsset) return "";
+    const active = history.find((ev) => ev.action === "Assign" || ev.action === "Transfer");
+    return asset.assignedDate || active?.assignedDate || active?.date || "";
+  }, [asset.assignedDate, history, isAssignedAsset]);
+
+  const durationBetween = useCallback((start?: string, end?: string) => {
+    const startTime = Date.parse(String(start || ""));
+    if (Number.isNaN(startTime)) return "";
+    const endTime = end ? Date.parse(end) : Date.now();
+    if (Number.isNaN(endTime)) return "";
+    const days = Math.max(0, Math.ceil((endTime - startTime) / (24 * 60 * 60 * 1000)));
+    if (days <= 1) return "1 day";
+    if (days < 30) return `${days} days`;
+    const months = Math.floor(days / 30);
+    const remDays = days % 30;
+    return remDays ? `${months} mo ${remDays} days` : `${months} mo`;
+  }, []);
 
   const displayAssignedDate = useMemo(() => {
     if (asset.assignedDate?.trim()) return asset.assignedDate;
@@ -79,23 +109,21 @@ export default function AssetDetails({
     (asset.status?.toLowerCase() === "available" && !!asset.employeeId);
 
   const handleDeassign = async () => {
-    if (window.confirm("Are you sure you want to deassign this asset and set it to available?")) {
-      const updatedAssetFormData: AssetFormData = {
-        ...asset,
-        employeeId: "",
-        contactName: "",
-        contactEmail: "",
-        contactMobile: "",
-        department: "",
-        status: "Available",
-      };
-
-      try {
-        await handleSubmit(updatedAssetFormData, asset);
-        if (onClose) onClose();
-      } catch (err) {
-        // Handled by handleSubmit
-      }
+    if (!isAssignedAsset || deassigning) return;
+    if (!window.confirm("Deassign this asset from the current employee and mark it available?")) return;
+    setDeassigning(true);
+    try {
+      await deassignAsset(asset, {
+        updatedBy: user?.email || user?.role || "System",
+        remarks: "Asset returned / deassigned from asset detail",
+      });
+      toast.success("Asset deassigned");
+      await fetchAssets({ silent: true, force: true });
+      loadHistory();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to deassign asset");
+    } finally {
+      setDeassigning(false);
     }
   };
 
@@ -279,6 +307,20 @@ export default function AssetDetails({
               )}
             </div>
           )}
+          {isAssignedAsset && !isMissingOrDamaged && role !== "User" && (
+            <button
+              type="button"
+              onClick={() => void handleDeassign()}
+              disabled={deassigning}
+              className="p-2 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+              title="Deassign asset"
+            >
+              <RotateCcw size={18} />
+              <span className="text-[10px] font-black uppercase">
+                {deassigning ? "Returning" : "Deassign"}
+              </span>
+            </button>
+          )}
         </div>
         <button
           type="button"
@@ -458,6 +500,9 @@ export default function AssetDetails({
         <Section title="User Assignment" icon={User}>
           <Field label="Assignee Full Name" value={asset.contactName} color="text-slate-900" />
           <Field label="Assigned Date" value={displayAssignedDate} color="text-slate-900" />
+          {isAssignedAsset && currentHolderSince && (
+            <Field label="Current Duration" value={durationBetween(currentHolderSince)} color="text-blue-700" />
+          )}
           <div>
             <Field label="Employee ID" value={asset.employeeId || "—"} />
             {asset.employeeId?.trim() && isPage && (
@@ -472,6 +517,18 @@ export default function AssetDetails({
           </div>
           <Field label="Email Address" value={asset.contactEmail} />
           <Field label="Mobile Number" value={asset.contactMobile} />
+          {isAssignedAsset && role !== "User" && (
+            <div className="sm:col-span-2 pt-2">
+              <button
+                type="button"
+                onClick={() => void handleDeassign()}
+                disabled={deassigning}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black uppercase text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+              >
+                <RotateCcw size={14} /> {deassigning ? "Deassigning..." : "Deassign from employee"}
+              </button>
+            </div>
+          )}
         </Section>
       )}
 
@@ -494,6 +551,10 @@ export default function AssetDetails({
                 </p>
                 <p className="text-sm font-bold text-slate-800">
                   {ev.action || 'Assign'}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                  Duration: {durationBetween(ev.assignmentStartDate || ev.assignedDate || ev.date, ev.returnedDate) || '—'}
+                  {!ev.returnedDate && ev.action !== 'Return' ? ' so far' : ''}
                 </p>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium flex flex-wrap items-center gap-1">
                   {ev.action === 'Return' ? (

@@ -163,14 +163,44 @@ function sameEditShape(next: AssetFormData, existing: AssetFormData): boolean {
 export function preserveExistingEditValues(formData: AssetFormData, existingAsset: Asset): AssetFormData {
   const existing = assetToFormData(existingAsset);
   const next: AssetFormData = { ...formData };
+  const hadAssignee =
+    !isBlank(existing.employeeId) ||
+    !isBlank(existing.contactName) ||
+    !isBlank(existing.contactEmail) ||
+    !isBlank(existing.contactMobile);
+  const clearedAssignee =
+    hadAssignee &&
+    isBlank(next.employeeId) &&
+    isBlank(next.contactName) &&
+    isBlank(next.contactEmail) &&
+    isBlank(next.contactMobile);
   const preserveKeys = sameEditShape(next, existing)
     ? [...ALWAYS_PRESERVE_ON_EDIT, ...TYPE_SPECIFIC_PRESERVE_ON_EDIT]
     : ALWAYS_PRESERVE_ON_EDIT;
 
   for (const key of preserveKeys) {
+    if (
+      clearedAssignee &&
+      (key === 'employeeId' ||
+        key === 'contactName' ||
+        key === 'contactEmail' ||
+        key === 'contactMobile' ||
+        key === 'assignedDate')
+    ) {
+      continue;
+    }
     if (isBlank(next[key]) && !isBlank(existing[key])) {
       (next as Record<string, unknown>)[key] = existing[key] as unknown;
     }
+  }
+
+  if (clearedAssignee) {
+    next.employeeId = '';
+    next.contactName = '';
+    next.contactEmail = '';
+    next.contactMobile = '';
+    next.assignedDate = '';
+    next.status = 'Available';
   }
 
   if (

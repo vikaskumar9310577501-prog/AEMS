@@ -1,20 +1,5 @@
 {
-  "users": [
-    {
-      "email": "software.2040@pgel.in",
-      "role": "IT Admin",
-      "locations": [
-        "All"
-      ],
-      "plants": [
-        "All"
-      ],
-      "categories": [
-        "All"
-      ],
-      "allowDelete": false
-    }
-  ],
+  "users": [],
   "settings": {
     "locations": [
       "BHIWADI"
@@ -98,25 +83,25 @@
         "Dell": [
           "Latitude 5420",
           "Latitude 5430",
-          "Latitude 5440",
           "OptiPlex 7090",
-          "OptiPlex 7010",
           "Precision 3560",
+          "Latitude 5440",
+          "OptiPlex 7010",
           "PowerEdge R740"
         ],
         "HP": [
           "EliteBook 840 G8",
-          "EliteBook 850 G9",
           "ProBook 450 G9",
           "ProDesk 400 G9",
+          "EliteBook 850 G9",
           "ZBook Firefly 14",
           "LaserJet Pro M404"
         ],
         "Lenovo": [
           "ThinkPad T14",
           "ThinkPad E14",
-          "ThinkPad L14",
           "ThinkCentre M70q",
+          "ThinkPad L14",
           "IdeaPad Slim 5",
           "Legion 5"
         ],
@@ -138,14 +123,10 @@
           "Predator Helios",
           "Veriton X"
         ],
-        "Microsoft": [
-          "Surface Laptop 5",
-          "Surface Pro 9"
-        ],
         "Cisco": [
           "Catalyst 2960",
-          "ISR 4331",
           "Meraki MR46",
+          "ISR 4331",
           "ASA 5506"
         ],
         "Fortinet": [
@@ -160,605 +141,43 @@
           "M185 Mouse"
         ],
         "Samsung": [
-          "Galaxy Tab S9",
           "27\" UR55 Monitor",
-          "990 Pro SSD"
+          "990 Pro SSD",
+          "Galaxy Tab S9"
         ],
         "LG": [
           "24MP88 Monitor",
+          "Gram 16",
           "Gram 16 Laptop",
           "27UL850 Monitor"
         ],
         "Epson": [
           "L3250 Printer",
-          "L6290 Printer",
-          "DS-530 Scanner"
+          "DS-530 Scanner",
+          "L6290 Printer"
         ],
         "Canon": [
           "LBP6030 Printer",
-          "imageCLASS MF301",
-          "CanoScan LiDE"
+          "CanoScan LiDE",
+          "imageCLASS MF301"
+        ],
+        "Microsoft": [
+          "Surface Laptop 5",
+          "Surface Pro 9"
         ]
-      },
-      "brandsByType": {
-        "Laptop": {
-          "Dell": [
-            "Latitude 5420",
-            "Latitude 5430",
-            "Latitude 5440",
-            "Precision 3560",
-            "XPS 13",
-            "Latitude 3450"
-          ],
-          "HP": [
-            "EliteBook 840 G8",
-            "EliteBook 850 G9",
-            "ProBook 450 G9",
-            "ZBook Firefly 14",
-            "THINKPAD"
-          ],
-          "Lenovo": [
-            "ThinkPad T14",
-            "ThinkPad E14",
-            "ThinkPad L14",
-            "ThinkPad X1 Carbon",
-            "IdeaPad Slim 5"
-          ],
-          "Apple": [
-            "MacBook Air M2",
-            "MacBook Air M3",
-            "MacBook Pro 14",
-            "MacBook Pro 16",
-            "speed"
-          ],
-          "Asus": [
-            "VivoBook 15",
-            "ZenBook 14",
-            "ExpertBook B1"
-          ],
-          "Acer": [
-            "Aspire 5",
-            "TravelMate P2",
-            "Swift 3"
-          ],
-          "Microsoft": [
-            "Surface Laptop 5",
-            "Surface Laptop Go 3"
-          ],
-          "Zebronics": [
-            "Zx11"
-          ],
-          "msi": [
-            "ms845959"
-          ],
-          "EXPIRA": [
-            "XS"
-          ]
-        },
-        "Desktop": {
-          "Dell": [
-            "OptiPlex 7090",
-            "OptiPlex 7010",
-            "Precision 3660",
-            "Vostro 3030",
-            "latitude 3450"
-          ],
-          "HP": [
-            "ProDesk 400 G9",
-            "EliteDesk 800 G9",
-            "Pavilion Desktop"
-          ],
-          "Lenovo": [
-            "ThinkCentre M70q",
-            "ThinkCentre M90q",
-            "IdeaCentre 3"
-          ],
-          "Asus": [
-            "ExpertCenter D5",
-            "ROG Strix GT"
-          ],
-          "Acer": [
-            "Veriton X",
-            "Aspire TC"
-          ]
-        },
-        "Monitor": {
-          "Lenovo": [
-            "ThinkVision T24",
-            "ThinkVision T27",
-            "ThinkVision P27h"
-          ],
-          "Dell": [
-            "P2422H",
-            "U2722D",
-            "E2423H"
-          ],
-          "HP": [
-            "E24 G5",
-            "Z24f G3",
-            "M27f"
-          ],
-          "LG": [
-            "24MP88",
-            "27UL850",
-            "27GN800"
-          ],
-          "Samsung": [
-            "S24R350",
-            "27\" UR55",
-            "Odyssey G5"
-          ],
-          "BenQ": [
-            "GW2480",
-            "PD2700Q"
-          ],
-          "Acer": [
-            "KA242Y",
-            "CB242Y"
-          ]
-        },
-        "Keyboard": {
-          "Dell": [
-            "KB216",
-            "KM5221W",
-            "KB522"
-          ],
-          "Logitech": [
-            "K380",
-            "K120",
-            "MX Keys",
-            "MK270"
-          ],
-          "HP": [
-            "225 USB Keyboard",
-            "350 Compact"
-          ],
-          "Lenovo": [
-            "ThinkPad TrackPoint Keyboard",
-            "Go Wireless"
-          ],
-          "Zebronics": [
-            "Zeb-KM2100",
-            "Zeb-Companion 2"
-          ]
-        },
-        "Mouse": {
-          "Dell": [
-            "MS116",
-            "WM126",
-            "MS5320W"
-          ],
-          "Logitech": [
-            "M185",
-            "M331",
-            "MX Master 3",
-            "M650"
-          ],
-          "HP": [
-            "FM710A",
-            "X500",
-            "280 Silent"
-          ],
-          "Lenovo": [
-            "Go Wireless",
-            "ThinkPad USB-C"
-          ],
-          "Zebronics": [
-            "Zeb-Blaze",
-            "Zeb-Jaguar"
-          ]
-        },
-        "UPS": {
-          "Microtek": [
-            "Legend 650",
-            "Legend 1000",
-            "Energy Save 1500"
-          ],
-          "APC": [
-            "Back-UPS 600",
-            "Back-UPS 1100",
-            "Smart-UPS 1500"
-          ],
-          "Emerson": [
-            "Liebert GXT4",
-            "Liebert PSI"
-          ],
-          "Eaton": [
-            "5E 650i",
-            "5E 1100i"
-          ],
-          "Luminous": [
-            "Pro 600",
-            "Zelio 1100"
-          ]
-        },
-        "Printer": {
-          "HP": [
-            "Smart Tank 580",
-            "Smart Tank 589",
-            "LaserJet Pro M404",
-            "M126nw"
-          ],
-          "Canon": [
-            "LBP6030",
-            "imageCLASS MF301",
-            "PIXMA G3730"
-          ],
-          "Epson": [
-            "L3250",
-            "L6290",
-            "DS-530"
-          ],
-          "Brother": [
-            "DCP-L2520D",
-            "HL-L2351DW"
-          ],
-          "hp": []
-        },
-        "QR Scanner": {
-          "Tera": [
-            "HW0002",
-            "HW0008",
-            "D5100"
-          ],
-          "Zebra": [
-            "DS2208",
-            "LI4278",
-            "DS8108"
-          ],
-          "Honeywell": [
-            "1900GHD",
-            "1470G"
-          ],
-          "Datalogic": [
-            "QuickScan QD2430",
-            "Gryphon GD4500"
-          ]
-        },
-        "Network Switch": {
-          "TP-Link": [
-            "TL-SG108E",
-            "TL-SG116E",
-            "TL-SG1024DE"
-          ],
-          "Cisco": [
-            "Catalyst 2960",
-            "CBS350-8T"
-          ],
-          "D-Link": [
-            "DGS-108",
-            "DGS-1210-08"
-          ],
-          "Netgear": [
-            "GS108",
-            "GS308"
-          ],
-          "HPE": [
-            "Aruba 1930 8G",
-            "OfficeConnect 1820"
-          ]
-        },
-        "Camera": {
-          "Hikvision": [
-            "DS-2CD1023G0",
-            "DS-2CD2043G2"
-          ],
-          "CP Plus": [
-            "CP-PLUS Dome",
-            "CP-PLUS Bullet"
-          ],
-          "Dahua": [
-            "DH-IPC-HFW1230S",
-            "DH-IPC-HDBW1230E"
-          ],
-          "TP-Link VIGI": [
-            "C400",
-            "C200",
-            "C500"
-          ],
-          "cisco": [
-            "876543234567"
-          ]
-        },
-        "NVR": {
-          "TP-Link VIGI": [
-            "NVR1008H",
-            "NVR1016H"
-          ],
-          "Hikvision": [
-            "DS-7104NI",
-            "DS-7604NI"
-          ],
-          "Dahua": [
-            "NVR4104",
-            "NVR4216"
-          ],
-          "CP Plus": [
-            "CP-UVR-0401E1",
-            "CP-UVR-0801E1",
-            "dfbje"
-          ],
-          "sfbjre": []
-        },
-        "Network Rack": {
-          "Netrack": [
-            "9U Wall Mount",
-            "15U Floor",
-            "42U Server Rack"
-          ],
-          "APW": [
-            "6U Wall",
-            "12U Floor"
-          ],
-          "Rittal": [
-            "TS IT 19\"",
-            "AX Compact"
-          ]
-        },
-        "Laptop Kit": {
-          "Dell": [
-            "Latitude Kit",
-            "Mobile Workstation Kit"
-          ],
-          "HP": [
-            "EliteBook Kit",
-            "ProBook Kit"
-          ],
-          "Lenovo": [
-            "ThinkPad Kit",
-            "Travel Kit"
-          ]
-        },
-        "Attendance Machine": {
-          "ZKTeco": [
-            "K40 Pro",
-            "iClock 680",
-            "MB360"
-          ],
-          "eSSL": [
-            "K21 Pro",
-            "F18",
-            "X990"
-          ],
-          "Realtime": [
-            "T502",
-            "RS20"
-          ],
-          "Hikvision": [
-            "DS-K1T671M",
-            "DS-K1T804A"
-          ]
-        },
-        "External HDD": {
-          "Seagate": [
-            "Backup Plus 1TB",
-            "Expansion 2TB",
-            "Portable 4TB"
-          ],
-          "Western Digital": [
-            "My Passport 1TB",
-            "Elements 2TB"
-          ],
-          "Toshiba": [
-            "Canvio Basics 1TB",
-            "Canvio Advance 2TB"
-          ],
-          "Samsung": [
-            "T7 Shield 1TB",
-            "T7 2TB"
-          ]
-        },
-        "Access Point": {
-          "TP-Link": [
-            "EAP225",
-            "EAP245",
-            "Archer AX23"
-          ],
-          "Cisco": [
-            "Meraki MR36",
-            "Catalyst 9120"
-          ],
-          "Ubiquiti": [
-            "UniFi AP AC Lite",
-            "UniFi 6 Lite"
-          ],
-          "D-Link": [
-            "DAP-2610",
-            "DAP-1860"
-          ],
-          "Aruba": [
-            "AP-505",
-            "Instant On AP22"
-          ]
-        },
-        "Firewall": {
-          "Fortinet": [
-            "FortiGate 60F",
-            "FortiGate 100F",
-            "FortiGate 200F"
-          ],
-          "Cisco": [
-            "ASA 5506",
-            "Firepower 1010"
-          ],
-          "SonicWall": [
-            "TZ270",
-            "TZ470"
-          ],
-          "pfSense": [
-            "SG-1100",
-            "Netgate 4100"
-          ],
-          "WatchGuard": [
-            "T20",
-            "T40"
-          ]
-        },
-        "Network Controller": {
-          "Cisco": [
-            "3504 WLC",
-            "9800-CL",
-            "Catalyst 9800-L"
-          ],
-          "Aruba": [
-            "7005",
-            "9012"
-          ],
-          "TP-Link Omada": [
-            "OC200",
-            "OC300"
-          ],
-          "Ruckus": [
-            "R350",
-            "SmartZone 100"
-          ]
-        },
-        "Screwdriver Set": {
-          "BOSCH": [
-            "B-TL5256"
-          ]
-        },
-        "Pneumatic Screw Gun": {
-          "6SLD-Japan": [
-            "Screwing6S"
-          ]
-        },
-        "Antivirus License": {
-          "jdjfj": [
-            "efjre"
-          ]
-        },
-        "Table": {
-          "woodIndia": [
-            "wdtb_79652"
-          ]
-        },
-        "Team": {
-          "SQL": [
-            "wew"
-          ]
-        },
-        "Adapter": {
-          "hh": [
-            "852"
-          ]
-        },
-        "Windows License": {
-          "micro soft": []
-        },
-        "SQL": {
-          "MICROSOFT": []
-        },
-        "Multimeter": {
-          "BOSCH": []
-        },
-        "AC": {
-          "BLUE STAR": [
-            "INBL-8765678",
-            "BLIN-987654567"
-          ]
-        },
-        "IT Assets": {
-          "Laptop": [
-            "msi"
-          ]
-        },
-        "Office Assets": {
-          "Laptop": [
-            "BLUE STAR"
-          ]
-        },
-        "Drill Machine": {
-          "bosch": [
-            "VXI"
-          ]
-        },
-        "Welding Machine": {
-          "bosch": [
-            "mx32",
-            "MIG (GMAW)"
-          ]
-        },
-        "Exhaust Fan": {
-          "HAVELLS": [
-            "HS-87656789"
-          ]
-        },
-        "Safety Helmet": {
-          "KARAM": [
-            "PN521",
-            "PN3458"
-          ]
-        },
-        "Meeting Table": {
-          "WOOD INDIA": []
-        },
-        "car": {
-          "MAHINDRA": [
-            "XUV 300"
-          ]
-        },
-        "Clamp Meter": {
-          "FLUKE": [
-            "17B MAX Digital Multimeter"
-          ]
-        },
-        "Visitor Chair": {
-          "WOODLAND": [
-            "OFI-UYT78998"
-          ]
-        },
-        "table": {
-          "WOOD LAND": [
-            "MEETING-TANLE"
-          ]
-        }
       },
       "vendors": [
         "BLUE STAR",
         "DAKSh",
+        "Dell India",
+        "HCL Infosystems",
+        "HP Enterprise",
+        "Ingram Micro",
+        "Lenovo India",
+        "Redington",
         "microsoft",
         "woodIndia"
       ],
-      "vendorsByCategory": {
-        "IT Assets": [
-          "BLUE STAR",
-          "DAKSh",
-          "microsoft",
-          "woodIndia"
-        ],
-        "Office Assets": [
-          "BLUE STAR",
-          "WOODLAND"
-        ],
-        "msi ms845959": [
-          "Daksh"
-        ],
-        "Air Conditioner": [
-          "BLUESTAR"
-        ],
-        "Production Assets": [
-          "Himanshu yadav"
-        ],
-        "Electrical Assets": [
-          "HAVELLS"
-        ],
-        "Safety Assets": [
-          "KARAM PVT LTD"
-        ],
-        "Vehicle Assets": [
-          "SPINNY"
-        ],
-        "Software / License Assets": [
-          "MICROSOFTWARE"
-        ],
-        "Maintenance Assets": [
-          "FLUKE"
-        ],
-        "Furniture Assets": [
-          "WOODLAND"
-        ]
-      },
       "departments": [
         "Admin",
         "Engineering",
@@ -772,178 +191,7 @@
         "Sales",
         "Security",
         "Store"
-      ],
-      "ram": [],
-      "ssd": [],
-      "cpu": [],
-      "windowsVersion": [],
-      "subCategories": {
-        "Vehicle Assets": [
-          "car"
-        ],
-        "Production Assets": [],
-        "Software / License Assets": [
-          "Team",
-          "SQL"
-        ],
-        "Office Assets": [
-          "table"
-        ],
-        "Maintenance Assets": [],
-        "Admin / Facility Assets": [],
-        "Furniture Assets": [],
-        "Safety Assets": [],
-        "Electrical Assets": []
-      },
-      "missingItemTypes": [],
-      "missingItemNames": [
-        "Access Point",
-        "Attendance Machine",
-        "Camera"
-      ],
-      "subCategoryImages": {
-        "Antivirus License": "https://drive.google.com/file/d/1mCfTlRwNQPVLVKOAP_R38KL7jbK7uwUU/preview",
-        "Clamp Meter": "https://drive.google.com/file/d/12RYrOjibxFNbIP8eWhRMKD637jLtw-fb/preview",
-        "Cutting Machine": "https://drive.google.com/file/d/1StUZU9TWPVA2Y5BchwNmp_16mn40NoJU/preview",
-        "Grease Gun": "https://drive.google.com/file/d/1H21AphpaYiGQzhbbElsgaQbfslbrzKK7/preview",
-        "Attendance Machine": "https://drive.google.com/file/d/109HuAt2uAI_96hrK2YVovjbSTrebzz4M/preview",
-        "Projector": "https://drive.google.com/file/d/151tnPW0BXjWhenZyaAEiJDbV5QN1ZEEu/preview",
-        "Speaker": "https://drive.google.com/file/d/1SPPkdno_Dc_mard5Qif7Njs6owUi9iwI/preview",
-        "SQL": "https://drive.google.com/file/d/1H2YdlHH2KvB69RxwNye9E3TioNGKbfNA/preview",
-        "Team": "https://drive.google.com/file/d/1Pom9zMoZRm0PeWwvNoCV35y7mp7EmQls/preview",
-        "Locker": "https://drive.google.com/file/d/1flEAaZQPrNDJVWj0LsrJcX-Of1J0cxXh/preview",
-        "Meeting Table": "https://drive.google.com/file/d/1QUZ27Plp4vG3k4mWpzqvbvkpNwrJ5vpj/preview",
-        "Visitor Chair": "https://drive.google.com/file/d/1IDDNo0i5-RsWhM5YBe5HJkARzAUYbv6t/preview",
-        "car": "https://drive.google.com/file/d/1WaEQ4QP2VtmNt8-qBDBMIeW5vlBWMT8h/preview",
-        "First Aid Box": "https://drive.google.com/file/d/1TYVB2cQmoFm0jYTUOnCOg0n00NlYbKP7/preview",
-        "Gloves": "https://drive.google.com/file/d/1l0zFxgqJL7zyuQ1z4C631z_huQVrq7Px/preview",
-        "Safety Helmet": "https://drive.google.com/file/d/16h2V0ZkKEylbRsoFvZ1QZY7DJYNhWfkm/preview",
-        "Fire Extinguisher": "https://drive.google.com/file/d/1rBrzr1BYjJW7RSg5jSf8wGpPCfWF1jfa/preview",
-        "Welding Machine": "https://drive.google.com/file/d/16rDN52iC9gAXztChqMm0RBucOgUbJ2DS/preview",
-        "Exhaust Fan": "https://drive.google.com/file/d/1uAXw0JzP78L2fiDTzlBu6CHORqC1kb8Z/preview",
-        "AC": "https://drive.google.com/file/d/1VFJjEXgU_PqYVXhvDwZIp8mCouA_rKfV/preview"
-      },
-      "softwareSubCategoryImages": {
-        "Antivirus License": "https://drive.google.com/file/d/1mCfTlRwNQPVLVKOAP_R38KL7jbK7uwUU/preview",
-        "SQL": "https://drive.google.com/file/d/1H2YdlHH2KvB69RxwNye9E3TioNGKbfNA/preview",
-        "Team": "https://drive.google.com/file/d/1Pom9zMoZRm0PeWwvNoCV35y7mp7EmQls/preview"
-      },
-      "licenseTypes": [],
-      "deletedOptions": {
-        "subCategories": [
-          "Vehicle Assets:E-Rickshaw",
-          "Vehicle Assets:Company Car",
-          "Vehicle Assets:Bike",
-          "Vehicle Assets:Battery Vehicle",
-          "Software / License Assets:Tally License",
-          "Office Assets:Whiteboard",
-          "Office Assets:File Cabinet",
-          "Vehicle Assets:Forklift",
-          "Office Assets:Sofa",
-          "Office Assets:Water Dispenser",
-          "Maintenance Assets:Spanner Set",
-          "Maintenance Assets:Screwdriver Set",
-          "Maintenance Assets:Multimeter",
-          "Maintenance Assets:Measuring Tape",
-          "Maintenance Assets:Tool Box",
-          "Admin / Facility Assets:Housekeeping Item",
-          "Admin / Facility Assets:Other Admin / Facility Asset",
-          "Admin / Facility Assets:Visitor Gate Pass Device",
-          "Admin / Facility Assets:Security Equipment",
-          "Admin / Facility Assets:Pantry Item",
-          "Admin / Facility Assets:PA System",
-          "Admin / Facility Assets:Mic",
-          "Software / License Assets:AutoCAD License",
-          "Software / License Assets:Cloud Subscription",
-          "Software / License Assets:Domain / Hosting",
-          "Software / License Assets:ERP License",
-          "Software / License Assets:Other Software License",
-          "Software / License Assets:Windows License",
-          "Furniture Assets:Workstation",
-          "Furniture Assets:Bench",
-          "Furniture Assets:Other Furniture Asset",
-          "Furniture Assets:Storage Box",
-          "Furniture Assets:Rack",
-          "Vehicle Assets:Other Vehicle Asset",
-          "Vehicle Assets:Vehicle Documents",
-          "Safety Assets:Emergency Light",
-          "Safety Assets:Fire Alarm System",
-          "Safety Assets:Smoke Detector",
-          "Safety Assets:Other Safety Asset",
-          "Safety Assets:Safety Goggles",
-          "Safety Assets:Safety Shoes",
-          "Production Assets:Tool",
-          "Production Assets:Testing Machine",
-          "Production Assets:Pneumatic Screw Gun",
-          "Production Assets:Packing Machine",
-          "Production Assets:Other Production Asset",
-          "Production Assets:Machine",
-          "Production Assets:Compressor",
-          "Production Assets:Die",
-          "Production Assets:Jig & Fixture",
-          "Production Assets:Mould",
-          "Production Assets:Conveyor Belt",
-          "Electrical Assets:Inverter",
-          "Electrical Assets:Battery",
-          "Electrical Assets:Control Panel",
-          "Electrical Assets:Generator",
-          "Electrical Assets:Extension Board",
-          "Electrical Assets:Other Electrical Asset",
-          "Electrical Assets:Stabilizer",
-          "Electrical Assets:Electrical Meter",
-          "Office Assets:Tea/Coffee Machine",
-          "Office Assets:Table",
-          "Office Assets:Almirah",
-          "Office Assets:Chair",
-          "Office Assets:Fan",
-          "Office Assets:Other Office Asset",
-          "Office Assets:Refrigerator",
-          "Production Assets:Drill Machine"
-        ],
-        "brands": [
-          "Laptop:TOYOTA",
-          "Laptop:STANLEY Multi-Tool Set",
-          "Laptop:Lakdi Furniture and Interiors",
-          "Laptop:Karam",
-          "Laptop:Indo",
-          "Laptop:Mahindra",
-          "Laptop:Havells",
-          "Laptop:Geeken",
-          "Laptop:Boch",
-          "Screwdriver Set:Bosh"
-        ],
-        "vendors": [
-          "GEEKEN FURNITURE",
-          "Bosch India",
-          "Thirty six Toyota",
-          "STANLEY Multi-Tool Set",
-          "Daksh",
-          "Dash",
-          "Dell India",
-          "HCL Infosystems",
-          "HP Enterprise",
-          "Indo India",
-          "Ingram Micro",
-          "Intech Systems",
-          "Karam India",
-          "Lakdi Furniture and Interior",
-          "Lenovo India",
-          "Rashi Peripherals",
-          "Redington",
-          "Savex Technologies",
-          "Softcell"
-        ],
-        "models": [
-          "Laptop:HP:ELITEBOOK8400 G8",
-          "Camera:cisco:hgujhk",
-          "Welding Machine:bosch:NG010001",
-          "Meeting Table:WOOD INDIA:IND-8765456"
-        ],
-        "cpu": [
-          "Apple M1"
-        ],
-        "missingItemNames": []
-      }
+      ]
     },
     "typeDefinitions": {
       "types": [

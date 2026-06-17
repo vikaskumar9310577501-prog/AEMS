@@ -961,6 +961,17 @@ async function getAssetsForOps(): Promise<MappedAsset[]> {
   }
 }
 
+async function getFreshAssetsForMutation(): Promise<MappedAsset[]> {
+  if (GAS_WEBAPP_URL) {
+    try {
+      return await refreshAssetsNow(GAS_WEBAPP_URL);
+    } catch (error) {
+      console.warn("[AMS] Fresh asset pull failed before mutation; falling back to cache:", error);
+    }
+  }
+  return getAssetsForOps();
+}
+
 function assertSavedEmployeeProfile(
   assetData: Record<string, unknown>,
   existing?: { employeeId?: string; contactEmail?: string }
@@ -1207,14 +1218,40 @@ function mergeAssetEditPayload(
 ): Record<string, unknown> {
   if (!existing) return incoming;
   const merged = { ...incoming };
+  const hadAssignee =
+    !isBlankValue(existing.employeeId) ||
+    !isBlankValue(existing.contactName) ||
+    !isBlankValue(existing.contactEmail) ||
+    !isBlankValue(existing.contactMobile);
+  const clearedAssignee =
+    hadAssignee &&
+    isBlankValue(merged.employeeId) &&
+    isBlankValue(merged.contactName) &&
+    isBlankValue(merged.contactEmail) &&
+    isBlankValue(merged.contactMobile);
   const preserveKeys = sameAssetEditShape(merged, existing)
     ? [...ALWAYS_PRESERVE_ASSET_EDIT_FIELDS, ...TYPE_SPECIFIC_PRESERVE_ASSET_EDIT_FIELDS]
     : ALWAYS_PRESERVE_ASSET_EDIT_FIELDS;
 
   for (const key of preserveKeys) {
+    if (
+      clearedAssignee &&
+      ["employeeId", "contactName", "contactEmail", "contactMobile", "assignedDate"].includes(key)
+    ) {
+      continue;
+    }
     if (isBlankValue(merged[key]) && !isBlankValue(existing[key])) {
       merged[key] = existing[key];
     }
+  }
+
+  if (clearedAssignee) {
+    merged.employeeId = "";
+    merged.contactName = "";
+    merged.contactEmail = "";
+    merged.contactMobile = "";
+    merged.assignedDate = "";
+    merged.status = "Available";
   }
 
   if (
@@ -3194,7 +3231,7 @@ app.post("/api/assets", async (req, res) => {
 app.put("/api/assets/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const assets = await getAssetsForOps();
+    const assets = await getFreshAssetsForMutation();
     const existing = findMappedAssetByAnyId(assets, id);
     const canonicalId = String(existing?.id || id);
     const mergedInput = mergeAssetEditPayload({ ...req.body, id: canonicalId } as Record<string, unknown>, existing as unknown as Record<string, unknown> | undefined);
@@ -3293,6 +3330,130 @@ app.put("/api/assets/:id", async (req, res) => {
     res.json({ success: true, asset: updatedAsset });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to update asset" });
+  }
+});
+
+app.post("/api/assets/:id/deassign", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const actor = String(req.body?.updatedBy || "").trim() || resolveRequestUser(req)?.email || "System";
+    const remarks = String(req.body?.remarks || "").trim() || "Asset returned / deassigned";
+    const assets = await getFreshAssetsForMutation();
+    const existing = findMappedAssetByAnyId(assets, id);
+    if (!existing) return res.status(404).json({ error: "Asset not found" });
+
+    const canonicalId = String(existing.id || id);
+    const hadAssignee = hasAssigneeFields(existing as unknown as Record<string, unknown>);
+    if (!hadAssignee) {
+      const currentAsset = mapSheetRow({
+        ...existing,
+        id: canonicalId,
+        "S No": canonicalId,
+        "Asset ID": canonicalId,
+        "QR Code / Barcode": existing.qrCodeText,
+      });
+      return res.json({ success: true, asset: currentAsset, message: "Asset is already deassigned" });
+    }
+
+    const assetData = prepareAssetPayload({
+      ...existing,
+      id: canonicalId,
+      status: "Available",
+      employeeId: "",
+      contactName: "",
+      contactEmail: "",
+      contactMobile: "",
+      assignedDate: "",
+      returnDate: new Date().toISOString(),
+      updatedBy: actor,
+      updatedDate: new Date().toISOString(),
+    } as Record<string, unknown>, existing);
+
+    const baseUrl = getBaseUrl(req);
+    assetData.qrCodeText = getScanUrl(baseUrl, { ...(existing || {}), ...assetData, id: canonicalId } as any);
+
+    const dbMode = readAppData().settings.dbMode;
+    const masterHeaders = getDefaultAssetHeaders();
+    let result;
+    let localRow: string[];
+    const localCategory = String(assetData.mainCategory || "IT Assets");
+
+    if (dbMode === "redesigned") {
+      const row = buildRedesignedAssetRow(assetData, canonicalId, String(assetData.qrCodeText ?? ""));
+      result = await proxyToGas({ action: "update_asset_redesigned", id: canonicalId, row });
+      localRow = buildMasterAssetRow(assetData);
+    } else {
+      const sheet = await fetchSheetData();
+      if (!sheet.length) return res.status(500).json({ error: "Sheet has no data" });
+
+      const sheetHeaders = sheet[0] as string[];
+      const rows = sheet.slice(1);
+      const idCol = sheetHeaders.findIndex((h: string) =>
+        ["s no", "id", "sr.no", "assetid"].includes(h.toLowerCase().replace(/[^a-z0-9]/g, ""))
+      );
+      const normalizeId = (val: any) => String(val || "").replace(/^0+/, "").trim();
+      const targetId = normalizeId(canonicalId);
+      const rowIndex = rows.findIndex((row: any[]) =>
+        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId
+      );
+      if (rowIndex === -1) return res.status(404).json({ error: "Asset not found" });
+
+      const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
+      const updatedRow = buildMasterAssetRow(assetData, existingMaster);
+      result = await proxyToGas({ action: "update", id: canonicalId, row: updatedRow, rowIndex: rowIndex + 2 });
+      localRow = updatedRow;
+    }
+
+    if (result?.error) throw new Error(result.error);
+    await updateAssetLocal(localCategory, canonicalId, localRow, masterHeaders);
+    await persistAssetDynamicDetails(canonicalId, assetData);
+
+    const hist = recordAssignmentChange({
+      assetId: canonicalId,
+      previous: {
+        employeeId: existing.employeeId || "",
+        contactName: existing.contactName || "",
+        contactEmail: existing.contactEmail || "",
+        status: existing.status || "",
+      },
+      next: {
+        employeeId: "",
+        contactName: "",
+        contactEmail: "",
+        status: "Available",
+      },
+      assignedBy: actor,
+      remarks,
+    });
+    if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+
+    addAuditLog(
+      actor,
+      "DEASSIGN_ASSET",
+      canonicalId,
+      JSON.stringify(existing),
+      JSON.stringify(assetData),
+      `Deassigned asset ${canonicalId}`,
+      proxyToGas
+    );
+
+    const updatedAsset = mapSheetRow({
+      ...assetData,
+      id: canonicalId,
+      "S No": canonicalId,
+      "Asset ID": canonicalId,
+      "QR Code / Barcode": assetData.qrCodeText,
+    });
+    upsertAssetInCache(updatedAsset);
+    if (GAS_WEBAPP_URL) {
+      void refreshAssetsNow(GAS_WEBAPP_URL).catch((err) =>
+        console.warn("[AMS] Post-deassign sheet refresh:", err)
+      );
+    }
+
+    res.json({ success: true, asset: updatedAsset });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to deassign asset" });
   }
 });
 

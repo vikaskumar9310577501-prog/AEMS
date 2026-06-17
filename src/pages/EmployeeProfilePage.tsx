@@ -17,7 +17,7 @@ import { toast } from 'react-hot-toast';
 export default function EmployeeProfilePage() {
   const { employeeId: routeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
-  const { assets, user, fetchAssets } = useApp();
+  const { assets, user, fetchAssets, deassignAsset } = useApp();
   const { employees, loading, refresh } = useEmployees();
   
   const [fetchedEmployee, setFetchedEmployee] = useState<Employee | null>(null);
@@ -27,6 +27,7 @@ export default function EmployeeProfilePage() {
   const [missingItems, setMissingItems] = useState<MissingItemRecord[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deassigningAssetId, setDeassigningAssetId] = useState<string | null>(null);
 
 
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
@@ -47,6 +48,27 @@ export default function EmployeeProfilePage() {
       navigate('/employees');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const handleDeassignAsset = async (asset: (typeof assets)[number]) => {
+    if (!window.confirm(`Deassign "${asset.assetName || asset.assetCode || asset.id}" from ${employee?.name || 'this employee'}?`)) {
+      return;
+    }
+    const assetKey = String(asset.id || asset.assetCode || asset.uniqueCode || '');
+    setDeassigningAssetId(assetKey);
+    try {
+      await deassignAsset(asset, {
+        updatedBy: user?.email || user?.role || 'System',
+        remarks: `Asset returned / deassigned from employee profile ${employee?.employeeId || ''}`.trim(),
+      });
+      toast.success('Asset deassigned');
+      await fetchAssets({ silent: true, force: true });
+      fetchHistory();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to deassign asset');
+    } finally {
+      setDeassigningAssetId(null);
     }
   };
 
@@ -103,7 +125,7 @@ export default function EmployeeProfilePage() {
     const events: TimelineEvent[] = [];
     for (const h of history) {
       events.push({
-        date: h.assignedDate || '',
+        date: h.returnedDate || h.assignedDate || '',
         label: `${h.action} — Asset #${h.assetId}`,
         kind: h.action,
         assetId: String(h.assetId || ''),
@@ -316,6 +338,9 @@ export default function EmployeeProfilePage() {
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Details</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Category</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Location</th>
+                    {!isHr && (
+                      <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500 text-right">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -330,6 +355,19 @@ export default function EmployeeProfilePage() {
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-600 font-bold uppercase">{asset.mainCategory}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{asset.location}</td>
+                      {!isHr && (
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => void handleDeassignAsset(asset)}
+                            disabled={deassigningAssetId === String(asset.id || asset.assetCode || asset.uniqueCode || '')}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-xs font-black text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                          >
+                            <RotateCcw size={14} />
+                            {deassigningAssetId === String(asset.id || asset.assetCode || asset.uniqueCode || '') ? 'Deassigning...' : 'Deassign'}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
