@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import type { DamagedItemRecord } from "../src/types/redesigned.js";
+import { getEnv } from "./env.js";
+import { gasGet } from "./gasClient.js";
 
 const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";
 const CACHE_DIR = isServerless
@@ -70,6 +72,23 @@ export function deleteDamagedItem(recordId: string): boolean {
   return true;
 }
 
+function normalizeDamagedItem(item: DamagedItemRecord): DamagedItemRecord {
+  return {
+    ...item,
+    "Record ID": String(item["Record ID"] || "").trim(),
+    "Asset ID": String(item["Asset ID"] || "").trim(),
+    "Asset Name": String(item["Asset Name"] || "").trim(),
+    "Damage Date": String(item["Damage Date"] || "").trim(),
+    "Damage Reason": String(item["Damage Reason"] || "").trim(),
+    "Reported By": String(item["Reported By"] || "").trim(),
+    "Repair Required": item["Repair Required"] || "No",
+    "Estimated Cost": Number(item["Estimated Cost"]) || 0,
+    "Status": item["Status"] || "Reported",
+    "Remarks": String(item["Remarks"] || "").trim(),
+    "Photo URL": String(item["Photo URL"] || "").trim(),
+  };
+}
+
 export function deleteDamagedItemsForAsset(assetId: string): number {
   const id = String(assetId || "").replace(/^0+/, "").trim().toLowerCase();
   const list = readDamagedItems();
@@ -84,21 +103,35 @@ export function deleteDamagedItemsForAsset(assetId: string): number {
 export async function fetchDamagedItemsFromGas(
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>
 ): Promise<DamagedItemRecord[]> {
+  const gasUrl = getEnv("GAS_WEBAPP_URL");
+  if (gasUrl) {
+    try {
+      const result = (await gasGet(gasUrl, { action: "list_damaged_items" }, 20000)) as {
+        items?: DamagedItemRecord[];
+        error?: string;
+      };
+      if (result?.items && Array.isArray(result.items)) {
+        const sanitized = result.items.map(normalizeDamagedItem);
+        writeDamagedItems(sanitized);
+        return sanitized;
+      }
+    } catch (e) {
+      console.warn("fetchDamagedItemsFromGas GET:", e);
+    }
+  }
+
   try {
     const result = (await proxyToGas({ action: "list_damaged_items" })) as {
       items?: DamagedItemRecord[];
       error?: string;
     };
     if (result?.items && Array.isArray(result.items)) {
-      const sanitized = result.items.map(item => ({
-        ...item,
-        "Estimated Cost": Number(item["Estimated Cost"]) || 0
-      }));
+      const sanitized = result.items.map(normalizeDamagedItem);
       writeDamagedItems(sanitized);
       return sanitized;
     }
   } catch (e) {
-    console.warn("fetchDamagedItemsFromGas:", e);
+    console.warn("fetchDamagedItemsFromGas POST:", e);
   }
   return readDamagedItems();
 }

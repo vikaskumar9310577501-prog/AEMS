@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import type { MissingItemRecord } from "../src/types/redesigned.js";
+import { getEnv } from "./env.js";
+import { gasGet } from "./gasClient.js";
 
 const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";
 const CACHE_DIR = isServerless
@@ -88,20 +90,58 @@ export function deleteMissingItemsForAsset(assetId: string): number {
   return list.length - next.length;
 }
 
+function normalizeMissingItem(item: MissingItemRecord): MissingItemRecord {
+  return {
+    ...item,
+    "Record ID": String(item["Record ID"] || "").trim(),
+    "Parent Asset ID": String(item["Parent Asset ID"] || "").trim(),
+    "Parent Asset Name": String(item["Parent Asset Name"] || "").trim(),
+    "Missing Item Name": String(item["Missing Item Name"] || "").trim(),
+    "Asset Type": String(item["Asset Type"] || "").trim(),
+    "Brand": String(item["Brand"] || "").trim(),
+    "Model": String(item["Model"] || "").trim(),
+    "Employee ID": String(item["Employee ID"] || "").trim(),
+    "Assigned Person": String(item["Assigned Person"] || "").trim(),
+    "Missing Date": String(item["Missing Date"] || "").trim(),
+    "Status": item["Status"] || "Missing",
+    "Remarks": String(item["Remarks"] || "").trim(),
+    "Recovered Date": String(item["Recovered Date"] || "").trim(),
+    "Recovered By": String(item["Recovered By"] || "").trim(),
+  };
+}
+
 export async function fetchMissingItemsFromGas(
   proxyToGas: (payload: Record<string, unknown>) => Promise<unknown>
 ): Promise<MissingItemRecord[]> {
+  const gasUrl = getEnv("GAS_WEBAPP_URL");
+  if (gasUrl) {
+    try {
+      const result = (await gasGet(gasUrl, { action: "list_missing_items" }, 20000)) as {
+        items?: MissingItemRecord[];
+        error?: string;
+      };
+      if (result?.items && Array.isArray(result.items)) {
+        const sanitized = result.items.map(normalizeMissingItem);
+        writeMissingItems(sanitized);
+        return sanitized;
+      }
+    } catch (e) {
+      console.warn("fetchMissingItemsFromGas GET:", e);
+    }
+  }
+
   try {
     const result = (await proxyToGas({ action: "list_missing_items" })) as {
       items?: MissingItemRecord[];
       error?: string;
     };
     if (result?.items && Array.isArray(result.items)) {
-      writeMissingItems(result.items);
-      return result.items;
+      const sanitized = result.items.map(normalizeMissingItem);
+      writeMissingItems(sanitized);
+      return sanitized;
     }
   } catch (e) {
-    console.warn("fetchMissingItemsFromGas:", e);
+    console.warn("fetchMissingItemsFromGas POST:", e);
   }
   return readMissingItems();
 }

@@ -213,7 +213,7 @@ export function mapSheetRow(item: Record<string, unknown>): MappedAsset {
   const mapped: MappedAsset = {
     id: getVal(item, ["Asset ID", "S No", "ID", "SR.NO", "id"]),
     location: getVal(item, ["Location", "Loc"]),
-    plantCode: getVal(item, ["Plant Code", "Plant Name", "Plant", "plantCode"]),
+    plantCode: getVal(item, ["Plant Code", "Plant", "plantCode", "Plant Name"]),
     department: getVal(item, ["Department", "Dept"]),
     make: getVal(item, ["Brand", "Make", "Brand/Make", "make"]),
     model,

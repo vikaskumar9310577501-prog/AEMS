@@ -9,7 +9,7 @@ import { useApp } from '../context/AppProvider';
 import MarkMissingModal from '../components/MarkMissingModal';
 import ReassignMissingModal from '../components/ReassignMissingModal';
 import ConfirmModal from '../components/ConfirmModal';
-import { assetRouteId } from '../lib/assetLookup';
+import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
 import { ViewModeToggle, useListViewMode } from '../components/ViewModeToggle';
 
 export default function MissingItemsPage() {
@@ -270,9 +270,7 @@ export default function MissingItemsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((it) => {
-                  const parentAsset = assets.find(
-                    (a) => String(a.id).replace(/^0+/, '') === String(it['Parent Asset ID']).replace(/^0+/, '')
-                  );
+                  const parentAsset = findAssetByAnyId(assets, it['Parent Asset ID']);
                   const handleRowClick = (e: React.MouseEvent) => {
                     const target = e.target as HTMLElement;
                     if (target.closest('a') || target.closest('button')) {
@@ -302,9 +300,7 @@ export default function MissingItemsPage() {
                     <td className="px-4 py-3">
                       {it['Parent Asset ID'] ? (
                         (() => {
-                          const parentAsset = assets.find(
-                            (a) => String(a.id).replace(/^0+/, '') === String(it['Parent Asset ID']).replace(/^0+/, '')
-                          );
+                          const parentAsset = findAssetByAnyId(assets, it['Parent Asset ID']);
                           if (parentAsset) {
                             return (
                               <>

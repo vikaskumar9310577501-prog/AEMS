@@ -46,7 +46,7 @@ import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
 import { formatFilenameDate, formatStoredDateTime } from '../lib/formatDisplayDate';
 import { SYNC_DATABASE_MSG, SYNC_DATABASE_OK, SYNC_DATABASE_ERR } from '../lib/uiLabels';
 import { syncDatabaseAssets } from '../lib/syncDatabase';
-import { assetRouteId } from '../lib/assetLookup';
+import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
 import { useApp } from '../context/AppProvider';
 import { isAssetAssignedToEmployee } from '../lib/employeeAssets';
 import {
@@ -114,6 +114,45 @@ const CATEGORY_STYLES: Record<string, { gradient: string; text: string; iconBg: 
   'Maintenance Assets': { gradient: 'from-slate-50 to-slate-100/30', text: 'text-slate-700', iconBg: 'bg-slate-200/60 text-slate-700', shadow: 'hover:shadow-slate-500/5', border: 'border-slate-200' },
   'Missing Items': { gradient: 'from-rose-50 to-red-50/30', text: 'text-rose-700', iconBg: 'bg-rose-100 text-rose-700', shadow: 'hover:shadow-rose-500/5', border: 'border-rose-100' },
 };
+
+function findAssetForRecord(assets: Asset[], recordAssetId: unknown): Asset | undefined {
+  return findAssetByAnyId(assets, recordAssetId);
+}
+
+function normFilterValue(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function sameFilterValue(left: unknown, right: unknown): boolean {
+  return normFilterValue(left) === normFilterValue(right);
+}
+
+function assetMatchesLocation(asset: Asset, selectedLocation: string): boolean {
+  return selectedLocation === 'All' || sameFilterValue(asset.location, selectedLocation);
+}
+
+function valueMatchesPlant(
+  value: unknown,
+  selectedPlant: string,
+  plants: { code: string; name: string; location: string }[]
+): boolean {
+  if (selectedPlant === 'All') return true;
+  const plant = plants.find(
+    (p) => sameFilterValue(p.code, selectedPlant) || sameFilterValue(p.name, selectedPlant)
+  );
+  return (
+    sameFilterValue(value, selectedPlant) ||
+    (plant ? sameFilterValue(value, plant.name) || sameFilterValue(value, plant.code) : false)
+  );
+}
+
+function assetMatchesPlant(
+  asset: Asset,
+  selectedPlant: string,
+  plants: { code: string; name: string; location: string }[]
+): boolean {
+  return valueMatchesPlant(asset.plantCode, selectedPlant, plants);
+}
 
 function getMissingItemMainCategory(assetType: string): string {
   if (!assetType) return 'IT Assets';
@@ -210,9 +249,10 @@ export default function DashboardPage() {
 
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
 
-  const loadMissingItems = useCallback(async () => {
+  const loadMissingItems = useCallback(async (force = false) => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/missing-items');
+      const url = force ? '/api/missing-items?refresh=1' : '/api/missing-items';
+      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url);
       const data = await parseJsonResponse<{ items?: MissingItemRecord[] }>(res);
       if (res.ok) setMissingItemRecords(data.items || []);
     } catch {
@@ -220,9 +260,10 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const loadDamagedItems = useCallback(async () => {
+  const loadDamagedItems = useCallback(async (force = false) => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/damaged-items');
+      const url = force ? '/api/damaged-items?refresh=1' : '/api/damaged-items';
+      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url);
       const data = await parseJsonResponse<{ items?: DamagedItemRecord[] }>(res);
       if (res.ok) setDamagedItemRecords(data.items || []);
     } catch {
@@ -243,7 +284,7 @@ export default function DashboardPage() {
   }, [loading, loadMissingItems, loadDamagedItems]);
 
   useEffect(() => {
-    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings')
+    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1')
       .then((r) => r.json())
       .then((data) => {
         setLocations(data.locations || []);
@@ -297,12 +338,12 @@ export default function DashboardPage() {
 
     // Filter by Location
     if (selectedLocation !== 'All') {
-      list = list.filter((a) => a.location === selectedLocation);
+      list = list.filter((a) => assetMatchesLocation(a, selectedLocation));
     }
 
     // Filter by Plant
     if (selectedPlant !== 'All') {
-      list = list.filter((a) => a.plantCode === selectedPlant);
+      list = list.filter((a) => assetMatchesPlant(a, selectedPlant, plants));
     }
 
     // Filter by Status / assetFilter
@@ -326,7 +367,7 @@ export default function DashboardPage() {
       }
     }
     return list;
-  }, [filteredAssets, selectedLocation, selectedPlant, selectedStatus]);
+  }, [filteredAssets, plants, selectedLocation, selectedPlant, selectedStatus]);
 
   const dashboardAssignedCount = useMemo(
     () => filteredAssets.filter(isAssetAssignedToEmployee).length,
@@ -366,10 +407,10 @@ export default function DashboardPage() {
         if (empId) {
           const emp = employees.find((e) => String(e.employeeId) === String(empId));
           if (emp) {
-            const matchesLocation = selectedLocation === 'All' || emp.location === selectedLocation;
+            const matchesLocation = selectedLocation === 'All' || sameFilterValue(emp.location, selectedLocation);
             if (!matchesLocation) return false;
 
-            const matchesPlant = selectedPlant === 'All' || emp.plantCode === selectedPlant;
+            const matchesPlant = valueMatchesPlant(emp.plantCode, selectedPlant, plants);
             if (!matchesPlant) return false;
           } else {
             if (selectedLocation !== 'All' || selectedPlant !== 'All') return false;
@@ -381,16 +422,16 @@ export default function DashboardPage() {
         return true;
       }
 
-      const asset = assets.find((a) => String(a.id) === String(parentAssetId));
+      const asset = findAssetForRecord(assets, parentAssetId);
       if (!asset) return false;
 
       const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
       if (!matchesCategory) return false;
 
-      const matchesLocation = selectedLocation === 'All' || asset.location === selectedLocation;
+      const matchesLocation = assetMatchesLocation(asset, selectedLocation);
       if (!matchesLocation) return false;
 
-      const matchesPlant = selectedPlant === 'All' || asset.plantCode === selectedPlant;
+      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plants);
       if (!matchesPlant) return false;
 
       return true;
@@ -403,20 +444,20 @@ export default function DashboardPage() {
       recoveredCount: recovered.length,
       totalCount: filtered.length,
     };
-  }, [missingItemRecords, assets, employees, selectedCategory, selectedLocation, selectedPlant]);
+  }, [missingItemRecords, assets, employees, plants, selectedCategory, selectedLocation, selectedPlant]);
 
   const damagedStats = useMemo(() => {
     const filtered = damagedItemRecords.filter((d) => {
-      const asset = assets.find((a) => String(a.id) === String(d['Asset ID']));
+      const asset = findAssetForRecord(assets, d['Asset ID']);
       if (!asset) return false;
 
       const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
       if (!matchesCategory) return false;
 
-      const matchesLocation = selectedLocation === 'All' || asset.location === selectedLocation;
+      const matchesLocation = assetMatchesLocation(asset, selectedLocation);
       if (!matchesLocation) return false;
 
-      const matchesPlant = selectedPlant === 'All' || asset.plantCode === selectedPlant;
+      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plants);
       if (!matchesPlant) return false;
 
       return true;
@@ -427,7 +468,7 @@ export default function DashboardPage() {
       activeCount: active.length,
       totalCount: filtered.length,
     };
-  }, [damagedItemRecords, assets, selectedCategory, selectedLocation, selectedPlant]);
+  }, [damagedItemRecords, assets, plants, selectedCategory, selectedLocation, selectedPlant]);
 
 
   const exportToExcel = () => {
@@ -451,7 +492,9 @@ export default function DashboardPage() {
   };
 
   const plantsFiltered = useMemo(() => {
-    return selectedLocation === 'All' ? plants : plants.filter(p => p.location === selectedLocation);
+    return selectedLocation === 'All'
+      ? plants
+      : plants.filter((p) => sameFilterValue(p.location, selectedLocation));
   }, [plants, selectedLocation]);
 
   const departmentLabel = useMemo(() => {
@@ -470,7 +513,9 @@ export default function DashboardPage() {
       selectedPlant !== 'All' ? selectedPlant : user?.plants?.[0];
 
     if (plantCode) {
-      const plantRec = plants.find((p) => p.code === plantCode);
+      const plantRec = plants.find(
+        (p) => sameFilterValue(p.code, plantCode) || sameFilterValue(p.name, plantCode)
+      );
       const plantName = plantRec?.name || plantCode;
       return `${location} (${plantName})`;
     }
@@ -578,11 +623,14 @@ export default function DashboardPage() {
               disabled={loading}
               onClick={() => {
                 toast.promise(
-                  syncDatabaseAssets({
-                    userEmail: user?.email,
-                    userRole: user?.role,
-                    fetchAssets,
-                  }),
+                  (async () => {
+                    await syncDatabaseAssets({
+                      userEmail: user?.email,
+                      userRole: user?.role,
+                      fetchAssets,
+                    });
+                    await Promise.all([loadMissingItems(true), loadDamagedItems(true)]);
+                  })(),
                   {
                     loading: SYNC_DATABASE_MSG,
                     success: SYNC_DATABASE_OK,
@@ -941,8 +989,8 @@ export default function DashboardPage() {
                         } else {
                           const catAssets = assets.filter(a => {
                             const matchCat = assetMatchesSidebarCategory(a, cat);
-                            const matchLoc = selectedLocation === 'All' || a.location === selectedLocation;
-                            const matchPlant = selectedPlant === 'All' || a.plantCode === selectedPlant;
+                            const matchLoc = assetMatchesLocation(a, selectedLocation);
+                            const matchPlant = assetMatchesPlant(a, selectedPlant, plants);
                             return matchCat && matchLoc && matchPlant;
                           });
 
@@ -951,11 +999,11 @@ export default function DashboardPage() {
                           assigned = catAssets.filter(isAssetAssignedToEmployee).length;
                           const damaged = damagedItemRecords.filter((d) => {
                             if (d.Status === 'Repaired') return false;
-                            const asset = assets.find((a) => String(a.id) === String(d['Asset ID']));
+                            const asset = findAssetForRecord(assets, d['Asset ID']);
                             if (!asset) return false;
                             const matchCat = assetMatchesSidebarCategory(asset, cat);
-                            const matchLoc = selectedLocation === 'All' || asset.location === selectedLocation;
-                            const matchPlant = selectedPlant === 'All' || asset.plantCode === selectedPlant;
+                            const matchLoc = assetMatchesLocation(asset, selectedLocation);
+                            const matchPlant = assetMatchesPlant(asset, selectedPlant, plants);
                             return matchCat && matchLoc && matchPlant;
                           }).length;
                           if (cat === SOFTWARE_LICENSE_CATEGORY) {
@@ -1064,7 +1112,7 @@ export default function DashboardPage() {
                 const parentAssetId = m['Parent Asset ID'];
                 const isStandalone = !parentAssetId || !String(parentAssetId).trim() || String(parentAssetId).trim().toUpperCase() === 'STANDALONE';
                 if (isStandalone) return missingItemMatchesCategory(m, selectedCategory);
-                const asset = assets.find((a) => String(a.id) === String(parentAssetId));
+                const asset = findAssetForRecord(assets, parentAssetId);
                 return asset ? assetMatchesSidebarCategory(asset, selectedCategory) : false;
               });
               return filteredMissingHistory.length > 0 ? (
@@ -1094,7 +1142,7 @@ export default function DashboardPage() {
                           onClick={() => {
                             const parentAssetId = m['Parent Asset ID'];
                             if (parentAssetId && String(parentAssetId).trim().toUpperCase() !== 'STANDALONE') {
-                              const asset = assets.find((a) => String(a.id) === String(parentAssetId));
+                              const asset = findAssetForRecord(assets, parentAssetId);
                               if (asset) navigate(`/assets/${assetRouteId(asset)}`);
                             }
                           }}
@@ -1134,7 +1182,7 @@ export default function DashboardPage() {
             {/* Damaged Items History — shown when Damaged filter is active */}
             {selectedStatus === 'Damaged' && (() => {
               const filteredDamagedHistory = damagedItemRecords.filter((d) => {
-                const asset = assets.find((a) => String(a.id) === String(d['Asset ID']));
+                const asset = findAssetForRecord(assets, d['Asset ID']);
                 if (!asset) return selectedCategory === 'All';
                 return selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
               });
@@ -1159,7 +1207,7 @@ export default function DashboardPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredDamagedHistory.map((d) => {
-                        const asset = assets.find((a) => String(a.id) === String(d['Asset ID']));
+                        const asset = findAssetForRecord(assets, d['Asset ID']);
                         return (
                           <tr
                             key={d['Record ID']}

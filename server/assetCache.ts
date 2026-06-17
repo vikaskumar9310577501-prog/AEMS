@@ -177,9 +177,18 @@ export function refreshAssetsInBackground(gasUrl: string): Promise<MappedAsset[]
 }
 
 export async function refreshAssetsNow(gasUrl: string): Promise<MappedAsset[]> {
-  const assets = await pullFromSheet(gasUrl);
-  writeCache(CACHE_KEY, assets);
-  return assets;
+  try {
+    const assets = await pullFromSheet(gasUrl);
+    writeCache(CACHE_KEY, assets);
+    return assets;
+  } catch (err) {
+    const stale = readCacheStale<MappedAsset[]>(CACHE_KEY);
+    if (stale) {
+      console.warn("Asset sync failed; keeping stale cache:", err);
+      return healAssetsList(stale);
+    }
+    throw err;
+  }
 }
 
 export function invalidateAssetCache() {

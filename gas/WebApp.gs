@@ -166,6 +166,36 @@ function isSystemSheetName_(name) {
   return !!SYSTEM_SHEET_NAMES_[name];
 }
 
+function collectMirrorSheetNames_(ss) {
+  var names = {};
+  var locSh = ss.getSheetByName("Locations");
+  if (locSh && locSh.getLastRow() > 1) {
+    var locData = locSh.getDataRange().getValues();
+    var locHeaders = locData[0];
+    var locIdx = locHeaders.indexOf("Location Name");
+    if (locIdx !== -1) {
+      for (var l = 1; l < locData.length; l++) {
+        var locName = sanitizeSheetName_(locData[l][locIdx]);
+        if (locName) names[locName] = true;
+      }
+    }
+  }
+
+  var plantSh = ss.getSheetByName("Plants");
+  if (plantSh && plantSh.getLastRow() > 1) {
+    var plantData = plantSh.getDataRange().getValues();
+    var plantHeaders = plantData[0];
+    var codeIdx = plantHeaders.indexOf("Plant Code");
+    if (codeIdx !== -1) {
+      for (var p = 1; p < plantData.length; p++) {
+        var plantCode = sanitizeSheetName_(plantData[p][codeIdx]);
+        if (plantCode) names[plantCode] = true;
+      }
+    }
+  }
+  return names;
+}
+
 function sheetHasAssetHeaders_(headers) {
   return (
     indexOfNormalized_(headers, "Asset ID") !== -1 ||
@@ -264,9 +294,10 @@ function listAssetDataSheets_(ss) {
   }
 
   var sheets = ss.getSheets();
+  var mirrorSheetNames = collectMirrorSheetNames_(ss);
   for (var s = 0; s < sheets.length; s++) {
     var name = sheets[s].getName();
-    if (seen[name] || isSystemSheetName_(name)) continue;
+    if (seen[name] || isSystemSheetName_(name) || mirrorSheetNames[name] || name.indexOf("ARCHIVED_") === 0) continue;
     var hdr = sheets[s].getLastColumn() > 0
       ? sheets[s].getRange(1, 1, 1, sheets[s].getLastColumn()).getValues()[0]
       : [];
@@ -641,6 +672,7 @@ function doPost(e) {
     if (action === "add_inventory_item") return json_(addInventoryItem_(body.item || {}));
     if (action === "update_inventory_item") return json_(updateInventoryItem_(body.item || {}));
     if (action === "delete_inventory_item") return json_(deleteInventoryItem_(body.item || {}));
+    if (action === "replace_inventory") return json_(replaceInventory_(body.inventory || []));
 
     if (action === "add_user" || action === "addUser" || action === "append_user") return json_(addUserToSheet_(body));
     if (action === "update_user" || action === "updateUser" || action === "edit_user") return json_(updateUserInSheet_(body));
@@ -694,14 +726,32 @@ function ensureMetaSheets_(ss) {
   var invSh = ss.getSheetByName("Inventory");
   if (!invSh) {
     invSh = ss.insertSheet("Inventory");
-    invSh.getRange(1, 1, 1, 10).setValues([[
-      "Item ID", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Updated Date"
+    invSh.getRange(1, 1, 1, 15).setValues([[
+      "Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Employee ID", "Assignee Name", "Assignee Email", "Contact Number", "Updated Date"
     ]]);
     invSh.setFrozenRows(1);
   } else {
     ensureSheetHeaders_(invSh, [
       "Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Employee ID", "Assignee Name", "Assignee Email", "Contact Number", "Updated Date"
     ]);
+  }
+  var missingSh = ss.getSheetByName("Missing_Items");
+  var missingHeaders = ["Record ID", "Parent Asset ID", "Parent Asset Name", "Missing Item Name", "Asset Type", "Brand", "Model", "Employee ID", "Assigned Person", "Missing Date", "Status", "Remarks", "Recovered Date", "Recovered By"];
+  if (!missingSh) {
+    missingSh = ss.insertSheet("Missing_Items");
+    missingSh.getRange(1, 1, 1, missingHeaders.length).setValues([missingHeaders]);
+    missingSh.setFrozenRows(1);
+  } else {
+    ensureSheetHeaders_(missingSh, missingHeaders);
+  }
+  var damagedSh = ss.getSheetByName("Damaged_Items");
+  var damagedHeaders = ["Record ID", "Asset ID", "Asset Name", "Damage Date", "Damage Reason", "Reported By", "Repair Required", "Estimated Cost", "Status", "Remarks", "Photo URL"];
+  if (!damagedSh) {
+    damagedSh = ss.insertSheet("Damaged_Items");
+    damagedSh.getRange(1, 1, 1, damagedHeaders.length).setValues([damagedHeaders]);
+    damagedSh.setFrozenRows(1);
+  } else {
+    ensureSheetHeaders_(damagedSh, damagedHeaders);
   }
 }
 
@@ -1678,7 +1728,7 @@ function inventoryFieldMap_(item, now) {
     "Assignee Name": isAssigned ? String(item.assigneeName || "").trim() : "",
     "Assignee Email": isAssigned ? String(item.assigneeEmail || "").trim() : "",
     "Contact Number": isAssigned ? String(item.assigneeMobile || "").trim() : "",
-    "Updated Date": now || new Date().toISOString()
+    "Updated Date": item.updatedAt ? String(item.updatedAt) : (now || new Date().toISOString())
   };
 }
 
@@ -1783,6 +1833,23 @@ function deleteInventoryItem_(item) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.getSheetByName("Inventory").deleteRow(row);
   return { success: true };
+}
+
+function replaceInventory_(items) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureMetaSheets_(ss);
+  var sh = ss.getSheetByName("Inventory");
+  ensureSheetHeaders_(sh, getInventoryHeaders_());
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  clearSheetDataRows_(sh);
+  if (!items || !items.length) return { success: true, count: 0 };
+  var now = new Date().toISOString();
+  var rows = [];
+  for (var i = 0; i < items.length; i++) {
+    rows.push(inventoryRowFromItem_(items[i], headers, now));
+  }
+  sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  return { success: true, count: rows.length };
 }
 
 function listRedesignedTable_(sheetName) {
@@ -2056,10 +2123,14 @@ function syncLocationAndPlantAssetSheets_(ss) {
     var plantData = plantSh.getDataRange().getValues();
     var plantHeaders = plantData[0];
     var codeIdx = plantHeaders.indexOf("Plant Code");
+    var plantNameIdx = plantHeaders.indexOf("Plant Name");
     if (codeIdx !== -1) {
       for (var p = 1; p < plantData.length; p++) {
         var code = String(plantData[p][codeIdx] || "").trim();
-        if (code) plants.push(code);
+        if (code) plants.push({
+          code: code,
+          name: plantNameIdx !== -1 ? String(plantData[p][plantNameIdx] || "").trim() : ""
+        });
       }
     }
   }
@@ -2072,7 +2143,7 @@ function syncLocationAndPlantAssetSheets_(ss) {
   var masterHeaders = collected.masterHeaders;
   var assetLocIdx = indexOfNormalized_(mirrorHeaders, "Location");
   var assetPlantNameIdx = indexOfNormalized_(mirrorHeaders, "Plant Name");
-  if (assetPlantNameIdx === -1) assetPlantNameIdx = indexOfNormalized_(mirrorHeaders, "Plant Code");
+  var assetPlantCodeIdx = indexOfNormalized_(mirrorHeaders, "Plant Code");
 
   var syncTab = function (tabName, filterFn, headerColor) {
     var sanitizedName = sanitizeSheetName_(tabName);
@@ -2108,11 +2179,15 @@ function syncLocationAndPlantAssetSheets_(ss) {
     return masterVal_(row, masterHeaders, "Location");
   };
 
-  var rowPlant = function (row) {
+  var rowPlantValues = function (row) {
+    var values = [];
     if (assetPlantNameIdx !== -1 && row[assetPlantNameIdx] !== undefined) {
-      return String(row[assetPlantNameIdx] || "").trim();
+      values.push(String(row[assetPlantNameIdx] || "").trim());
     }
-    return masterVal_(row, masterHeaders, "Plant Name") || masterVal_(row, masterHeaders, "Plant Code");
+    if (assetPlantCodeIdx !== -1 && row[assetPlantCodeIdx] !== undefined) {
+      values.push(String(row[assetPlantCodeIdx] || "").trim());
+    }
+    return values;
   };
 
   for (var l = 0; l < locs.length; l++) {
@@ -2124,9 +2199,14 @@ function syncLocationAndPlantAssetSheets_(ss) {
   }
 
   for (var pi = 0; pi < plants.length; pi++) {
-    (function (plantCode) {
-      syncTab(plantCode, function (row) {
-        return rowPlant(row).toUpperCase() === plantCode.toUpperCase();
+    (function (plant) {
+      syncTab(plant.code, function (row) {
+        var values = rowPlantValues(row);
+        for (var v = 0; v < values.length; v++) {
+          var value = String(values[v] || "").trim().toUpperCase();
+          if (value === plant.code.toUpperCase() || (plant.name && value === plant.name.toUpperCase())) return true;
+        }
+        return false;
       }, "#0f766e");
     })(plants[pi]);
   }

@@ -44,10 +44,12 @@ import {
 } from "./server/cacheStore.js";
 import {
   readInventory,
+  writeInventory,
   upsertInventoryItem,
   deleteInventoryItem,
   fetchInventoryFromGas,
   persistInventoryToGas,
+  replaceInventoryInGas,
 } from "./server/inventoryStore.js";
 import {
   fetchLocationsPlantsFromGas,
@@ -129,6 +131,7 @@ import {
 } from "./server/extraItemsStore.js";
 import {
   readDamagedItems,
+  writeDamagedItems,
   upsertDamagedItem,
   deleteDamagedItem,
   deleteDamagedItemsForAsset,
@@ -137,6 +140,7 @@ import {
 } from "./server/damagedStore.js";
 import {
   readMissingItems,
+  writeMissingItems,
   upsertMissingItem,
   deleteMissingItem,
   deleteMissingItemsForAsset,
@@ -263,9 +267,10 @@ if (SPREADSHEET_ID) {
 
 function shouldRefreshSheetBackedData(force: boolean, localCount: number) {
   if (!GAS_WEBAPP_URL) return false;
-  if (force || IS_SERVERLESS || localCount === 0) return true;
   if (isCacheForDifferentSpreadsheet(SPREADSHEET_ID)) return true;
-  return false;
+  if (force || IS_SERVERLESS || localCount === 0) return true;
+  // Sheet-backed data must stay fresh across devices; local JSON is only fallback.
+  return true;
 }
 
 async function loadEmployeesWithSheetSync(): Promise<Employee[]> {
@@ -670,7 +675,6 @@ app.post("/api/assets/sync", async (req, res) => {
 
     const user = resolveRequestUser(req);
 
-    invalidateAssetCache();
     let assets = await refreshAssetsNow(GAS_WEBAPP_URL);
 
     if (user && isItAdminRole(user.role)) {
@@ -710,7 +714,6 @@ app.post("/api/assets/sync", async (req, res) => {
         }
       }
       if (persisted > 0) {
-        invalidateAssetCache();
         assets = await refreshAssetsNow(GAS_WEBAPP_URL);
       }
     }
@@ -2046,17 +2049,17 @@ app.get("/api/inventory", async (req, res) => {
 
 app.post("/api/inventory", async (req, res) => {
   try {
+    const previousInventory = readInventory();
     const body = req.body as any;
     if (!String(body.itemName || "").trim()) {
       return res.status(400).json({ error: "Item Name is required" });
     }
     const saved = upsertInventoryItem(body);
-    let sheetWarning: string | undefined;
     if (body.syncSheet !== false && GAS_WEBAPP_URL) {
       const gas = await persistInventoryToGas("add", saved, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error || "Database sync failed";
+      assertSheetSyncOk(gas, () => writeInventory(previousInventory));
     }
-    res.json({ success: true, item: saved, sheetWarning });
+    res.json({ success: true, item: saved });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to save inventory item" });
   }
@@ -2064,14 +2067,14 @@ app.post("/api/inventory", async (req, res) => {
 
 app.put("/api/inventory/:itemId", async (req, res) => {
   try {
+    const previousInventory = readInventory();
     const body = { ...req.body, itemId: decodeURIComponent(req.params.itemId) } as any;
     const saved = upsertInventoryItem(body);
-    let sheetWarning: string | undefined;
     if (body.syncSheet !== false && GAS_WEBAPP_URL) {
       const gas = await persistInventoryToGas("update", saved, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error || "Database sync failed";
+      assertSheetSyncOk(gas, () => writeInventory(previousInventory));
     }
-    res.json({ success: true, item: saved, sheetWarning });
+    res.json({ success: true, item: saved });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update inventory item" });
   }
@@ -2083,9 +2086,10 @@ app.delete("/api/inventory/:itemId", async (req, res) => {
     if (shouldRefreshSheetBackedData(false, readInventory().length)) {
       await fetchInventoryFromGas(proxyToGas);
     }
+    const previousInventory = readInventory();
     if (!deleteInventoryItem(id)) return res.status(404).json({ error: "Inventory item not found" });
     if (GAS_WEBAPP_URL) {
-      await persistInventoryToGas(
+      const gas = await persistInventoryToGas(
         "delete",
         {
           itemId: id,
@@ -2101,6 +2105,7 @@ app.delete("/api/inventory/:itemId", async (req, res) => {
         },
         proxyToGas
       );
+      assertSheetSyncOk(gas, () => writeInventory(previousInventory));
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -2115,7 +2120,8 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
     if (!employeeId) return res.status(400).json({ error: "Employee ID is required" });
 
     // Find inventory item
-    const list = readInventory();
+    const previousInventory = readInventory();
+    const list = previousInventory;
     const item = list.find(i => i.itemId === itemId);
     if (!item) return res.status(404).json({ error: "Inventory item not found" });
 
@@ -2125,7 +2131,7 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
 
     // Check if it's an individual asset (has assetCode or maps to a parent physical asset)
     const assets = await getAssetsForOps();
-    const parentAsset = assets.find(a => String(a.uniqueCode || a.assetCode || a.id) === itemId || (item.assetCode && String(a.assetCode) === String(item.assetCode)));
+    const parentAsset = findMappedAssetByAnyId(assets, itemId) || findMappedAssetByAnyId(assets, item.assetCode);
 
     if (parentAsset) {
       // Update physical asset -> this will automatically sync to inventory!
@@ -2216,16 +2222,14 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
           assigneeMobile: employeeMobile || "",
           updatedAt: new Date().toISOString(),
         };
-        const saved = upsertInventoryItem(updatedItem);
-        if (GAS_WEBAPP_URL) void persistInventoryToGas("update", saved, proxyToGas);
+        upsertInventoryItem(updatedItem);
       } else {
         const updatedAvailable = {
           ...item,
           quantity: availableQuantity - 1,
           updatedAt: new Date().toISOString(),
         };
-        const savedAvailable = upsertInventoryItem(updatedAvailable);
-        if (GAS_WEBAPP_URL) void persistInventoryToGas("update", savedAvailable, proxyToGas);
+        upsertInventoryItem(updatedAvailable);
 
         const assignedItem = {
           itemId: "INV_" + Date.now() + "_" + Math.floor(Math.random() * 100),
@@ -2245,9 +2249,13 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        const savedAssigned = upsertInventoryItem(assignedItem);
-        if (GAS_WEBAPP_URL) void persistInventoryToGas("add", savedAssigned, proxyToGas);
+        upsertInventoryItem(assignedItem);
       }
+
+      await assertInventorySnapshotSynced(
+        previousInventory,
+        "Database sync failed; inventory assignment was not saved locally."
+      );
 
       res.json({ success: true, message: "Inventory item assigned successfully" });
     }
@@ -2263,13 +2271,14 @@ app.post("/api/inventory/:itemId/return", async (req, res) => {
     const updatedBy = req.body.updatedBy || "System";
 
     // Find inventory item
-    const list = readInventory();
+    const previousInventory = readInventory();
+    const list = previousInventory;
     const item = list.find(i => i.itemId === itemId);
     if (!item) return res.status(404).json({ error: "Inventory item not found" });
 
     // Check if it maps to a parent physical asset
     const assets = await getAssetsForOps();
-    const parentAsset = assets.find(a => String(a.uniqueCode || a.assetCode || a.id) === itemId || (item.assetCode && String(a.assetCode) === String(item.assetCode)));
+    const parentAsset = findMappedAssetByAnyId(assets, itemId) || findMappedAssetByAnyId(assets, item.assetCode);
 
     if (parentAsset) {
       // Return parent asset (status: Available, Location: Store, clear employee fields)
@@ -2362,20 +2371,17 @@ app.post("/api/inventory/:itemId/return", async (req, res) => {
           quantity: match.quantity + 1,
           updatedAt: new Date().toISOString(),
         };
-        const savedAvailable = upsertInventoryItem(updatedAvailable);
-        if (GAS_WEBAPP_URL) void persistInventoryToGas("update", savedAvailable, proxyToGas);
+        upsertInventoryItem(updatedAvailable);
 
         if (item.quantity <= 1) {
           deleteInventoryItem(item.itemId);
-          if (GAS_WEBAPP_URL) void persistInventoryToGas("delete", item, proxyToGas);
         } else {
           const updatedAssigned = {
             ...item,
             quantity: item.quantity - 1,
             updatedAt: new Date().toISOString(),
           };
-          const savedAssigned = upsertInventoryItem(updatedAssigned);
-          if (GAS_WEBAPP_URL) void persistInventoryToGas("update", savedAssigned, proxyToGas);
+          upsertInventoryItem(updatedAssigned);
         }
       } else {
         const updatedItem = {
@@ -2388,9 +2394,13 @@ app.post("/api/inventory/:itemId/return", async (req, res) => {
           quantity: 1,
           updatedAt: new Date().toISOString(),
         };
-        const saved = upsertInventoryItem(updatedItem);
-        if (GAS_WEBAPP_URL) void persistInventoryToGas("update", saved, proxyToGas);
+        upsertInventoryItem(updatedItem);
       }
+
+      await assertInventorySnapshotSynced(
+        previousInventory,
+        "Database sync failed; inventory return was not saved locally."
+      );
 
       res.json({ success: true, message: "Inventory item returned successfully" });
     }
@@ -2411,7 +2421,8 @@ app.post("/api/inventory/:itemId/transfer", async (req, res) => {
     if (!targetEmp) return res.status(404).json({ error: "Target employee not found" });
 
     // Find inventory item
-    const list = readInventory();
+    const previousInventory = readInventory();
+    const list = previousInventory;
     const item = list.find(i => i.itemId === itemId);
     if (!item) return res.status(404).json({ error: "Inventory item not found" });
 
@@ -2423,7 +2434,7 @@ app.post("/api/inventory/:itemId/transfer", async (req, res) => {
 
     // Check if it maps to a parent physical asset
     const assets = await getAssetsForOps();
-    const parentAsset = assets.find(a => String(a.uniqueCode || a.assetCode || a.id) === itemId || (item.assetCode && String(a.assetCode) === String(item.assetCode)));
+    const parentAsset = findMappedAssetByAnyId(assets, itemId) || findMappedAssetByAnyId(assets, item.assetCode);
 
     if (parentAsset) {
       // Transfer physical asset: update employee fields
@@ -2509,8 +2520,11 @@ app.post("/api/inventory/:itemId/transfer", async (req, res) => {
         assigneeMobile: targetEmp.phone || "",
         updatedAt: new Date().toISOString(),
       };
-      const saved = upsertInventoryItem(updatedItem);
-      if (GAS_WEBAPP_URL) void persistInventoryToGas("update", saved, proxyToGas);
+      upsertInventoryItem(updatedItem);
+      await assertInventorySnapshotSynced(
+        previousInventory,
+        "Database sync failed; inventory transfer was not saved locally."
+      );
 
       res.json({ success: true, message: "Inventory item transferred successfully" });
     }
@@ -2594,8 +2608,47 @@ function getMissingItemMainCategory(assetType: string): string {
   return 'IT Assets';
 }
 
+function assertSheetSyncOk(
+  result: { ok: boolean; error?: string },
+  rollback: () => void,
+  fallbackMessage = "Database sync failed"
+) {
+  if (result.ok) return;
+  rollback();
+  throw new Error(result.error || fallbackMessage);
+}
+
+async function assertInventorySnapshotSynced(
+  previousInventory: import("./src/types/inventory.js").InventoryItem[],
+  fallbackMessage: string
+) {
+  if (!GAS_WEBAPP_URL) return;
+  const gas = await replaceInventoryInGas(readInventory(), proxyToGas);
+  assertSheetSyncOk(gas, () => writeInventory(previousInventory), fallbackMessage);
+}
+
+function normalizeAssetLookupId(value: unknown): string {
+  return String(value ?? "").replace(/^0+/, "").trim().toLowerCase();
+}
+
+function findMappedAssetByAnyId(assets: MappedAsset[], lookupId: unknown): MappedAsset | undefined {
+  const target = normalizeAssetLookupId(lookupId);
+  if (!target) return undefined;
+  return assets.find((asset) =>
+    [
+      asset.id,
+      asset.assetCode,
+      asset.uniqueCode,
+      asset.serialNumber,
+      getCanonicalScanId(asset),
+    ].some((candidate) => normalizeAssetLookupId(candidate) === target)
+  );
+}
+
 app.post("/api/missing-items/:recordId/deassign", async (req, res) => {
   try {
+    const previousMissingItems = readMissingItems();
+    const previousInventory = readInventory();
     const recordId = decodeURIComponent(req.params.recordId);
     let list = readMissingItems();
     if (shouldRefreshSheetBackedData(false, list.length)) {
@@ -2652,16 +2705,21 @@ app.post("/api/missing-items/:recordId/deassign", async (req, res) => {
       inventoryOp = "add";
     }
 
-    let sheetWarning: string | undefined;
     if (GAS_WEBAPP_URL) {
       const gasMissing = await persistMissingItemToGas("update", savedMissing, proxyToGas);
-      if (!gasMissing.ok) sheetWarning = gasMissing.error;
+      assertSheetSyncOk(gasMissing, () => {
+        writeMissingItems(previousMissingItems);
+        writeInventory(previousInventory);
+      });
 
       const gasInv = await persistInventoryToGas(inventoryOp, savedInventory, proxyToGas);
-      if (!gasInv.ok) sheetWarning = (sheetWarning ? sheetWarning + "; " : "") + gasInv.error;
+      assertSheetSyncOk(gasInv, () => {
+        writeMissingItems(previousMissingItems);
+        writeInventory(previousInventory);
+      });
     }
 
-    res.json({ success: true, item: savedMissing, inventoryItem: savedInventory, sheetWarning });
+    res.json({ success: true, item: savedMissing, inventoryItem: savedInventory });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to deassign missing item" });
   }
@@ -2669,6 +2727,8 @@ app.post("/api/missing-items/:recordId/deassign", async (req, res) => {
 
 app.post("/api/missing-items/:recordId/reassign", async (req, res) => {
   try {
+    const previousMissingItems = readMissingItems();
+    const previousInventory = readInventory();
     const recordId = decodeURIComponent(req.params.recordId);
     const employeeId = String(req.body.employeeId || "").trim();
     if (!employeeId) return res.status(400).json({ error: "Employee ID is required" });
@@ -2718,16 +2778,21 @@ app.post("/api/missing-items/:recordId/reassign", async (req, res) => {
       assigneeMobile: emp.phone || "",
     });
 
-    let sheetWarning: string | undefined;
     if (GAS_WEBAPP_URL) {
       const gasMissing = await persistMissingItemToGas("update", savedMissing, proxyToGas);
-      if (!gasMissing.ok) sheetWarning = gasMissing.error;
+      assertSheetSyncOk(gasMissing, () => {
+        writeMissingItems(previousMissingItems);
+        writeInventory(previousInventory);
+      });
 
       const gasInv = await persistInventoryToGas("add", savedInventory, proxyToGas);
-      if (!gasInv.ok) sheetWarning = (sheetWarning ? sheetWarning + "; " : "") + gasInv.error;
+      assertSheetSyncOk(gasInv, () => {
+        writeMissingItems(previousMissingItems);
+        writeInventory(previousInventory);
+      });
     }
 
-    res.json({ success: true, item: savedMissing, inventoryItem: savedInventory, sheetWarning });
+    res.json({ success: true, item: savedMissing, inventoryItem: savedInventory });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to reassign missing item" });
   }
@@ -2748,6 +2813,7 @@ app.get("/api/missing-items", async (req, res) => {
 
 app.post("/api/missing-items", async (req, res) => {
   try {
+    const previousMissingItems = readMissingItems();
     const body = req.body as { item: import("./src/types/redesigned.js").MissingItemRecord; syncSheet?: boolean };
     const raw = body.item || ({} as import("./src/types/redesigned.js").MissingItemRecord);
     const assetType = String(raw["Asset Type"] || "").trim();
@@ -2759,18 +2825,17 @@ app.post("/api/missing-items", async (req, res) => {
     };
     const saved = upsertMissingItem(item);
 
+    if (body.syncSheet !== false && GAS_WEBAPP_URL) {
+      const gas = await persistMissingItemToGas("add", saved, proxyToGas);
+      assertSheetSyncOk(gas, () => writeMissingItems(previousMissingItems));
+    }
+
     // Sync asset status: 'Missing' -> 'Lost', 'Recovered' -> 'Available'
     if (item["Parent Asset ID"]) {
       const assetStatus = item.Status === "Recovered" ? "Available" : "Lost";
       void syncAssetStatusUpdate(item["Parent Asset ID"], assetStatus, "System");
     }
-
-    let sheetWarning: string | undefined;
-    if (body.syncSheet !== false && GAS_WEBAPP_URL) {
-      const gas = await persistMissingItemToGas("add", saved, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error || "Database sync failed";
-    }
-    res.json({ success: true, item: saved, sheetWarning });
+    res.json({ success: true, item: saved });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to save missing item" });
   }
@@ -2778,6 +2843,7 @@ app.post("/api/missing-items", async (req, res) => {
 
 app.post("/api/missing-items/:recordId/recover", async (req, res) => {
   try {
+    const previousMissingItems = readMissingItems();
     const recordId = decodeURIComponent(req.params.recordId);
     let list = readMissingItems();
     if (shouldRefreshSheetBackedData(false, list.length)) {
@@ -2792,17 +2858,17 @@ app.post("/api/missing-items/:recordId/recover", async (req, res) => {
       "Recovered By": String(req.body?.recoveredBy || "System"),
     });
 
+    if (GAS_WEBAPP_URL) {
+      const gas = await persistMissingItemToGas("update", saved, proxyToGas);
+      assertSheetSyncOk(gas, () => writeMissingItems(previousMissingItems));
+    }
+
     // Sync parent asset status back to 'Available' upon recovery
     if (existing["Parent Asset ID"]) {
       void syncAssetStatusUpdate(existing["Parent Asset ID"], "Available", String(req.body?.recoveredBy || "System"));
     }
 
-    let sheetWarning: string | undefined;
-    if (GAS_WEBAPP_URL) {
-      const gas = await persistMissingItemToGas("update", saved, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error;
-    }
-    res.json({ success: true, item: saved, sheetWarning });
+    res.json({ success: true, item: saved });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update" });
   }
@@ -2810,6 +2876,7 @@ app.post("/api/missing-items/:recordId/recover", async (req, res) => {
 
 app.delete("/api/missing-items/:recordId", async (req, res) => {
   try {
+    const previousMissingItems = readMissingItems();
     const user = resolveRequestUser(req);
     if (!user) {
       return res.status(403).json({ error: "Authentication required." });
@@ -2826,17 +2893,17 @@ app.delete("/api/missing-items/:recordId", async (req, res) => {
     const deleted = deleteMissingItem(recordId);
     if (!deleted) return res.status(404).json({ error: "Record not found" });
 
+    if (GAS_WEBAPP_URL) {
+      const gas = await persistMissingItemToGas("delete", existing, proxyToGas);
+      assertSheetSyncOk(gas, () => writeMissingItems(previousMissingItems));
+    }
+
     // Revert parent asset status back to 'Available' upon log deletion
     if (existing["Parent Asset ID"]) {
       void syncAssetStatusUpdate(existing["Parent Asset ID"], "Available", user.email);
     }
 
-    let sheetWarning: string | undefined;
-    if (GAS_WEBAPP_URL) {
-      const gas = await persistMissingItemToGas("delete", existing, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error;
-    }
-    res.json({ success: true, sheetWarning });
+    res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to delete" });
   }
@@ -2845,11 +2912,12 @@ app.delete("/api/missing-items/:recordId", async (req, res) => {
 async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy = "System") {
   try {
     const assets = await getAssetsForOps();
-    const existing = assets.find(a => String(a.id).replace(/^0+/, "") === String(assetId).replace(/^0+/, ""));
+    const existing = findMappedAssetByAnyId(assets, assetId);
     if (!existing) {
       console.warn(`[AMS] syncAssetStatusUpdate: Asset ID ${assetId} not found`);
       return;
     }
+    const canonicalAssetId = String(existing.id || assetId);
 
     const assetData = {
       ...existing,
@@ -2861,12 +2929,12 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
     const dbMode = readAppData().settings.dbMode;
     let result;
     if (dbMode === "redesigned") {
-      const row = buildRedesignedAssetRow(assetData, String(assetId), String(assetData.qrCodeText ?? ""));
-      result = await proxyToGas({ action: "update_asset_redesigned", id: assetId, row });
+      const row = buildRedesignedAssetRow(assetData, canonicalAssetId, String(assetData.qrCodeText ?? ""));
+      result = await proxyToGas({ action: "update_asset_redesigned", id: canonicalAssetId, row });
 
       const masterHeaders = getDefaultAssetHeaders();
       const sqliteRow = buildMasterAssetRow(assetData);
-      await updateAssetLocal(String(assetData.mainCategory || "IT Assets"), String(assetId), sqliteRow, masterHeaders);
+      await updateAssetLocal(String(assetData.mainCategory || "IT Assets"), canonicalAssetId, sqliteRow, masterHeaders);
     } else {
       const sheet = await fetchSheetData();
       if (!sheet.length) throw new Error("Sheet has no data");
@@ -2877,7 +2945,7 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
         ["s no", "id", "sr.no", "assetid"].includes(h.toLowerCase().replace(/[^a-z0-9]/g, ""))
       );
       const normalizeId = (val: any) => String(val || "").replace(/^0+/, "").trim();
-      const targetId = normalizeId(assetId);
+      const targetId = normalizeId(canonicalAssetId);
       const rowIndex = rows.findIndex((row: any[]) =>
         normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId
       );
@@ -2886,9 +2954,9 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
       const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
       const updatedRow = buildMasterAssetRow(assetData, existingMaster);
       const masterHeaders = getDefaultAssetHeaders();
-      result = await proxyToGas({ action: "update", id: assetId, row: updatedRow, rowIndex: rowIndex + 2 });
+      result = await proxyToGas({ action: "update", id: canonicalAssetId, row: updatedRow, rowIndex: rowIndex + 2 });
 
-      await updateAssetLocal(String(assetData.mainCategory || "IT Assets"), String(assetId), updatedRow, masterHeaders);
+      await updateAssetLocal(String(assetData.mainCategory || "IT Assets"), canonicalAssetId, updatedRow, masterHeaders);
     }
 
     if (result.error) throw new Error(result.error);
@@ -2896,13 +2964,13 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
     // Update Cache
     const updatedAsset = mapSheetRow({
       ...assetData,
-      id: String(assetId),
-      "S No": assetId,
-      "Asset ID": assetId,
+      id: canonicalAssetId,
+      "S No": canonicalAssetId,
+      "Asset ID": canonicalAssetId,
       "QR Code / Barcode": assetData.qrCodeText,
     });
     upsertAssetInCache(updatedAsset);
-    console.log(`[AMS] Dynamic status update for asset ${assetId} to ${status} completed successfully.`);
+    console.log(`[AMS] Dynamic status update for asset ${canonicalAssetId} to ${status} completed successfully.`);
   } catch (err: any) {
     console.error(`[AMS] Failed to automatically update asset status for ID ${assetId}:`, err);
   }
@@ -2923,19 +2991,20 @@ app.get("/api/damaged-items", async (req, res) => {
 
 app.post("/api/damaged-items", async (req, res) => {
   try {
+    const previousDamagedItems = readDamagedItems();
     const body = req.body as { item: import("./src/types/redesigned.js").DamagedItemRecord; syncSheet?: boolean };
     const saved = upsertDamagedItem(body.item);
     
+    if (body.syncSheet !== false && GAS_WEBAPP_URL) {
+      const gas = await persistDamagedItemToGas("add", saved, proxyToGas);
+      assertSheetSyncOk(gas, () => writeDamagedItems(previousDamagedItems));
+    }
+
     // Sync asset status: 'Scrapped' -> 'Scrap', 'Repaired' -> 'Available', others -> 'Damaged'
     const assetStatus = body.item.Status === "Scrapped" ? "Scrap" : body.item.Status === "Repaired" ? "Available" : "Damaged";
     void syncAssetStatusUpdate(body.item["Asset ID"], assetStatus, body.item["Reported By"] || "System");
 
-    let sheetWarning: string | undefined;
-    if (body.syncSheet !== false && GAS_WEBAPP_URL) {
-      const gas = await persistDamagedItemToGas("add", saved, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error || "Database sync failed";
-    }
-    res.json({ success: true, item: saved, sheetWarning });
+    res.json({ success: true, item: saved });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to save damaged item" });
   }
@@ -2943,6 +3012,7 @@ app.post("/api/damaged-items", async (req, res) => {
 
 app.put("/api/damaged-items/:recordId", async (req, res) => {
   try {
+    const previousDamagedItems = readDamagedItems();
     const recordId = decodeURIComponent(req.params.recordId);
     let list = readDamagedItems();
     if (shouldRefreshSheetBackedData(false, list.length)) {
@@ -2958,18 +3028,18 @@ app.put("/api/damaged-items/:recordId", async (req, res) => {
     };
     const saved = upsertDamagedItem(updated);
 
+    if (GAS_WEBAPP_URL) {
+      const gas = await persistDamagedItemToGas("update", saved, proxyToGas);
+      assertSheetSyncOk(gas, () => writeDamagedItems(previousDamagedItems));
+    }
+
     // Sync asset status: 'Scrapped' -> 'Scrap', 'Repaired' -> 'Available', others -> 'Damaged' (skip for Deassigned / Reassigned)
     if (updated.Status !== "Deassigned" && updated.Status !== "Reassigned") {
       const assetStatus = updated.Status === "Scrapped" ? "Scrap" : updated.Status === "Repaired" ? "Available" : "Damaged";
       void syncAssetStatusUpdate(updated["Asset ID"], assetStatus, updated["Reported By"] || "System");
     }
 
-    let sheetWarning: string | undefined;
-    if (GAS_WEBAPP_URL) {
-      const gas = await persistDamagedItemToGas("update", saved, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error || "Database sync failed";
-    }
-    res.json({ success: true, item: saved, sheetWarning });
+    res.json({ success: true, item: saved });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to update damaged item" });
   }
@@ -2977,6 +3047,7 @@ app.put("/api/damaged-items/:recordId", async (req, res) => {
 
 app.delete("/api/damaged-items/:recordId", async (req, res) => {
   try {
+    const previousDamagedItems = readDamagedItems();
     const user = resolveRequestUser(req);
     if (!user) {
       return res.status(403).json({ error: "Authentication required." });
@@ -2993,15 +3064,15 @@ app.delete("/api/damaged-items/:recordId", async (req, res) => {
     const deleted = deleteDamagedItem(recordId);
     if (!deleted) return res.status(404).json({ error: "Record not found" });
 
+    if (GAS_WEBAPP_URL) {
+      const gas = await persistDamagedItemToGas("delete", existing, proxyToGas);
+      assertSheetSyncOk(gas, () => writeDamagedItems(previousDamagedItems));
+    }
+
     // When damage record is deleted, set asset back to 'Available'
     void syncAssetStatusUpdate(existing["Asset ID"], "Available", user.email);
 
-    let sheetWarning: string | undefined;
-    if (GAS_WEBAPP_URL) {
-      const gas = await persistDamagedItemToGas("delete", existing, proxyToGas);
-      if (!gas.ok) sheetWarning = gas.error;
-    }
-    res.json({ success: true, sheetWarning });
+    res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to delete" });
   }
@@ -3124,17 +3195,18 @@ app.put("/api/assets/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const assets = await getAssetsForOps();
-    const existing = assets.find(a => String(a.id).replace(/^0+/, "") === String(id).replace(/^0+/, ""));
-    const mergedInput = mergeAssetEditPayload({ ...req.body, id } as Record<string, unknown>, existing as unknown as Record<string, unknown> | undefined);
+    const existing = findMappedAssetByAnyId(assets, id);
+    const canonicalId = String(existing?.id || id);
+    const mergedInput = mergeAssetEditPayload({ ...req.body, id: canonicalId } as Record<string, unknown>, existing as unknown as Record<string, unknown> | undefined);
     const assetData = prepareAssetPayload(mergedInput, existing);
-    await assertAssetUnique(assetData, String(id));
+    await assertAssetUnique(assetData, canonicalId);
 
     if (existing && existing.employeeId && assetData.employeeId && String(existing.employeeId).trim() !== "" && String(existing.employeeId).trim() !== String(assetData.employeeId).trim()) {
       return res.status(400).json({ error: "Asset already assigned" });
     }
 
     const baseUrl = getBaseUrl(req);
-    assetData.qrCodeText = getScanUrl(baseUrl, { ...(existing || {}), ...assetData, id: String(id) } as any);
+    assetData.qrCodeText = getScanUrl(baseUrl, { ...(existing || {}), ...assetData, id: canonicalId } as any);
 
     const dbMode = readAppData().settings.dbMode;
     let result;
@@ -3142,8 +3214,8 @@ app.put("/api/assets/:id", async (req, res) => {
     let localCategory = String(assetData.mainCategory || "IT Assets");
     let localRow: string[];
     if (dbMode === "redesigned") {
-      const row = buildRedesignedAssetRow(assetData, String(id), String(assetData.qrCodeText ?? ""));
-      result = await proxyToGas({ action: "update_asset_redesigned", id, row });
+      const row = buildRedesignedAssetRow(assetData, canonicalId, String(assetData.qrCodeText ?? ""));
+      result = await proxyToGas({ action: "update_asset_redesigned", id: canonicalId, row });
       localRow = buildMasterAssetRow(assetData);
     } else {
       const sheet = await fetchSheetData();
@@ -3155,7 +3227,7 @@ app.put("/api/assets/:id", async (req, res) => {
         ["s no", "id", "sr.no", "assetid"].includes(h.toLowerCase().replace(/[^a-z0-9]/g, ""))
       );
       const normalizeId = (val: any) => String(val || "").replace(/^0+/, "").trim();
-      const targetId = normalizeId(id);
+      const targetId = normalizeId(canonicalId);
       const rowIndex = rows.findIndex((row: any[]) =>
         normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId
       );
@@ -3164,18 +3236,18 @@ app.put("/api/assets/:id", async (req, res) => {
       const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
       const updatedRow = buildMasterAssetRow(assetData, existingMaster);
       logAssetMappingAudit("sheet-write-update", assetData as Record<string, unknown>, masterHeaders, updatedRow);
-      console.log("[AMS] Sheet row payload (update):", updatedRow.length, "columns for id", id);
-      result = await proxyToGas({ action: "update", id, row: updatedRow, rowIndex: rowIndex + 2 });
+      console.log("[AMS] Sheet row payload (update):", updatedRow.length, "columns for id", canonicalId);
+      result = await proxyToGas({ action: "update", id: canonicalId, row: updatedRow, rowIndex: rowIndex + 2 });
       localRow = updatedRow;
     }
 
     if (result.error) throw new Error(result.error);
-    await updateAssetLocal(localCategory, String(id), localRow, masterHeaders);
+    await updateAssetLocal(localCategory, canonicalId, localRow, masterHeaders);
 
-    await persistAssetDynamicDetails(String(id), assetData);
+    await persistAssetDynamicDetails(canonicalId, assetData);
 
     const hist = recordAssignmentChange({
-      assetId: String(id),
+      assetId: canonicalId,
       previous: {
         employeeId: existing?.employeeId || "",
         contactName: existing?.contactName || "",
@@ -3206,9 +3278,9 @@ app.put("/api/assets/:id", async (req, res) => {
 
     const updatedAsset = mapSheetRow({
       ...assetData,
-      id: String(id),
-      "S No": id,
-      "Asset ID": id,
+      id: canonicalId,
+      "S No": canonicalId,
+      "Asset ID": canonicalId,
       "QR Code / Barcode": assetData.qrCodeText,
     });
     upsertAssetInCache(updatedAsset);
@@ -3261,44 +3333,48 @@ app.delete("/api/assets/:id", async (req, res) => {
     const data = readAppData();
     const dbMode = data.settings.dbMode;
     const assets = await getAssetsForOps();
-    const existing = assets.find(a => String(a.id).replace(/^0+/, "") === String(id).replace(/^0+/, ""));
+    const existing = findMappedAssetByAnyId(assets, id);
+    const canonicalId = String(existing?.id || id);
 
     let sheetWarning: string | undefined;
     if (GAS_WEBAPP_URL) {
       try {
         let result;
         if (dbMode === "redesigned") {
-          result = await proxyToGas({ action: "delete_asset_redesigned", id });
+          result = await proxyToGas({ action: "delete_asset_redesigned", id: canonicalId });
         } else {
-          result = await proxyToGas({ action: "delete", id });
+          result = await proxyToGas({ action: "delete", id: canonicalId });
         }
         if (result?.error) sheetWarning = String(result.error);
       } catch (gasErr: any) {
         sheetWarning = gasErr.message || "Sheet delete failed";
         console.warn("[AMS] GAS delete warning:", sheetWarning);
       }
+      if (sheetWarning) {
+        return res.status(502).json({ error: `Database delete failed: ${sheetWarning}` });
+      }
     }
 
-    deleteDetailsForAsset(id);
-    if (GAS_WEBAPP_URL) void deleteDetailsFromGas(id, proxyToGas);
-    deleteAssignmentHistoryForAsset(id);
-    deleteExtraItemsForAsset(id);
-    deleteMissingItemsForAsset(id);
-    deleteDamagedItemsForAsset(id);
-    await deleteAssetLocal(id);
+    deleteDetailsForAsset(canonicalId);
+    if (GAS_WEBAPP_URL) void deleteDetailsFromGas(canonicalId, proxyToGas);
+    deleteAssignmentHistoryForAsset(canonicalId);
+    deleteExtraItemsForAsset(canonicalId);
+    deleteMissingItemsForAsset(canonicalId);
+    deleteDamagedItemsForAsset(canonicalId);
+    await deleteAssetLocal(canonicalId);
 
     addAuditLog(
       actorEmail,
       "DELETE_ASSET",
-      id,
+      canonicalId,
       existing ? JSON.stringify(existing) : "",
       "",
-      `Deleted asset ${id}`,
+      `Deleted asset ${canonicalId}`,
       proxyToGas
     );
 
-    removeAssetFromCache(id);
-    res.json({ success: true, sheetWarning });
+    removeAssetFromCache(canonicalId);
+    res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to delete asset" });
   }

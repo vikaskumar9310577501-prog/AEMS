@@ -82,6 +82,43 @@ var CATEGORY_SHEET_MAP_ = {
   "Maintenance Tools": "Maintenance Assets"
 };
 
+var SHEET_TO_MAIN_CATEGORY_ = {
+  "IT Assets": "IT Assets",
+  "Office Assets": "Office Assets",
+  "Electrical Assets": "Electrical Assets",
+  "Production Assets": "Production Assets",
+  "Safety Assets": "Safety Assets",
+  "Vehicle Assets": "Vehicle Assets",
+  "Furniture Assets": "Furniture Assets",
+  "Software License Assets": "Software / License Assets",
+  "Admin Facility Assets": "Admin / Facility Assets",
+  "Maintenance Assets": "Maintenance Assets"
+};
+
+var SYSTEM_SHEET_NAMES_ = {
+  "Users": true,
+  "OTP_Log": true,
+  "Locations": true,
+  "Plants": true,
+  "Options": true,
+  "Asset_Details": true,
+  "Category_Definitions": true,
+  "Employees": true,
+  "Assignment_History": true,
+  "Inventory": true,
+  "Damaged_Items": true,
+  "Missing_Items": true,
+  "Audit_Logs": true,
+  "Categories": true,
+  "Asset_Types": true,
+  "Asset_Extra_Items": true,
+  "Assignments": true
+};
+
+function getMasterHeaders_() {
+  return CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
+}
+
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   migrateCategorySheetNames_(ss);
@@ -302,14 +339,32 @@ function ensureMetaSheets_(ss) {
   var invSh = ss.getSheetByName("Inventory");
   if (!invSh) {
     invSh = ss.insertSheet("Inventory");
-    invSh.getRange(1, 1, 1, 10).setValues([[
-      "Item ID", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Updated Date"
+    invSh.getRange(1, 1, 1, 15).setValues([[
+      "Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Employee ID", "Assignee Name", "Assignee Email", "Contact Number", "Updated Date"
     ]]);
     invSh.setFrozenRows(1);
   } else {
     ensureSheetHeaders_(invSh, [
-      "Item ID", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Updated Date"
+      "Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Employee ID", "Assignee Name", "Assignee Email", "Contact Number", "Updated Date"
     ]);
+  }
+  var missingSh = ss.getSheetByName("Missing_Items");
+  var missingHeaders = ["Record ID", "Parent Asset ID", "Parent Asset Name", "Missing Item Name", "Asset Type", "Brand", "Model", "Employee ID", "Assigned Person", "Missing Date", "Status", "Remarks", "Recovered Date", "Recovered By"];
+  if (!missingSh) {
+    missingSh = ss.insertSheet("Missing_Items");
+    missingSh.getRange(1, 1, 1, missingHeaders.length).setValues([missingHeaders]);
+    missingSh.setFrozenRows(1);
+  } else {
+    ensureSheetHeaders_(missingSh, missingHeaders);
+  }
+  var damagedSh = ss.getSheetByName("Damaged_Items");
+  var damagedHeaders = ["Record ID", "Asset ID", "Asset Name", "Damage Date", "Damage Reason", "Reported By", "Repair Required", "Estimated Cost", "Status", "Remarks", "Photo URL"];
+  if (!damagedSh) {
+    damagedSh = ss.insertSheet("Damaged_Items");
+    damagedSh.getRange(1, 1, 1, damagedHeaders.length).setValues([damagedHeaders]);
+    damagedSh.setFrozenRows(1);
+  } else {
+    ensureSheetHeaders_(damagedSh, damagedHeaders);
   }
 }
 
@@ -402,7 +457,7 @@ function doGet(e) {
     if (action === "get_asset_headers") {
       return json_({
         success: true,
-        headers: CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS)
+        headers: getMasterHeaders_()
       });
     }
 
@@ -420,69 +475,8 @@ function doGet(e) {
       return json_({ success: true, options: options });
     }
 
-    // Read from ALL category sheets and combine them
-    var allAssets = [];
-    var isHeadersAdded = false;
-    var headers = [];
-
     setupSheetsOnFirstRun_(ss);
-
-    for (var c = 0; c < CATEGORIES.length; c++) {
-      var cat = CATEGORIES[c];
-      var sh = ss.getSheetByName(cat);
-      if (!sh) continue;
-
-      var data = sh.getDataRange().getValues();
-      if (data.length < 2) continue;
-
-      var sheetHeaders = data[0];
-      var sheetRows = data.slice(1);
-
-      if (!isHeadersAdded) {
-        headers = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
-        allAssets.push(headers);
-        isHeadersAdded = true;
-      }
-
-      for (var r = 0; r < sheetRows.length; r++) {
-        var row = sheetRows[r];
-        var mappedRow = new Array(headers.length).fill("");
-
-        for (var h = 0; h < headers.length; h++) {
-          var headerName = headers[h];
-          var sourceIndex = indexOfNormalized_(sheetHeaders, headerName);
-          var val = "";
-          if (sourceIndex !== -1) {
-            val = String(row[sourceIndex] || "").trim();
-          }
-          
-          if (!val) {
-            var fallbackIndex = -1;
-            if (headerName === "Contact Email") {
-              fallbackIndex = indexOfNormalized_(sheetHeaders, "Email");
-              if (fallbackIndex === -1) fallbackIndex = indexOfNormalized_(sheetHeaders, "MAIL ID");
-            } else if (headerName === "Contact Number") {
-              fallbackIndex = indexOfNormalized_(sheetHeaders, "Mobile");
-              if (fallbackIndex === -1) fallbackIndex = indexOfNormalized_(sheetHeaders, "CONTACT NUMBER");
-            }
-            if (fallbackIndex !== -1) {
-              val = String(row[fallbackIndex] || "").trim();
-            }
-          }
-          
-          mappedRow[h] = val;
-        }
-        allAssets.push(mappedRow);
-      }
-    }
-
-    // Empty sheets: still return header row so the app can add the first asset
-    if (!isHeadersAdded) {
-      headers = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
-      allAssets.push(headers);
-    }
-
-    return json_(allAssets);
+    return json_(readAllAssetsForApi_());
   } catch (err) {
     return json_({ error: String(err) });
   }
@@ -567,11 +561,17 @@ function doPost(e) {
     if (action === "update_damaged_item") {
       return json_(updateRedesignedRow_("Damaged_Items", body.id, body.row, "Record ID"));
     }
+    if (action === "delete_damaged_item") {
+      return json_(deleteRedesignedRow_("Damaged_Items", body.id, "Record ID"));
+    }
     if (action === "add_missing_item") {
       return json_(addRedesignedRow_("Missing_Items", body.row, "Record ID"));
     }
     if (action === "update_missing_item") {
       return json_(updateRedesignedRow_("Missing_Items", body.id, body.row, "Record ID"));
+    }
+    if (action === "delete_missing_item") {
+      return json_(deleteRedesignedRow_("Missing_Items", body.id, "Record ID"));
     }
     if (action === "add_audit_log") {
       return json_(addRedesignedRow_("Audit_Logs", body.row, "Log ID"));
@@ -579,6 +579,10 @@ function doPost(e) {
     if (action === "sync_locations_plants") {
       ensureLocationsPlantsSheets_(ss);
       return json_(syncLocationsPlantsSheets_(body.locations, body.plants));
+    }
+    if (action === "sync_location_plant_sheets") {
+      syncLocationAndPlantAssetSheets_(ss);
+      return json_({ success: true, message: "Location & plant view sheets refreshed from assets." });
     }
     if (action === "rename_location") {
       return json_(renameLocationInSheets_(body.oldName, body.newName));
@@ -645,6 +649,7 @@ function doPost(e) {
       }
 
       sh.appendRow(newRow);
+      syncLocationAndPlantAssetSheets_(ss);
       return json_({ success: true, message: "Asset added", id: serial });
     }
 
@@ -712,6 +717,7 @@ function doPost(e) {
         sh.appendRow(newRow);
       }
 
+      syncLocationAndPlantAssetSheets_(ss);
       return json_({ success: true, message: "Asset updated" });
     }
 
@@ -744,6 +750,9 @@ function doPost(e) {
     }
     if (action === "delete_inventory_item") {
       return json_(deleteInventoryItem_(body.item || {}));
+    }
+    if (action === "replace_inventory") {
+      return json_(replaceInventory_(body.inventory || []));
     }
     if (action === "add_assignment_history") {
       return json_(addAssignmentHistory_(body.entry || {}));
@@ -1520,7 +1529,7 @@ function getSheetByNameCaseInsensitive_(ss, name) {
 }
 
 function normalizeId_(id) {
-  return String(id || "").replace(/^0+/, "").trim();
+  return String(id || "").replace(/^0+/, "").trim().toLowerCase();
 }
 
 function indexOfNormalized_(headers, target) {
@@ -1532,7 +1541,248 @@ function indexOfNormalized_(headers, target) {
   return -1;
 }
 
+function cellToString_(val) {
+  if (val == null || val === "") return "";
+  if (Object.prototype.toString.call(val) === "[object Date]" && !isNaN(val.getTime())) {
+    return val.toISOString();
+  }
+  return String(val).trim();
+}
+
+function isCategorySheetName_(name) {
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    if (CATEGORIES[i] === name) return true;
+  }
+  return false;
+}
+
+function isSystemSheetName_(name) {
+  return !!SYSTEM_SHEET_NAMES_[name];
+}
+
+function collectMirrorSheetNames_(ss) {
+  var names = {};
+  var locSh = ss.getSheetByName("Locations");
+  if (locSh && locSh.getLastRow() > 1) {
+    var locData = locSh.getDataRange().getValues();
+    var locHeaders = locData[0];
+    var locIdx = locHeaders.indexOf("Location Name");
+    if (locIdx !== -1) {
+      for (var l = 1; l < locData.length; l++) {
+        var locName = sanitizeSheetName_(locData[l][locIdx]);
+        if (locName) names[locName] = true;
+      }
+    }
+  }
+
+  var plantSh = ss.getSheetByName("Plants");
+  if (plantSh && plantSh.getLastRow() > 1) {
+    var plantData = plantSh.getDataRange().getValues();
+    var plantHeaders = plantData[0];
+    var codeIdx = plantHeaders.indexOf("Plant Code");
+    if (codeIdx !== -1) {
+      for (var p = 1; p < plantData.length; p++) {
+        var plantCode = sanitizeSheetName_(plantData[p][codeIdx]);
+        if (plantCode) names[plantCode] = true;
+      }
+    }
+  }
+  return names;
+}
+
+function sheetHasAssetHeaders_(headers) {
+  return (
+    indexOfNormalized_(headers, "Asset ID") !== -1 ||
+    indexOfNormalized_(headers, "S No") !== -1 ||
+    indexOfNormalized_(headers, "Asset Code") !== -1 ||
+    indexOfNormalized_(headers, "Asset Name") !== -1
+  );
+}
+
+function assetRowSyncKey_(sheetHeaders, row) {
+  var idIdx = indexOfNormalized_(sheetHeaders, "Asset ID");
+  if (idIdx === -1) idIdx = indexOfNormalized_(sheetHeaders, "S No");
+  if (idIdx !== -1) {
+    var id = String(row[idIdx] || "").trim();
+    if (id) return "id:" + normalizeId_(id);
+  }
+  var codeIdx = indexOfNormalized_(sheetHeaders, "Asset Code");
+  if (codeIdx !== -1) {
+    var code = String(row[codeIdx] || "").trim().toLowerCase();
+    if (code) return "code:" + code;
+  }
+  var snIdx = indexOfNormalized_(sheetHeaders, "Serial Number");
+  if (snIdx !== -1) {
+    var sn = String(row[snIdx] || "").trim().toLowerCase();
+    if (sn) return "sn:" + sn;
+  }
+  return "";
+}
+
+function sheetRowHasAssetData_(sheetHeaders, row) {
+  if (assetRowSyncKey_(sheetHeaders, row)) return true;
+  var nameIdx = indexOfNormalized_(sheetHeaders, "Asset Name");
+  if (nameIdx !== -1 && String(row[nameIdx] || "").trim()) return true;
+  return row.some(function (v) {
+    return String(v || "").trim() !== "";
+  });
+}
+
+function resolveRowMainCategory_(sheetName, masterRow, masterHeaders, canonicalMainOverride) {
+  var mainIdx = indexOfNormalized_(masterHeaders, "Main Category");
+  if (mainIdx !== -1 && String(masterRow[mainIdx] || "").trim()) {
+    return String(masterRow[mainIdx]).trim();
+  }
+  if (canonicalMainOverride) return canonicalMainOverride;
+  if (isCategorySheetName_(sheetName)) {
+    return SHEET_TO_MAIN_CATEGORY_[sheetName] || sheetName;
+  }
+  return "IT Assets";
+}
+
+function mapSheetRowToMasterRow_(sheetHeaders, masterHeaders, sheetRow) {
+  var out = new Array(masterHeaders.length);
+  for (var m = 0; m < masterHeaders.length; m++) {
+    var src = indexOfNormalized_(sheetHeaders, masterHeaders[m]);
+    var norm = String(masterHeaders[m] || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (src === -1 && (norm === "contactemail" || norm === "email" || norm === "mailid")) {
+      src = indexOfNormalized_(sheetHeaders, "Email");
+      if (src === -1) src = indexOfNormalized_(sheetHeaders, "MAIL ID");
+      if (src === -1) src = indexOfNormalized_(sheetHeaders, "Contact Person Email");
+    }
+    if (src === -1 && (norm === "contactnumber" || norm === "mobile")) {
+      src = indexOfNormalized_(sheetHeaders, "Mobile");
+      if (src === -1) src = indexOfNormalized_(sheetHeaders, "CONTACT NUMBER");
+      if (src === -1) src = indexOfNormalized_(sheetHeaders, "Contact Person Mobile Number");
+    }
+    if (src === -1 && norm === "plantname") {
+      src = indexOfNormalized_(sheetHeaders, "Plant Code");
+      if (src === -1) src = indexOfNormalized_(sheetHeaders, "Plant");
+    }
+    out[m] = src !== -1 && src < sheetRow.length && sheetRow[src] != null ? cellToString_(sheetRow[src]) : "";
+  }
+  return out;
+}
+
+function appendAssetsFromSheet_(sh, masterHeaders, allAssets, seenKeys, canonicalMainOverride) {
+  if (!sh || sh.getLastRow() < 2) return 0;
+  var data = sh.getDataRange().getValues();
+  var sheetHeaders = data[0];
+  if (!sheetHasAssetHeaders_(sheetHeaders)) return 0;
+
+  var added = 0;
+  for (var r = 1; r < data.length; r++) {
+    var row = data[r];
+    if (!sheetRowHasAssetData_(sheetHeaders, row)) continue;
+    var key = assetRowSyncKey_(sheetHeaders, row);
+    if (key && seenKeys[key]) continue;
+
+    var masterRow = mapSheetRowToMasterRow_(sheetHeaders, masterHeaders, row);
+    var mainIdx = indexOfNormalized_(masterHeaders, "Main Category");
+    if (mainIdx !== -1) {
+      masterRow[mainIdx] = resolveRowMainCategory_(sh.getName(), masterRow, masterHeaders, canonicalMainOverride);
+    }
+
+    if (key) seenKeys[key] = true;
+    allAssets.push(masterRow);
+    added++;
+  }
+  return added;
+}
+
+function listAssetDataSheets_(ss) {
+  var ordered = [];
+  var seen = {};
+
+  for (var c = 0; c < CATEGORIES.length; c++) {
+    var cat = CATEGORIES[c];
+    var catSh = ss.getSheetByName(cat);
+    if (catSh) {
+      ordered.push(catSh);
+      seen[cat] = true;
+    }
+  }
+
+  var legacy = ss.getSheetByName("Assets");
+  if (legacy && !seen["Assets"]) {
+    ordered.push(legacy);
+    seen["Assets"] = true;
+  }
+
+  var sheets = ss.getSheets();
+  var mirrorSheetNames = collectMirrorSheetNames_(ss);
+  for (var s = 0; s < sheets.length; s++) {
+    var name = sheets[s].getName();
+    if (seen[name] || isSystemSheetName_(name) || mirrorSheetNames[name] || name.indexOf("ARCHIVED_") === 0) continue;
+    var hdr = sheets[s].getLastColumn() > 0
+      ? sheets[s].getRange(1, 1, 1, sheets[s].getLastColumn()).getValues()[0]
+      : [];
+    if (sheetHasAssetHeaders_(hdr)) {
+      ordered.push(sheets[s]);
+      seen[name] = true;
+    }
+  }
+  return ordered;
+}
+
+function readAllAssetsForApi_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var masterHeaders = getMasterHeaders_();
+  var allAssets = [masterHeaders.slice()];
+  var seenKeys = {};
+  var sheets = listAssetDataSheets_(ss);
+
+  for (var i = 0; i < sheets.length; i++) {
+    var sh = sheets[i];
+    var canonicalMain = isCategorySheetName_(sh.getName())
+      ? SHEET_TO_MAIN_CATEGORY_[sh.getName()] || sh.getName()
+      : null;
+    appendAssetsFromSheet_(sh, masterHeaders, allAssets, seenKeys, canonicalMain);
+  }
+
+  return allAssets;
+}
+
 // --- Inventory ---
+
+function getInventoryHeaders_() {
+  return [
+    "Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number",
+    "Category", "Status", "Quantity", "Min Stock",
+    "Employee ID", "Assignee Name", "Assignee Email", "Contact Number",
+    "Updated Date"
+  ];
+}
+
+function inventoryFieldMap_(item, now) {
+  var isAssigned = String(item.status || "Available").trim() === "Assigned";
+  return {
+    "Item ID": String(item.itemId || "").trim().toUpperCase(),
+    "Asset Code": String(item.assetCode || "").trim().toUpperCase(),
+    "Item Name": String(item.itemName || "").trim(),
+    "Brand Name": String(item.brandName || "").trim(),
+    "Model": String(item.model || "").trim(),
+    "Serial Number": String(item.serialNumber || "").trim().toUpperCase(),
+    "Category": String(item.category || "IT Assets").trim(),
+    "Status": String(item.status || "Available").trim(),
+    "Quantity": Number(item.quantity) || 0,
+    "Min Stock": Number(item.minStock) || 0,
+    "Employee ID": isAssigned ? String(item.employeeId || "").trim() : "",
+    "Assignee Name": isAssigned ? String(item.assigneeName || "").trim() : "",
+    "Assignee Email": isAssigned ? String(item.assigneeEmail || "").trim() : "",
+    "Contact Number": isAssigned ? String(item.assigneeMobile || "").trim() : "",
+    "Updated Date": item.updatedAt ? String(item.updatedAt) : (now || new Date().toISOString())
+  };
+}
+
+function inventoryRowFromItem_(item, headers, now) {
+  var map = inventoryFieldMap_(item, now);
+  var row = [];
+  for (var h = 0; h < headers.length; h++) {
+    row.push(map[headers[h]] !== undefined ? map[headers[h]] : "");
+  }
+  return row;
+}
 
 function listInventory_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1559,6 +1809,10 @@ function listInventory_() {
       status: String(item["Status"] || "Available").trim(),
       quantity: Number(item["Quantity"]) || 0,
       minStock: Number(item["Min Stock"]) || 0,
+      employeeId: String(item["Employee ID"] || "").trim(),
+      assigneeName: String(item["Assignee Name"] || "").trim(),
+      assigneeEmail: String(item["Assignee Email"] || "").trim(),
+      assigneeMobile: String(item["Contact Number"] || "").trim(),
       updatedAt: String(item["Updated Date"] || "")
     });
   }
@@ -1593,24 +1847,14 @@ function addInventoryItem_(item) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ensureMetaSheets_(ss);
   var sh = ss.getSheetByName("Inventory");
+  ensureSheetHeaders_(sh, getInventoryHeaders_());
   var id = String(item.itemId || "").trim().toUpperCase();
   var assetCode = String(item.assetCode || "").trim().toUpperCase();
   if (!id) return { error: "Item ID required" };
   if (findInventoryRow_(id, assetCode) !== -1) return { error: "Item ID or Asset Code already exists" };
   var now = new Date().toISOString();
-  sh.appendRow([
-    id,
-    assetCode,
-    String(item.itemName || "").trim(),
-    String(item.brandName || "").trim(),
-    String(item.model || "").trim(),
-    String(item.serialNumber || "").trim().toUpperCase(),
-    String(item.category || "IT Assets").trim(),
-    String(item.status || "Available").trim(),
-    Number(item.quantity) || 0,
-    Number(item.minStock) || 0,
-    now
-  ]);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.appendRow(inventoryRowFromItem_(item, headers, now));
   return { success: true, item: item };
 }
 
@@ -1619,20 +1863,10 @@ function updateInventoryItem_(item) {
   if (row === -1) return addInventoryItem_(item);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName("Inventory");
+  ensureSheetHeaders_(sh, getInventoryHeaders_());
   var now = new Date().toISOString();
-  sh.getRange(row, 1, 1, 11).setValues([[
-    String(item.itemId || "").trim().toUpperCase(),
-    String(item.assetCode || "").trim().toUpperCase(),
-    String(item.itemName || "").trim(),
-    String(item.brandName || "").trim(),
-    String(item.model || "").trim(),
-    String(item.serialNumber || "").trim().toUpperCase(),
-    String(item.category || "IT Assets").trim(),
-    String(item.status || "Available").trim(),
-    Number(item.quantity) || 0,
-    Number(item.minStock) || 0,
-    now
-  ]]);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.getRange(row, 1, 1, headers.length).setValues([inventoryRowFromItem_(item, headers, now)]);
   return { success: true, item: item };
 }
 
@@ -1642,6 +1876,23 @@ function deleteInventoryItem_(item) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.getSheetByName("Inventory").deleteRow(row);
   return { success: true };
+}
+
+function replaceInventory_(items) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureMetaSheets_(ss);
+  var sh = ss.getSheetByName("Inventory");
+  ensureSheetHeaders_(sh, getInventoryHeaders_());
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  clearSheetDataRows_(sh);
+  if (!items || !items.length) return { success: true, count: 0 };
+  var now = new Date().toISOString();
+  var rows = [];
+  for (var i = 0; i < items.length; i++) {
+    rows.push(inventoryRowFromItem_(items[i], headers, now));
+  }
+  sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  return { success: true, count: rows.length };
 }
 
 function listRedesignedTable_(sheetName) {
@@ -2005,7 +2256,7 @@ function setupRedesignedSheets() {
     "Users": ["Email", "Role", "Locations", "Plants", "Categories", "OTP", "Expiry", "Attempts"],
     "Categories": ["Category Name", "Description", "Created Date"],
     "Asset_Types": ["Type ID", "Type Name", "Main Category", "Config JSON"],
-    "Inventory": ["Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Updated Date"],
+    "Inventory": ["Item ID", "Asset Code", "Item Name", "Brand Name", "Model", "Serial Number", "Category", "Status", "Quantity", "Min Stock", "Employee ID", "Assignee Name", "Assignee Email", "Contact Number", "Updated Date"],
     "Assets": [
       "Asset ID", "Category", "Sub Category", "Asset Type", "Asset Name", "Brand", "Model",
       "Serial Number", "Vehicle Number", "Asset Code", "MAC Address",
@@ -2019,8 +2270,8 @@ function setupRedesignedSheets() {
     "Asset_Extra_Items": ["Record ID", "Parent Asset ID", "Item Name", "Quantity", "Serial Number", "Condition", "Status", "Remarks", "Updated Date"],
     "Assignments": ["Assignment ID", "Asset/Inventory ID", "Type", "Assignee Name", "Assignee ID", "Department", "Contact Number", "Assigned Date", "Assigned By", "Status", "Remarks"],
     "Assignment_History": ["Record ID", "Asset ID", "Action", "Employee ID", "Employee Name", "Contact Number", "Assigned Date", "Returned Date", "Assigned By", "Remarks", "From Employee ID", "From Employee Name"],
-    "Missing_Items": ["Record ID", "Parent Asset ID", "Parent Asset Name", "Missing Item Name", "Assigned Person", "Missing Date", "Status", "Remarks", "Recovered Date", "Recovered By"],
-    "Damaged_Items": ["Record ID", "Asset ID", "Asset Name", "Damage Date", "Damage Reason", "Reported By", "Repair Required", "Estimated Cost", "Status", "Remarks"],
+    "Missing_Items": ["Record ID", "Parent Asset ID", "Parent Asset Name", "Missing Item Name", "Asset Type", "Brand", "Model", "Employee ID", "Assigned Person", "Missing Date", "Status", "Remarks", "Recovered Date", "Recovered By"],
+    "Damaged_Items": ["Record ID", "Asset ID", "Asset Name", "Damage Date", "Damage Reason", "Reported By", "Repair Required", "Estimated Cost", "Status", "Remarks", "Photo URL"],
     "Repair_Records": ["Record ID", "Asset ID", "Repair Vendor", "Sent Date", "Return Date", "Cost", "Status", "Remarks"],
     "Locations": ["Location Name", "Department", "Created Date"],
     "Plants": ["Plant Code", "Plant Name", "Location Name", "Created Date"],
@@ -2483,8 +2734,35 @@ function deletePlantInSheets_(code, deleteOrArchive) {
   return { success: true };
 }
 
+function collectMirrorAssetRows_(ss) {
+  var masterHeaders = getMasterHeaders_();
+  var rows = [];
+  var seenKeys = {};
+  var allAssets = [masterHeaders.slice()];
+  var sheets = listAssetDataSheets_(ss);
+
+  for (var i = 0; i < sheets.length; i++) {
+    var sh = sheets[i];
+    var canonicalMain = isCategorySheetName_(sh.getName())
+      ? SHEET_TO_MAIN_CATEGORY_[sh.getName()] || sh.getName()
+      : null;
+    appendAssetsFromSheet_(sh, masterHeaders, allAssets, seenKeys, canonicalMain);
+  }
+
+  for (var r = 1; r < allAssets.length; r++) {
+    rows.push(allAssets[r]);
+  }
+
+  return { headers: masterHeaders, rows: rows, masterHeaders: masterHeaders };
+}
+
+function normalizedCompare_(a, b) {
+  return String(a || "").trim().toUpperCase() === String(b || "").trim().toUpperCase();
+}
+
 function syncLocationAndPlantAssetSheets_(ss) {
   if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureLocationsPlantsSheets_(ss);
 
   var locs = [];
   var locSh = ss.getSheetByName("Locations");
@@ -2494,8 +2772,8 @@ function syncLocationAndPlantAssetSheets_(ss) {
     var nameIdx = locHeaders.indexOf("Location Name");
     if (nameIdx !== -1) {
       for (var i = 1; i < locData.length; i++) {
-        var name = String(locData[i][nameIdx] || "").trim();
-        if (name) locs.push(name);
+        var locName = String(locData[i][nameIdx] || "").trim();
+        if (locName) locs.push(locName);
       }
     }
   }
@@ -2506,69 +2784,87 @@ function syncLocationAndPlantAssetSheets_(ss) {
     var plantData = plantSh.getDataRange().getValues();
     var plantHeaders = plantData[0];
     var codeIdx = plantHeaders.indexOf("Plant Code");
+    var plantNameIdx = plantHeaders.indexOf("Plant Name");
     if (codeIdx !== -1) {
-      for (var i = 1; i < plantData.length; i++) {
-        var code = String(plantData[i][codeIdx] || "").trim();
-        if (code) plants.push(code);
+      for (var p = 1; p < plantData.length; p++) {
+        var code = String(plantData[p][codeIdx] || "").trim();
+        if (code) plants.push({
+          code: code,
+          name: plantNameIdx !== -1 ? String(plantData[p][plantNameIdx] || "").trim() : ""
+        });
       }
     }
   }
 
-  var assetsSh = ss.getSheetByName("Assets");
-  if (!assetsSh) return;
-  var assetsData = assetsSh.getDataRange().getValues();
-  if (assetsData.length < 1) return;
-  var assetsHeaders = assetsData[0];
-  var assetsRows = assetsData.slice(1);
+  var collected = collectMirrorAssetRows_(ss);
+  if (!collected.headers) return;
 
-  var assetLocIdx = assetsHeaders.indexOf("Location");
-  var assetPlantIdx = assetsHeaders.indexOf("Plant Code");
+  var mirrorHeaders = collected.headers;
+  var mirrorRows = collected.rows;
+  var masterHeaders = collected.masterHeaders;
+  var assetLocIdx = indexOfNormalized_(mirrorHeaders, "Location");
+  var assetPlantNameIdx = indexOfNormalized_(mirrorHeaders, "Plant Name");
+  var assetPlantCodeIdx = indexOfNormalized_(mirrorHeaders, "Plant Code");
 
-  var syncTab = function(tabName, filterFn) {
+  var syncTab = function(tabName, filterFn, headerColor) {
     var sanitizedName = sanitizeSheetName_(tabName);
     if (!sanitizedName) return;
     var sh = ss.getSheetByName(sanitizedName);
     if (!sh) {
       sh = ss.insertSheet(sanitizedName);
-      sh.getRange(1, 1, 1, assetsHeaders.length).setValues([assetsHeaders]);
-      sh.setFrozenRows(1);
-      var hr = sh.getRange(1, 1, 1, assetsHeaders.length);
-      hr.setBackground("#0284c7");
-      hr.setFontColor("#ffffff");
-      hr.setFontWeight("bold");
-    } else {
-      if (sh.getLastRow() > 1) {
-        sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).clearContent();
-      }
+    }
+    sh.getRange(1, 1, 1, mirrorHeaders.length).setValues([mirrorHeaders]);
+    sh.setFrozenRows(1);
+    var hr = sh.getRange(1, 1, 1, mirrorHeaders.length);
+    hr.setBackground(headerColor || "#0284c7");
+    hr.setFontColor("#ffffff");
+    hr.setFontWeight("bold");
+
+    if (sh.getLastRow() > 1) {
+      sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(sh.getLastColumn(), mirrorHeaders.length)).clearContent();
     }
 
     var matchingRows = [];
-    for (var r = 0; r < assetsRows.length; r++) {
-      if (filterFn(assetsRows[r])) {
-        matchingRows.push(assetsRows[r]);
-      }
+    for (var r = 0; r < mirrorRows.length; r++) {
+      if (filterFn(mirrorRows[r])) matchingRows.push(mirrorRows[r]);
     }
 
     if (matchingRows.length > 0) {
-      sh.getRange(2, 1, matchingRows.length, assetsHeaders.length).setValues(matchingRows);
+      sh.getRange(2, 1, matchingRows.length, mirrorHeaders.length).setValues(matchingRows);
     }
   };
 
+  var rowLoc = function(row) {
+    if (assetLocIdx !== -1 && row[assetLocIdx] !== undefined) {
+      return String(row[assetLocIdx] || "").trim();
+    }
+    return "";
+  };
+
+  var rowPlantValues = function(row) {
+    var values = [];
+    if (assetPlantNameIdx !== -1 && row[assetPlantNameIdx] !== undefined) values.push(String(row[assetPlantNameIdx] || "").trim());
+    if (assetPlantCodeIdx !== -1 && row[assetPlantCodeIdx] !== undefined) values.push(String(row[assetPlantCodeIdx] || "").trim());
+    return values;
+  };
+
   for (var l = 0; l < locs.length; l++) {
-    var locName = locs[l];
     (function(name) {
       syncTab(name, function(row) {
-        return assetLocIdx !== -1 && String(row[assetLocIdx] || "").trim() === name;
-      });
-    })(locName);
+        return normalizedCompare_(rowLoc(row), name);
+      }, "#0284c7");
+    })(locs[l]);
   }
 
-  for (var p = 0; p < plants.length; p++) {
-    var plantCode = plants[p];
-    (function(code) {
-      syncTab(code, function(row) {
-        return assetPlantIdx !== -1 && String(row[assetPlantIdx] || "").trim() === code;
-      });
-    })(plantCode);
+  for (var pi = 0; pi < plants.length; pi++) {
+    (function(plant) {
+      syncTab(plant.code, function(row) {
+        var values = rowPlantValues(row);
+        for (var v = 0; v < values.length; v++) {
+          if (normalizedCompare_(values[v], plant.code) || normalizedCompare_(values[v], plant.name)) return true;
+        }
+        return false;
+      }, "#0f766e");
+    })(plants[pi]);
   }
 }

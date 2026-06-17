@@ -96,7 +96,7 @@ export default function MarkMissingModal({ open, onClose, onSaved }: MarkMissing
 
   useEffect(() => {
     if (!open) return;
-    fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/settings')
+    fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/settings?refresh=1')
       .then((r) => r.json())
       .then((data) => {
         setAppSettings({

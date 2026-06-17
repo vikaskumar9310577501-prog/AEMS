@@ -75,6 +75,22 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+function normalizedScopeValue(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function sameScopeValue(left: unknown, right: unknown): boolean {
+  const l = normalizedScopeValue(left);
+  const r = normalizedScopeValue(right);
+  return !!l && !!r && l === r;
+}
+
+function scopeValueIncludes(left: unknown, right: unknown): boolean {
+  const l = normalizedScopeValue(left);
+  const r = normalizedScopeValue(right);
+  return !!l && !!r && (l === r || l.includes(r));
+}
+
 export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
@@ -329,6 +345,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     const pollSheetChanges = async () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       try {
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL || ''}/api/assets/sync-meta`,
@@ -391,14 +408,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (user && user.role !== 'IT Admin') {
         if (user.locations?.length && !user.locations.includes('All')) {
           filtered = filtered.filter((a) =>
-            user.locations.some((loc) =>
-              (a.location || '').toLowerCase().includes(loc.toLowerCase())
-            )
+            user.locations.some((loc) => sameScopeValue(a.location, loc) || scopeValueIncludes(a.location, loc))
           );
         }
         if (user.plants?.length && !user.plants.includes('All')) {
           filtered = filtered.filter((a) =>
-            user.plants.some((p) => (a.plantCode || '').toLowerCase().includes(p.toLowerCase()))
+            user.plants.some((p) => sameScopeValue(a.plantCode, p) || scopeValueIncludes(a.plantCode, p))
           );
         }
         if (user.categories?.length && !user.categories.includes('All')) {

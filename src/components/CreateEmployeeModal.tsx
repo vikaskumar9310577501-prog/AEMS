@@ -29,6 +29,10 @@ interface CreateEmployeeModalProps {
   mode?: 'create' | 'edit';
 }
 
+function sameSettingValue(left: unknown, right: unknown): boolean {
+  return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+}
+
 export default function CreateEmployeeModal({ open, initial, onClose, onSaved, mode }: CreateEmployeeModalProps) {
   const [form, setForm] = useState<Employee>(EMPTY_EMPLOYEE());
   const [saving, setSaving] = useState(false);
@@ -37,7 +41,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
 
   useEffect(() => {
     if (!open) return;
-    fetch(`${API_BASE}/api/settings`)
+    fetch(`${API_BASE}/api/settings?refresh=1`)
       .then((r) => parseJsonResponse<AppSettings>(r))
       .then(setSettings)
       .catch(() => setSettings({ locations: [], plants: [] }));
@@ -62,7 +66,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
 
   const plantsForLocation = useMemo(() => {
     if (!form.location) return settings.plants;
-    return settings.plants.filter((p) => !p.location || p.location === form.location);
+    return settings.plants.filter((p) => !p.location || sameSettingValue(p.location, form.location));
   }, [settings.plants, form.location]);
 
   if (!open) return null;

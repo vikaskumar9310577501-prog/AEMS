@@ -36,6 +36,10 @@ const emptyForm = (): AppUser => ({
   allowDelete: false,
 });
 
+function sameSettingValue(left: unknown, right: unknown): boolean {
+  return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+}
+
 export default function UserManagement() {
   const { user: loggedInUser } = useApp();
   if (!loggedInUser || !canAccessUserManagement(loggedInUser.role) || loggedInUser.role === 'HR') {
@@ -58,7 +62,7 @@ export default function UserManagement() {
   const canManageUsers = !!loggedInUser && canAccessUserManagement(loggedInUser.role);
 
   useEffect(() => {
-    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings')
+    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {
@@ -75,19 +79,23 @@ export default function UserManagement() {
   const allowedLocations = useMemo(() => {
     if (!loggedInUser) return [];
     if (isITAdmin || loggedInUser.locations?.includes('All')) return settings.locations;
-    return settings.locations.filter(loc => loggedInUser.locations?.includes(loc));
+    return settings.locations.filter((loc) =>
+      loggedInUser.locations?.some((allowed) => sameSettingValue(allowed, loc))
+    );
   }, [settings.locations, loggedInUser, isITAdmin]);
 
   const allowedPlants = useMemo(() => {
     if (!loggedInUser) return [];
     if (isITAdmin || loggedInUser.plants?.includes('All')) return settings.plants;
-    return settings.plants.filter(p => loggedInUser.plants?.includes(p.code));
+    return settings.plants.filter((p) =>
+      loggedInUser.plants?.some((allowed) => sameSettingValue(allowed, p.code) || sameSettingValue(allowed, p.name))
+    );
   }, [settings.plants, loggedInUser, isITAdmin]);
 
   const plantsForSelectedLocations = useMemo(() => {
     const list = selectedLocations.length === 0 
       ? allowedPlants 
-      : allowedPlants.filter((p) => selectedLocations.includes(p.location));
+      : allowedPlants.filter((p) => selectedLocations.some((loc) => sameSettingValue(loc, p.location)));
     return list;
   }, [allowedPlants, selectedLocations]);
 
@@ -110,9 +118,9 @@ export default function UserManagement() {
       const uLocs = u.locations || [];
       const uPlants = u.plants || [];
       const sharesLoc =
-        uLocs.includes('All') || uLocs.some((loc) => adminLocs.includes(loc));
+        uLocs.includes('All') || uLocs.some((loc) => adminLocs.some((adminLoc) => sameSettingValue(adminLoc, loc)));
       const sharesPlant =
-        uPlants.includes('All') || uPlants.some((p) => adminPlants.includes(p));
+        uPlants.includes('All') || uPlants.some((p) => adminPlants.some((adminPlant) => sameSettingValue(adminPlant, p)));
       const sharesCategory =
         adminCats.includes('All') ||
         adminCats.length === 0 ||
@@ -130,9 +138,11 @@ export default function UserManagement() {
     setSelectedLocations((prev) => {
       const next = prev.includes(loc) ? prev.filter((l) => l !== loc) : [...prev, loc];
       const allowedPlantsList = allowedPlants
-        .filter((p) => next.includes(p.location))
+        .filter((p) => next.some((selectedLoc) => sameSettingValue(selectedLoc, p.location)))
         .map((p) => p.code);
-      setSelectedPlants((plants) => plants.filter((p) => allowedPlantsList.includes(p)));
+      setSelectedPlants((plants) =>
+        plants.filter((p) => allowedPlantsList.some((allowed) => sameSettingValue(allowed, p)))
+      );
       return next;
     });
   };

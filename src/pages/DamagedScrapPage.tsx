@@ -10,7 +10,7 @@ import MarkDamagedModal from '../components/MarkDamagedModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useEmployees } from '../hooks/useEmployees';
 import type { AssetFormData } from '../types';
-import { assetRouteId } from '../lib/assetLookup';
+import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
 import { ViewModeToggle, useListViewMode } from '../components/ViewModeToggle';
 
 export default function DamagedScrapPage() {
@@ -134,9 +134,7 @@ export default function DamagedScrapPage() {
   };
 
   const handleRowDeassign = async (record: DamagedItemRecord) => {
-    const asset = assets.find(
-      (a) => String(a.id).replace(/^0+/, '') === String(record['Asset ID']).replace(/^0+/, '')
-    );
+    const asset = findAssetByAnyId(assets, record['Asset ID']);
     if (!asset) {
       toast.error('Parent asset not found in database');
       return;
@@ -183,9 +181,7 @@ export default function DamagedScrapPage() {
   };
 
   const handleRowReassignClick = (record: DamagedItemRecord) => {
-    const asset = assets.find(
-      (a) => String(a.id).replace(/^0+/, '') === String(record['Asset ID']).replace(/^0+/, '')
-    );
+    const asset = findAssetByAnyId(assets, record['Asset ID']);
     if (!asset) {
       toast.error('Parent asset not found in database');
       return;
@@ -203,9 +199,7 @@ export default function DamagedScrapPage() {
     const emp = employees.find((e) => e.employeeId === selectedEmployeeId);
     if (!emp) return;
 
-    const asset = assets.find(
-      (a) => String(a.id).replace(/^0+/, '') === String(reassigningRecord['Asset ID']).replace(/^0+/, '')
-    );
+    const asset = findAssetByAnyId(assets, reassigningRecord['Asset ID']);
     if (!asset) return;
 
     if (asset.employeeId && asset.employeeId !== selectedEmployeeId) {
@@ -315,17 +309,21 @@ export default function DamagedScrapPage() {
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((it) => (
+            {filtered.map((it) => {
+              const asset = findAssetByAnyId(assets, it['Asset ID']);
+              const displayCode = asset?.assetCode || it['Asset ID'];
+              return (
               <div key={it['Record ID']} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                <p className="font-black text-slate-900">{it['Asset Name'] || it['Asset Code']}</p>
-                <p className="text-xs font-mono text-slate-500 mt-1">{it['Asset Code']}</p>
+                <p className="font-black text-slate-900">{it['Asset Name'] || asset?.assetName || displayCode}</p>
+                <p className="text-xs font-mono text-slate-500 mt-1">{displayCode}</p>
                 <p className="text-sm text-slate-600 mt-3">{it['Damage Reason'] || '—'}</p>
                 <p className="text-xs text-slate-500 mt-2">Reported by {it['Reported By'] || '—'}</p>
                 <span className="inline-block mt-3 text-[10px] font-black uppercase px-2 py-0.5 rounded bg-red-50 text-red-700">
                   {it.Status}
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -343,9 +341,7 @@ export default function DamagedScrapPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((it) => {
-                  const asset = assets.find(
-                    (a) => String(a.id).replace(/^0+/, '') === String(it['Asset ID']).replace(/^0+/, '')
-                  );
+                  const asset = findAssetByAnyId(assets, it['Asset ID']);
                   const handleRowClick = (e: React.MouseEvent) => {
                     const target = e.target as HTMLElement;
                     if (target.closest('a') || target.closest('button')) {
@@ -472,9 +468,7 @@ export default function DamagedScrapPage() {
                         {it.Status === 'Repaired' && (
                           <>
                             {(() => {
-                              const parentAsset = assets.find(
-                                (a) => String(a.id).replace(/^0+/, '') === String(it['Asset ID']).replace(/^0+/, '')
-                              );
+                              const parentAsset = findAssetByAnyId(assets, it['Asset ID']);
                               const hasAssignee = !!parentAsset?.employeeId;
                               return (
                                 <>

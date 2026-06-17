@@ -15,7 +15,7 @@ export async function syncDatabaseAssets(opts: {
   });
 
   if (syncRes.ok) {
-    await opts.fetchAssets({ silent: true });
+    await opts.fetchAssets({ force: true, silent: true });
     return;
   }
 

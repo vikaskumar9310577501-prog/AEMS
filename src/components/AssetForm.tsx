@@ -167,6 +167,10 @@ interface AppSettings {
   catalog?: AssetCatalog;
 }
 
+function sameSettingValue(left: unknown, right: unknown): boolean {
+  return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+}
+
 export default function AssetForm({ initialData, onSubmit, onCancel, loading, layout = "modal", prefillMainCategory, prefillAssetType, hideAssignee = false, allowedCategories: propAllowedCategories }: AssetFormProps) {
   const isPageLayout = layout === "page";
   const { config: typeConfig } = useTypeDefinitions();
@@ -179,7 +183,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const [dynamicFieldErrors, setDynamicFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings')
+    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1')
       .then((r) => r.json())
       .then((data) => {
         setAppSettings({
@@ -797,7 +801,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     if (loggedInUser.role === 'IT Admin' || loggedInUser.locations?.includes('All')) {
       return appSettings.locations;
     }
-    return appSettings.locations.filter(loc => loggedInUser.locations?.includes(loc));
+    return appSettings.locations.filter((loc) =>
+      loggedInUser.locations?.some((allowed: string) => sameSettingValue(allowed, loc))
+    );
   }, [appSettings.locations, loggedInUser]);
 
   const allowedPlants = React.useMemo(() => {
@@ -805,12 +811,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     if (loggedInUser.role === 'IT Admin' || loggedInUser.plants?.includes('All')) {
       return appSettings.plants;
     }
-    return appSettings.plants.filter(p => loggedInUser.plants?.includes(p.code));
+    return appSettings.plants.filter((p) =>
+      loggedInUser.plants?.some((allowed: string) => sameSettingValue(allowed, p.code) || sameSettingValue(allowed, p.name))
+    );
   }, [appSettings.plants, loggedInUser]);
 
   const plantsForLocation = React.useMemo(() => {
     return allowedPlants.filter(
-      (p) => !formData.location || p.location === formData.location
+      (p) => !formData.location || sameSettingValue(p.location, formData.location)
     );
   }, [allowedPlants, formData.location]);
 
@@ -2137,7 +2145,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   </option>
                 ))}
                 {formData.plantCode &&
-                  !plantsForLocation.some((p) => p.code === formData.plantCode) && (
+                  !plantsForLocation.some((p) => sameSettingValue(p.code, formData.plantCode) || sameSettingValue(p.name, formData.plantCode)) && (
                     <option value={formData.plantCode}>{formData.plantCode}</option>
                   )}
               </select>

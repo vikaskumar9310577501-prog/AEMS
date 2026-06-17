@@ -73,7 +73,7 @@ export function mapAssetsFromApi(data: Record<string, unknown>[]): Asset[] {
     return {
       id: getVal(item, ['S No', 'ID', 'SR.NO', 'id', 'Asset ID']) as unknown as number,
       location: getVal(item, ['Location', 'Loc']),
-      plantCode: getVal(item, ['Plant Name', 'Plant Code', 'Plant', 'plantCode']),
+      plantCode: getVal(item, ['Plant Code', 'Plant', 'plantCode', 'Plant Name']),
       department: getVal(item, ['Department', 'Dept']),
       make: getVal(item, ['Make', 'Brand', 'Brand/Make']),
       model: getVal(item, ['Model']),

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, Building2, MapPin, Package, History, AlertTriangle, Wrench, RotateCcw, Trash2 } from 'lucide-react';
 import type { MissingItemRecord } from '../types/redesigned';
-import { assetRouteId } from '../lib/assetLookup';
+import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
 import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
@@ -346,9 +346,7 @@ export default function EmployeeProfilePage() {
             </h2>
             <div className="bg-amber-50 border border-amber-200 rounded-2xl divide-y divide-amber-100">
               {activeMissingComponents.map((m) => {
-                const parentAsset = assets.find(
-                  (a) => String(a.id).replace(/^0+/, '') === String(m['Parent Asset ID']).replace(/^0+/, '')
-                );
+                const parentAsset = findAssetByAnyId(assets, m['Parent Asset ID']);
                 return (
                   <div key={m['Record ID']} className="p-4 flex flex-wrap justify-between gap-2 items-center">
                     <div>
@@ -412,9 +410,7 @@ export default function EmployeeProfilePage() {
             </h2>
             <ul className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
               {returnedHistory.map((h) => {
-                const asset = assets.find(
-                  (a) => String(a.id).replace(/^0+/, '') === String(h.assetId).replace(/^0+/, '')
-                );
+                const asset = findAssetByAnyId(assets, h.assetId);
                 return (
                   <li key={h.id} className="px-4 py-3 text-sm flex justify-between items-center">
                     {asset ? (
@@ -456,7 +452,7 @@ export default function EmployeeProfilePage() {
               {timeline.map((ev, i) => {
                 const targetAssetId = ev.assetId || ev.parentAssetId;
                 const asset = targetAssetId
-                  ? assets.find((a) => String(a.id).replace(/^0+/, '') === String(targetAssetId).replace(/^0+/, ''))
+                  ? findAssetByAnyId(assets, targetAssetId)
                   : undefined;
                 return (
                   <li key={i} className="ml-6">
