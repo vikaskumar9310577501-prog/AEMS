@@ -9,8 +9,9 @@ export function useInventory(opts?: { autoLoad?: boolean }) {
   const refresh = useCallback(async (force = false) => {
     setLoading(true);
     try {
+      const base = import.meta.env.VITE_API_BASE_URL || '';
       const url = force ? '/api/inventory?refresh=1' : '/api/inventory';
-      const res = await fetch(url);
+      const res = await fetch(base + url, { credentials: 'include' });
       if (res.ok) {
         const data = await parseJsonResponse<InventoryItem[] | { inventory?: InventoryItem[] }>(res);
         setInventory(Array.isArray(data) ? data : data.inventory || []);

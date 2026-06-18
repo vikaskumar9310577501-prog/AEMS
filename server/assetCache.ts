@@ -83,7 +83,8 @@ function filterDeletedAssets(assets: MappedAsset[]): MappedAsset[] {
 }
 
 function mergeAssetsBySyncKey(previous: MappedAsset[], incoming: MappedAsset[]): MappedAsset[] {
-  const merged = filterDeletedAssets(previous);
+  const sheetKeys = buildAssetSyncKeySet(filterDeletedAssets(incoming));
+  const merged = filterDeletedAssets(previous).filter((asset) => isAssetOnSheet(asset, sheetKeys));
   for (const raw of filterDeletedAssets(incoming)) {
     const asset = healMisalignedAssetFields(raw);
     const keys = buildAssetSyncKeySet([asset]);
@@ -115,12 +116,6 @@ function reconcileSheetDeletions(sheetAssets: MappedAsset[]): number {
     return 0;
   }
 
-  if (removed.length > 0) {
-    console.warn(
-      `[AMS] Sheet sync: preserving ${removed.length} local/cache assets missing from sheet response; delete only happens via explicit delete.`
-    );
-  }
-
   return removed.length;
 }
 
@@ -137,6 +132,13 @@ async function pullFromSheet(gasUrl: string): Promise<MappedAsset[]> {
 
   if (emptyGuard.block) {
     console.warn(`[AMS] Sheet sync: keeping previous cache - ${emptyGuard.reason}`);
+    return previous;
+  }
+
+  if (sheetAssets.length === 0 && previous.length > 0) {
+    console.warn(
+      `[AMS] Sheet sync: keeping ${previous.length} cached assets because Database returned 0 rows.`
+    );
     return previous;
   }
 
@@ -180,6 +182,7 @@ export async function getAssetsWithCache(
   const spreadsheetId = getEnv("SPREADSHEET_ID");
   if (spreadsheetId && isCacheForDifferentSpreadsheet(spreadsheetId)) {
     deleteCache(CACHE_KEY);
+    touchCacheSpreadsheetId(spreadsheetId);
     force = true;
   }
 

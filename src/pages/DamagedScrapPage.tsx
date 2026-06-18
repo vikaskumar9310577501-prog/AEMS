@@ -41,8 +41,9 @@ export default function DamagedScrapPage() {
   const load = useCallback(async (force = false) => {
     setLoading(true);
     try {
+      const base = import.meta.env.VITE_API_BASE_URL || '';
       const url = force ? '/api/damaged-items?refresh=1' : '/api/damaged-items';
-      const res = await fetch(url);
+      const res = await fetch(base + url, { credentials: 'include' });
       const data = await parseJsonResponse<{ items?: DamagedItemRecord[] }>(res);
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Load failed');
       setItems(data.items || []);
@@ -81,6 +82,7 @@ export default function DamagedScrapPage() {
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ item: updatedItem }),
         }
       );
@@ -120,7 +122,7 @@ export default function DamagedScrapPage() {
         try {
           const res = await fetch(
             `${import.meta.env.VITE_API_BASE_URL || ""}/api/damaged-items/${encodeURIComponent(record['Record ID'])}?userEmail=${encodeURIComponent(user.email)}`,
-            { method: 'DELETE' }
+            { method: 'DELETE', credentials: 'include' }
           );
           const data = await parseJsonResponse(res);
           if (!res.ok) throw new Error((data as { error?: string }).error || 'Delete failed');
@@ -166,6 +168,7 @@ export default function DamagedScrapPage() {
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
               body: JSON.stringify({ item: updatedItem }),
             }
           );
@@ -225,6 +228,7 @@ export default function DamagedScrapPage() {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/damaged-items/${encodeURIComponent(reassigningRecord['Record ID'])}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ item: updatedItem }),
       });
       if (!res.ok) throw new Error('Failed to update log status');

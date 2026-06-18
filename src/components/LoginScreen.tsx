@@ -55,10 +55,10 @@ export default function LoginScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, otp: loginOtp }),
       });
-      const data = await parseJsonResponse<{ error?: string; user?: Record<string, unknown> }>(res);
+      const data = await parseJsonResponse<{ error?: string; user?: Record<string, unknown>; token?: string }>(res);
       if (!res.ok) throw new Error(data.error || 'Failed to verify OTP');
       const userData = normalizeUser(data.user);
-      loginSuccess(userData);
+      loginSuccess(userData, data.token);
       toast.success(`Welcome, ${userData.role}!`);
       const from = (location.state as { from?: string } | null)?.from;
       navigate(resolvePostAuthRoute(from), { replace: true });

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { AlertTriangle, Plus, RefreshCw, Search, CheckCircle2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Plus, RefreshCw, Search, CheckCircle2, Trash2, X, ExternalLink, UserCircle } from 'lucide-react';
 import type { MissingItemRecord } from '../types/redesigned';
+import type { Asset } from '../types';
 import { parseJsonResponse } from '../lib/apiFetch';
 import { SYNC_DATABASE_MSG, SYNC_DATABASE_OK, SYNC_DATABASE_ERR } from '../lib/uiLabels';
 import { useApp } from '../context/AppProvider';
@@ -11,6 +12,137 @@ import ReassignMissingModal from '../components/ReassignMissingModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
 import { ViewModeToggle, useListViewMode } from '../components/ViewModeToggle';
+
+interface MissingItemDetailModalProps {
+  record: MissingItemRecord;
+  parentAsset?: Asset;
+  canDelete: boolean;
+  onClose: () => void;
+  onOpenParent: () => void;
+  onOpenEmployee: () => void;
+  onMarkRecovered: () => void;
+  onReassign: () => void;
+  onDelete: () => void;
+}
+
+function MissingItemDetailModal({
+  record,
+  parentAsset,
+  canDelete,
+  onClose,
+  onOpenParent,
+  onOpenEmployee,
+  onMarkRecovered,
+  onReassign,
+  onDelete,
+}: MissingItemDetailModalProps) {
+  const InfoRow = ({ label, value }: { label: string; value?: string | number | null }) => (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-bold text-slate-800 break-words">{value || '-'}</p>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-slate-100 bg-slate-50 flex items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                  record.Status === 'Recovered'
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : record.Status === 'Reassigned'
+                      ? 'bg-violet-50 text-violet-700'
+                      : 'bg-amber-50 text-amber-800'
+                }`}
+              >
+                {record.Status}
+              </span>
+              <span className="text-[10px] font-mono font-black text-slate-400">#{record['Record ID']}</span>
+            </div>
+            <h2 className="mt-2 text-xl font-black text-slate-900">{record['Missing Item Name'] || 'Missing item'}</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {[record['Asset Type'], record.Brand, record.Model].filter(Boolean).join(' / ') || 'No item specification'}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-200 text-slate-500">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoRow label="Parent Asset" value={record['Parent Asset Name'] || parentAsset?.assetName || record['Parent Asset ID']} />
+            <InfoRow label="Parent Asset ID" value={record['Parent Asset ID']} />
+            <InfoRow label="Employee" value={record['Assigned Person']} />
+            <InfoRow label="Employee ID" value={record['Employee ID']} />
+            <InfoRow label="Missing Date" value={record['Missing Date']?.slice(0, 10)} />
+            <InfoRow label="Recovered Date" value={record['Recovered Date']?.slice(0, 10)} />
+            <InfoRow label="Recovered By" value={record['Recovered By']} />
+            <InfoRow label="Model" value={record.Model} />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</p>
+            <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 border border-slate-100 rounded-xl p-4">
+              {record.Remarks || '-'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+            {record['Parent Asset ID'] && (
+              <button
+                type="button"
+                onClick={onOpenParent}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 text-blue-700 text-xs font-black hover:bg-blue-100"
+              >
+                <ExternalLink size={14} /> Open parent asset
+              </button>
+            )}
+            {record['Employee ID'] && (
+              <button
+                type="button"
+                onClick={onOpenEmployee}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black hover:bg-slate-200"
+              >
+                <UserCircle size={14} /> Open employee
+              </button>
+            )}
+            {record.Status === 'Missing' && (
+              <button
+                type="button"
+                onClick={onMarkRecovered}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-black hover:bg-emerald-100"
+              >
+                <CheckCircle2 size={14} /> Mark recovered
+              </button>
+            )}
+            {record.Status === 'Recovered' && (
+              <button
+                type="button"
+                onClick={onReassign}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-black hover:bg-indigo-100"
+              >
+                Reassign
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 text-red-700 text-xs font-black hover:bg-red-100"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function MissingItemsPage() {
   const navigate = useNavigate();
@@ -26,6 +158,7 @@ export default function MissingItemsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [selectedItemForReassign, setSelectedItemForReassign] = useState<MissingItemRecord | null>(null);
+  const [detailItem, setDetailItem] = useState<MissingItemRecord | null>(null);
 
   interface ConfirmConfig {
     title: string;
@@ -40,8 +173,9 @@ export default function MissingItemsPage() {
   const load = useCallback(async (force = false) => {
     setLoading(true);
     try {
+      const base = import.meta.env.VITE_API_BASE_URL || '';
       const url = force ? '/api/missing-items?refresh=1' : '/api/missing-items';
-      const res = await fetch(url);
+      const res = await fetch(base + url, { credentials: 'include' });
       const data = await parseJsonResponse<{ items?: MissingItemRecord[] }>(res);
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Load failed');
       setItems(data.items || []);
@@ -79,7 +213,8 @@ export default function MissingItemsPage() {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/missing-items/${encodeURIComponent(record['Record ID'])}/recover`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recoveredBy: user?.email || user?.name || 'Admin' }),
+        credentials: 'include',
+        body: JSON.stringify({ recoveredBy: user?.email || 'Admin' }),
       });
       const data = await parseJsonResponse(res);
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Update failed');
@@ -107,7 +242,7 @@ export default function MissingItemsPage() {
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_BASE_URL || ""}/api/missing-items/${encodeURIComponent(record['Record ID'])}?userEmail=${encodeURIComponent(user?.email || '')}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', credentials: 'include' }
       );
       const data = await parseJsonResponse(res);
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Delete failed');
@@ -142,6 +277,10 @@ export default function MissingItemsPage() {
     } else if (record['Parent Asset ID']) {
       navigate(`/assets/${encodeURIComponent(record['Parent Asset ID'])}`);
     }
+  };
+
+  const openMissingDetail = (record: MissingItemRecord) => {
+    setDetailItem(record);
   };
 
 
@@ -219,11 +358,11 @@ export default function MissingItemsPage() {
                 key={it['Record ID']}
                 role="button"
                 tabIndex={0}
-                onClick={() => openMissingParentAsset(it)}
+                onClick={() => openMissingDetail(it)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    openMissingParentAsset(it);
+                    openMissingDetail(it);
                   }
                 }}
                 className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
@@ -295,11 +434,7 @@ export default function MissingItemsPage() {
                     if (target.closest('a') || target.closest('button')) {
                       return;
                     }
-                    if (parentAsset) {
-                      navigate(`/assets/${assetRouteId(parentAsset)}`);
-                    } else if (it['Parent Asset ID']) {
-                      navigate(`/assets/${encodeURIComponent(it['Parent Asset ID'])}`);
-                    }
+                    openMissingDetail(it);
                   };
                   return (
                     <tr 
@@ -474,6 +609,31 @@ export default function MissingItemsPage() {
           }
         }}
       />
+      {detailItem && (
+        <MissingItemDetailModal
+          record={detailItem}
+          parentAsset={findAssetByAnyId(assets, detailItem['Parent Asset ID'])}
+          canDelete={!!user?.email}
+          onClose={() => setDetailItem(null)}
+          onOpenParent={() => openMissingParentAsset(detailItem)}
+          onOpenEmployee={() => {
+            if (detailItem['Employee ID']) navigate(`/employees/${encodeURIComponent(detailItem['Employee ID'])}`);
+          }}
+          onMarkRecovered={() => {
+            setDetailItem(null);
+            markRecovered(detailItem);
+          }}
+          onReassign={() => {
+            setDetailItem(null);
+            setSelectedItemForReassign(detailItem);
+            setReassignModalOpen(true);
+          }}
+          onDelete={() => {
+            setDetailItem(null);
+            deleteRecord(detailItem);
+          }}
+        />
+      )}
     </div>
   );
 }

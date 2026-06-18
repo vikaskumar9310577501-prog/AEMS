@@ -90,7 +90,7 @@ export function getSessionFromRequest(req: Request): SessionUser | null {
   return null;
 }
 
-export function setSessionCookie(res: Response, user: SessionUser): void {
+export function setSessionCookie(res: Response, user: SessionUser): string {
   const token = createSessionToken(user);
   const secure = process.env.NODE_ENV === "production";
   const parts = [
@@ -102,6 +102,7 @@ export function setSessionCookie(res: Response, user: SessionUser): void {
   ];
   if (secure) parts.push("Secure");
   res.setHeader("Set-Cookie", parts.join("; "));
+  return token;
 }
 
 export function clearSessionCookie(res: Response): void {

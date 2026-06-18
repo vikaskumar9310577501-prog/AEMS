@@ -252,13 +252,15 @@ if (SPREADSHEET_ID) {
       (getCachedAssets()?.length ?? 0) > 0 ||
       readAppData().users.length > 0 ||
       readAssignmentHistory().length > 0);
-  if (isCacheForDifferentSpreadsheet(SPREADSHEET_ID) || hasLegacyCache) {
+  const shouldResetCache = isCacheForDifferentSpreadsheet(SPREADSHEET_ID) || hasLegacyCache;
+  if (shouldResetCache) {
     console.log("[AMS] Clearing local cache — sheet source:", SPREADSHEET_ID);
     clearAllCaches();
     writeEmployees([]);
     invalidateAssetCache();
     invalidateUsersCache();
     clearAllAssignmentHistory();
+    touchCacheSpreadsheetId(SPREADSHEET_ID);
   }
   if (!getCacheSpreadsheetId()) {
     touchCacheSpreadsheetId(SPREADSHEET_ID);
@@ -451,8 +453,8 @@ app.post("/api/auth/verify-otp", async (req, res) => {
             (gasResult as { user: Record<string, unknown> }).user
           );
           upsertLocalUser(normalized);
-          setSessionCookie(res, { email: normalized.email, role: normalized.role });
-          return res.json({ success: true, user: normalized });
+          const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+          return res.json({ success: true, user: normalized, token });
         }
         return res.status(400).json({ error: gasErr || "Invalid or expired OTP" });
       } catch (gasFail: unknown) {
@@ -488,8 +490,8 @@ app.post("/api/auth/verify-otp", async (req, res) => {
 
     const normalized = normalizeUser(user as unknown as Record<string, unknown>);
     upsertLocalUser(normalized);
-    setSessionCookie(res, { email: normalized.email, role: normalized.role });
-    res.json({ success: true, user: normalized });
+    const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+    res.json({ success: true, user: normalized, token });
   } catch (error: any) {
     console.error("Verify OTP Error:", error);
     res.status(500).json({ error: error.message || "Verification failed" });
@@ -514,7 +516,8 @@ app.get("/api/auth/session", async (req, res) => {
 
     const normalized = normalizeUser(user as unknown as Record<string, unknown>);
     upsertLocalUser(normalized);
-    res.json({ success: true, user: normalized });
+    const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+    res.json({ success: true, user: normalized, token });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Session check failed";
     res.status(500).json({ error: msg });

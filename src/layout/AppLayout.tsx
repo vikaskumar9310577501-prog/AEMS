@@ -118,9 +118,9 @@ export default function AppLayout() {
                   alt={APP_NAME}
                   className="object-contain shrink-0 w-32 h-24 logo-sidebar-pulse transition-all"
                 />
-                <div className="mt-1 text-center leading-tight">
-                  <p className="text-base font-black tracking-wide text-slate-950">AEMS</p>
-                  <p className="mt-0.5 text-[9px] font-black uppercase tracking-wide text-slate-400 max-w-[180px]">
+                <div className="mt-2 text-center leading-tight">
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-600">PG Group</p>
+                  <p className="mt-1 text-[11px] font-black text-slate-900 max-w-[180px]">
                     {APP_NAME}
                   </p>
                 </div>

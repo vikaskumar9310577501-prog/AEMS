@@ -346,20 +346,61 @@ function mapGasRowsToAssets(parsed: unknown): MappedAsset[] {
   return dedupeAssets(assets);
 }
 
-export async function fetchAllAssets(gasWebappUrl: string, dbMode?: string): Promise<MappedAsset[]> {
-  let parsed: unknown;
+async function readGasAssetsAttempt(
+  label: string,
+  reader: () => Promise<unknown>
+): Promise<{ label: string; assets: MappedAsset[]; error?: unknown }> {
+  try {
+    return { label, assets: mapGasRowsToAssets(await reader()) };
+  } catch (error) {
+    return { label, assets: [], error };
+  }
+}
 
-  if (dbMode === "redesigned") {
-    parsed = await gasPost(gasWebappUrl, { action: "list_assets_redesigned" }).catch(async () =>
-      gasGet(gasWebappUrl, { action: "list_assets_redesigned" })
-    );
-  } else {
-    parsed = await gasPost(gasWebappUrl, { action: "read_all_assets" }).catch(async () =>
-      gasGet(gasWebappUrl)
-    );
+export async function fetchAllAssets(gasWebappUrl: string, dbMode?: string): Promise<MappedAsset[]> {
+  const attempts =
+    dbMode === "redesigned"
+      ? [
+          ["redesigned-get", () => gasGet(gasWebappUrl, { action: "list_assets_redesigned" })] as const,
+          ["legacy-get", () => gasGet(gasWebappUrl)] as const,
+          ["redesigned-post", () => gasPost(gasWebappUrl, { action: "list_assets_redesigned" })] as const,
+          ["legacy-post", () => gasPost(gasWebappUrl, { action: "read_all_assets" })] as const,
+        ]
+      : [
+          ["legacy-get", () => gasGet(gasWebappUrl)] as const,
+          ["redesigned-get", () => gasGet(gasWebappUrl, { action: "list_assets_redesigned" })] as const,
+          ["legacy-post", () => gasPost(gasWebappUrl, { action: "read_all_assets" })] as const,
+          ["redesigned-post", () => gasPost(gasWebappUrl, { action: "list_assets_redesigned" })] as const,
+        ];
+
+  let firstEmpty: { label: string; assets: MappedAsset[] } | null = null;
+  const errors: string[] = [];
+
+  for (const [label, reader] of attempts) {
+    const result = await readGasAssetsAttempt(label, reader);
+    if (result.assets.length > 0) {
+      if (firstEmpty) {
+        console.warn(
+          `[AMS] Asset sync fallback: ${firstEmpty.label} returned 0 rows; using ${label} with ${result.assets.length} rows.`
+        );
+      }
+      return result.assets;
+    }
+    if (result.error) {
+      errors.push(`${label}: ${result.error instanceof Error ? result.error.message : String(result.error)}`);
+    } else if (!firstEmpty) {
+      firstEmpty = { label, assets: result.assets };
+    }
   }
 
-  return mapGasRowsToAssets(parsed);
+  if (firstEmpty) {
+    if (errors.length) {
+      console.warn(`[AMS] Asset sync returned 0 rows after fallback attempts. ${errors.join(" | ")}`);
+    }
+    return firstEmpty.assets;
+  }
+
+  throw new Error(errors.join(" | ") || "Failed to load assets from Database");
 }
 
 function normalizeScanKey(value: string): string[] {

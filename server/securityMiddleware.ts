@@ -43,12 +43,52 @@ export function isPublicApiRoute(req: Request): boolean {
   return false;
 }
 
+function getFallbackEmail(req: Request): string {
+  return String(
+    req.query.userEmail ||
+      req.body?.userEmail ||
+      req.headers["x-user-email"] ||
+      ""
+  ).trim();
+}
+
 function canUseEmailFallbackAuth(req: Request): boolean {
-  return (
+  if (!getFallbackEmail(req)) return false;
+
+  if (
     req.method === "DELETE" &&
-    /^\/api\/assets\/[^/]+$/.test(req.path) &&
-    !!String(req.query.userEmail || "").trim()
-  );
+    (/^\/api\/assets\/[^/]+$/.test(req.path) ||
+      /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
+      /^\/api\/damaged-items\/[^/]+$/.test(req.path))
+  ) {
+    return true;
+  }
+
+  if (
+    req.method === "GET" &&
+    (req.path === "/api/assets" ||
+      req.path === "/api/assets/sync-meta" ||
+      req.path === "/api/settings" ||
+      req.path === "/api/type-definitions" ||
+      req.path === "/api/employees" ||
+      req.path === "/api/inventory" ||
+      req.path === "/api/missing-items" ||
+      req.path === "/api/damaged-items" ||
+      /^\/api\/employees\/[^/]+$/.test(req.path) ||
+      /^\/api\/employees\/[^/]+\/history$/.test(req.path) ||
+      /^\/api\/assets\/[^/]+\/history$/.test(req.path))
+  ) {
+    return true;
+  }
+
+  if (
+    req.method === "POST" &&
+    req.path === "/api/assets/sync"
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export function applySecurityHeaders(_req: Request, res: Response, next: NextFunction): void {
@@ -73,7 +113,7 @@ export function configureCors(allowedOrigins: string[]) {
     }
 
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Email");
 
     if (req.method === "OPTIONS") {
       res.sendStatus(204);

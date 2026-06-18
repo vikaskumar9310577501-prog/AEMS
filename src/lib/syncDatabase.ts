@@ -11,6 +11,7 @@ export async function syncDatabaseAssets(opts: {
   const syncRes = await fetch(`${base}/api/assets/sync`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ userEmail: opts.userEmail || '' }),
   });
 
@@ -30,6 +31,7 @@ export async function syncDatabaseAssets(opts: {
       await fetch(`${base}/api/assets/rebuild-sheets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ userEmail: opts.userEmail }),
       });
     } catch {

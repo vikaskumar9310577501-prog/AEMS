@@ -10,3 +10,4 @@ export const LEGACY_USER_KEY = 'assetflow_user';
 export const LOGIN_TIME_KEY = 'assetvault_loginTime';
 export const LEGACY_LOGIN_KEY = 'assetflow_loginTime';
 export const ASSETS_CACHE_KEY = 'assetvault_assets_cache';
+export const SESSION_TOKEN_KEY = 'sessionToken';

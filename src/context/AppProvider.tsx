@@ -27,6 +27,7 @@ import {
   LEGACY_LOGIN_KEY,
   LEGACY_USER_KEY,
   LOGIN_TIME_KEY,
+  SESSION_TOKEN_KEY,
   USER_STORAGE_KEY,
 } from '../lib/constants';
 
@@ -70,7 +71,7 @@ interface AppContextValue {
   ) => Promise<Asset>;
   executeDelete: (id: number | string) => Promise<void>;
   handleLogout: () => void;
-  loginSuccess: (user: AppSessionUser) => void;
+  loginSuccess: (user: AppSessionUser, token?: string) => void;
   filterAssets: (
     assets: Asset[],
     opts: { searchQuery: string; selectedCategory: string }
@@ -132,13 +133,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(LEGACY_USER_KEY);
     localStorage.removeItem(LOGIN_TIME_KEY);
     localStorage.removeItem(LEGACY_LOGIN_KEY);
+    localStorage.removeItem(SESSION_TOKEN_KEY);
   }, []);
 
   const loginSuccess = useCallback(
-    (userData: AppSessionUser) => {
+    (userData: AppSessionUser, token?: string) => {
       setUser(userData);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
       localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(userData));
+      if (token) localStorage.setItem(SESSION_TOKEN_KEY, token);
       const now = Date.now().toString();
       localStorage.setItem(LOGIN_TIME_KEY, now);
       localStorage.setItem(LEGACY_LOGIN_KEY, now);
@@ -160,12 +163,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           { credentials: 'include' }
         );
         if (sessionRes.ok) {
-          const data = (await sessionRes.json()) as { user?: Record<string, unknown> };
+          const data = (await sessionRes.json()) as { user?: Record<string, unknown>; token?: string };
           if (!cancelled && data.user) {
             const parsedUser = normalizeUser(data.user);
             setUser(parsedUser);
             localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(parsedUser));
             localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(parsedUser));
+            if (data.token) localStorage.setItem(SESSION_TOKEN_KEY, data.token);
             const now = Date.now().toString();
             localStorage.setItem(LOGIN_TIME_KEY, now);
             localStorage.setItem(LEGACY_LOGIN_KEY, now);
@@ -216,12 +220,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem(LEGACY_USER_KEY);
           localStorage.removeItem(LOGIN_TIME_KEY);
           localStorage.removeItem(LEGACY_LOGIN_KEY);
+          localStorage.removeItem(SESSION_TOKEN_KEY);
         }
       } catch {
         localStorage.removeItem(USER_STORAGE_KEY);
         localStorage.removeItem(LEGACY_USER_KEY);
         localStorage.removeItem(LOGIN_TIME_KEY);
         localStorage.removeItem(LEGACY_LOGIN_KEY);
+        localStorage.removeItem(SESSION_TOKEN_KEY);
       }
       if (!cancelled) setAuthChecked(true);
     };

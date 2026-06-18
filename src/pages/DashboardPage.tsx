@@ -252,7 +252,7 @@ export default function DashboardPage() {
   const loadMissingItems = useCallback(async (force = false) => {
     try {
       const url = force ? '/api/missing-items?refresh=1' : '/api/missing-items';
-      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url);
+      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url, { credentials: 'include' });
       const data = await parseJsonResponse<{ items?: MissingItemRecord[] }>(res);
       if (res.ok) setMissingItemRecords(data.items || []);
     } catch {
@@ -263,7 +263,7 @@ export default function DashboardPage() {
   const loadDamagedItems = useCallback(async (force = false) => {
     try {
       const url = force ? '/api/damaged-items?refresh=1' : '/api/damaged-items';
-      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url);
+      const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url, { credentials: 'include' });
       const data = await parseJsonResponse<{ items?: DamagedItemRecord[] }>(res);
       if (res.ok) setDamagedItemRecords(data.items || []);
     } catch {
@@ -284,7 +284,7 @@ export default function DashboardPage() {
   }, [loading, loadMissingItems, loadDamagedItems]);
 
   useEffect(() => {
-    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1')
+    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
         setLocations(data.locations || []);
@@ -529,11 +529,11 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
       <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-2 flex items-center gap-3 shrink-0 overflow-visible">
-        <div className="flex flex-col justify-center leading-snug shrink-0 pr-3 border-r border-slate-300 min-w-[210px] max-w-[300px]">
-          <span title={APP_NAME} className="text-lg font-black text-slate-950 tracking-wide leading-none">
-            {APP_SHORT_NAME}
+        <div className="flex flex-col justify-center leading-snug shrink-0 pr-4 border-r border-slate-300 min-w-[235px] max-w-[300px]">
+          <span className="text-[9px] font-black uppercase tracking-[0.18em] text-red-600 leading-none">
+            PG Group
           </span>
-          <span className="text-[9px] font-black uppercase tracking-wide text-slate-400 mt-0.5 truncate">
+          <span title={APP_NAME} className="mt-1 text-[13px] lg:text-sm font-black text-slate-950 leading-tight">
             {APP_NAME}
           </span>
           <div className="mt-1 flex items-center gap-1.5 min-w-0">

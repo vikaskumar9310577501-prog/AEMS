@@ -5,7 +5,9 @@ import { getCachedUsers } from "./usersSync.js";
 export function getSessionEmail(req: Request): string {
   return (
     req.authUser?.email?.trim().toLowerCase() ||
-    String(req.query.userEmail || req.body?.userEmail || "").trim().toLowerCase()
+    String(req.query.userEmail || req.body?.userEmail || req.headers["x-user-email"] || "")
+      .trim()
+      .toLowerCase()
   );
 }
 
