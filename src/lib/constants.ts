@@ -1,4 +1,4 @@
-export const APP_NAME = 'Asset Entry Management system';
+export const APP_NAME = 'Asset Entry Management System';
 export const APP_SHORT_NAME = 'AEMS';
 export const LOGO_SRC = '/logo.png';
 export const DAY_MS = 24 * 60 * 60 * 1000;

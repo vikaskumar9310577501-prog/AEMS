@@ -112,12 +112,15 @@ export default function AppLayout() {
             </>
           ) : (
             <>
-              <div className="flex items-center min-w-0">
+              <div className="flex flex-col items-center min-w-0">
                 <img
                   src={LOGO_SRC}
                   alt={APP_NAME}
-                  className="object-contain shrink-0 w-32 h-32 logo-sidebar-pulse transition-all"
+                  className="object-contain shrink-0 w-32 h-28 logo-sidebar-pulse transition-all"
                 />
+                <p className="mt-1 text-center text-[11px] font-black uppercase tracking-wide leading-tight text-slate-800 max-w-[190px]">
+                  {APP_NAME}
+                </p>
               </div>
               <button
                 type="button"

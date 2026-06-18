@@ -59,6 +59,7 @@ export function deleteCache(key: string) {
 
 const KNOWN_CACHE_KEYS = [
   "assets",
+  "assets_deleted_tombstones",
   "users",
   "audit_logs",
   "asset-details",
