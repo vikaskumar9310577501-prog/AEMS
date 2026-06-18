@@ -528,27 +528,23 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
-      <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-2.5 grid grid-cols-[minmax(220px,280px)_minmax(260px,1fr)_auto] items-center gap-4 shrink-0 overflow-visible">
-        <div className="min-w-0 pr-4 border-r border-slate-200 leading-tight">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-red-600 shrink-0">
-              PG Group
-            </span>
-            <span className="h-1 w-1 rounded-full bg-slate-300 shrink-0" />
-            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400 truncate">
-              {departmentLabel}
-            </span>
+      <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-6 py-3 grid grid-cols-[minmax(300px,390px)_minmax(320px,1fr)_auto] items-center gap-5 shrink-0 overflow-visible shadow-sm">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="bg-white rounded-md px-2.5 py-1.5 shadow-sm shrink-0">
+            <img src="/logo.png" alt={APP_NAME} className="w-16 h-9 object-contain" />
           </div>
-          <h1 title={APP_NAME} className="mt-1 text-[15px] font-black text-slate-950 leading-none truncate">
-            {APP_NAME}
-          </h1>
-          <p className="mt-1 text-[10px] font-bold text-emerald-600 truncate">
-            {headerLocationPlant}
-          </p>
+          <div className="min-w-0 leading-tight">
+            <h1 title={APP_NAME} className="text-xl font-black text-white leading-none truncate">
+              {APP_NAME}
+            </h1>
+            <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
+              {headerLocationPlant} <span className="text-slate-500 px-1">|</span> {departmentLabel}
+            </p>
+          </div>
         </div>
         <div className="min-w-0">
-          <div className="relative w-full max-w-2xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+          <div className="relative w-full max-w-3xl">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
               value={searchQuery}
@@ -558,7 +554,7 @@ export default function DashboardPage() {
                   ? 'Search software...'
                   : 'Search assets...'
               }
-              className="w-full pl-8 pr-3 py-2.5 bg-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-slate-400"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/95 border border-white/10 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300/50 transition-all placeholder:text-slate-400"
             />
           </div>
         </div>
@@ -567,10 +563,10 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setFiltersOpen((o) => !o)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 filtersOpen || hasActiveFilters
-                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  ? 'bg-white text-[#113355] hover:bg-slate-100'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
               }`}
             >
               <Filter size={14} />
@@ -589,7 +585,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setViewMenuOpen((o) => !o)}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
+                className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
               >
                 <Settings2 size={14} /> <span className="hidden sm:inline">View</span>
                 <ChevronDown size={12} className={viewMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
