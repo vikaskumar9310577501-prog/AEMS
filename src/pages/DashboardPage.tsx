@@ -534,12 +534,12 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
       <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-5 py-3 flex items-center gap-3 shrink-0 overflow-visible shadow-sm">
-        <div className="flex items-center gap-3 shrink-0 w-[410px] min-[1700px]:w-[500px]">
+        <div className="flex items-center gap-3 shrink-0 w-[310px] min-[1450px]:w-[380px] min-[1700px]:w-[500px]">
           <div className="bg-white rounded-md px-2.5 py-1.5 shadow-sm shrink-0">
             <img src="/logo.png" alt={APP_NAME} className="w-14 h-8 min-[1700px]:w-16 min-[1700px]:h-9 object-contain" />
           </div>
           <div className="min-w-0 leading-tight">
-            <h1 title={APP_NAME} className="text-[17px] min-[1700px]:text-[20px] font-black text-white leading-none tracking-normal whitespace-nowrap">
+            <h1 title={APP_NAME} className="text-[13px] min-[1450px]:text-[16px] min-[1700px]:text-[20px] font-black text-white leading-none tracking-normal whitespace-nowrap">
               {APP_NAME}
             </h1>
             <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
@@ -547,7 +547,7 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <div className="relative shrink-0 w-[210px] min-[1700px]:w-[280px] min-[1900px]:w-[360px]">
+        <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
@@ -573,7 +573,7 @@ export default function DashboardPage() {
               }`}
             >
               <Filter size={14} />
-              <span className="hidden sm:inline">Filter</span>
+              <span className="hidden min-[1500px]:inline">Filter</span>
               <ChevronDown
                 size={12}
                 className={filtersOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
@@ -590,7 +590,7 @@ export default function DashboardPage() {
                 onClick={() => setViewMenuOpen((o) => !o)}
                 className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
               >
-                <Settings2 size={14} /> <span className="hidden sm:inline">View</span>
+                <Settings2 size={14} /> <span className="hidden min-[1500px]:inline">View</span>
                 <ChevronDown size={12} className={viewMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
               </button>
               {viewMenuOpen && (
@@ -785,7 +785,7 @@ export default function DashboardPage() {
           </div>
         )}
         {showAssetsView && (
-          <div className={`grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-6'}`}>
+          <div className={`grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'}`}>
               <div 
                 onClick={() => {
                   setSelectedStatus('All');
