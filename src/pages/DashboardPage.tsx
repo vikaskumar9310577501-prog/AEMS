@@ -528,13 +528,13 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
-      <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-6 py-3 grid grid-cols-[minmax(300px,390px)_minmax(320px,1fr)_auto] items-center gap-5 shrink-0 overflow-visible shadow-sm">
+      <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-6 py-3 grid grid-cols-[minmax(430px,520px)_minmax(260px,520px)_auto] items-center gap-5 shrink-0 overflow-visible shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
           <div className="bg-white rounded-md px-2.5 py-1.5 shadow-sm shrink-0">
             <img src="/logo.png" alt={APP_NAME} className="w-16 h-9 object-contain" />
           </div>
           <div className="min-w-0 leading-tight">
-            <h1 title={APP_NAME} className="text-xl font-black text-white leading-none truncate">
+            <h1 title={APP_NAME} className="text-[22px] font-black text-white leading-none tracking-tight whitespace-nowrap">
               {APP_NAME}
             </h1>
             <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
@@ -543,7 +543,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="min-w-0">
-          <div className="relative w-full max-w-3xl">
+          <div className="relative w-full max-w-[520px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
@@ -642,14 +642,14 @@ export default function DashboardPage() {
                   { id: 'sync-assets' }
                 );
               }}
-              className={`px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+              className={`px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden md:inline">Sync</span>
             </button>
             <button
               type="button"
               onClick={exportToExcel}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
             >
               <Download size={14} /> <span className="hidden sm:inline">Export</span>
             </button>
@@ -662,7 +662,7 @@ export default function DashboardPage() {
                   ),
                 })
               }
-              className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-[#113355] rounded-lg text-xs font-black uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap"
             >
               <Plus size={15} strokeWidth={3} />
               <span className="hidden sm:inline">

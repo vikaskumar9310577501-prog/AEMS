@@ -89,8 +89,8 @@ export default function AppLayout() {
         }`}
       >
         <div
-          className={`p-4 border-b border-gray-200 flex ${
-            sidebarCollapsed ? 'flex-col items-center gap-4 py-5' : 'items-center justify-between gap-3'
+          className={`relative border-b border-gray-200 flex ${
+            sidebarCollapsed ? 'flex-col items-center gap-4 p-4 py-5' : 'items-center gap-3 px-5 py-4 bg-white pr-12'
           }`}
         >
           {sidebarCollapsed ? (
@@ -113,14 +113,16 @@ export default function AppLayout() {
           ) : (
             <>
               <div className="flex items-center gap-3 min-w-0">
-                <img
-                  src={LOGO_SRC}
-                  alt={APP_NAME}
-                  className="object-contain shrink-0 w-20 h-16 logo-sidebar-pulse transition-all"
-                />
+                <div className="shrink-0">
+                  <img
+                    src={LOGO_SRC}
+                    alt={APP_NAME}
+                    className="object-contain w-24 h-14 logo-sidebar-pulse transition-all"
+                  />
+                </div>
                 <div className="min-w-0 leading-tight">
-                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-600">PG Group</p>
-                  <p className="mt-1 text-[13px] font-black text-slate-950 max-w-[145px] leading-[1.12]">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-600">PG Group</p>
+                  <p className="mt-1 text-[13px] font-black text-slate-950 max-w-[135px] leading-[1.12]">
                     {APP_NAME}
                   </p>
                 </div>
@@ -128,7 +130,7 @@ export default function AppLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg hover:bg-gray-200 text-black transition-colors shrink-0"
+                className="absolute right-4 top-5 p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors shrink-0"
                 title="Collapse menu"
                 aria-label="Toggle sidebar"
               >
