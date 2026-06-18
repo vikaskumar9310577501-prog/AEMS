@@ -528,13 +528,13 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
-      <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-6 py-3 grid grid-cols-[minmax(430px,520px)_minmax(260px,520px)_auto] items-center gap-5 shrink-0 overflow-visible shadow-sm">
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-5 py-3 flex items-center gap-3 shrink-0 overflow-visible shadow-sm">
+        <div className="flex items-center gap-3 shrink-0 w-[410px] min-[1700px]:w-[500px]">
           <div className="bg-white rounded-md px-2.5 py-1.5 shadow-sm shrink-0">
-            <img src="/logo.png" alt={APP_NAME} className="w-16 h-9 object-contain" />
+            <img src="/logo.png" alt={APP_NAME} className="w-14 h-8 min-[1700px]:w-16 min-[1700px]:h-9 object-contain" />
           </div>
           <div className="min-w-0 leading-tight">
-            <h1 title={APP_NAME} className="text-[22px] font-black text-white leading-none tracking-tight whitespace-nowrap">
+            <h1 title={APP_NAME} className="text-[19px] min-[1700px]:text-[21px] font-black text-white leading-none tracking-tight whitespace-nowrap">
               {APP_NAME}
             </h1>
             <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
@@ -542,8 +542,7 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <div className="min-w-0">
-          <div className="relative w-full max-w-[520px]">
+        <div className="relative shrink-0 w-[210px] min-[1700px]:w-[280px] min-[1900px]:w-[360px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
@@ -556,14 +555,13 @@ export default function DashboardPage() {
               }
               className="w-full pl-10 pr-4 py-2.5 bg-white/95 border border-white/10 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300/50 transition-all placeholder:text-slate-400"
             />
-          </div>
         </div>
-        <div className="flex items-center justify-end gap-1.5 shrink-0 flex-nowrap overflow-visible">
+        <div className="ml-auto flex items-center justify-end gap-1.5 shrink-0 flex-nowrap overflow-visible">
           <>
             <button
               type="button"
               onClick={() => setFiltersOpen((o) => !o)}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 filtersOpen || hasActiveFilters
                   ? 'bg-white text-[#113355] hover:bg-slate-100'
                   : 'bg-white/10 hover:bg-white/20 text-white'
@@ -585,7 +583,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setViewMenuOpen((o) => !o)}
-                className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
+                className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
               >
                 <Settings2 size={14} /> <span className="hidden sm:inline">View</span>
                 <ChevronDown size={12} className={viewMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
@@ -642,16 +640,16 @@ export default function DashboardPage() {
                   { id: 'sync-assets' }
                 );
               }}
-              className={`px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+              className={`px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden md:inline">Sync</span>
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="sr-only">Sync</span>
             </button>
             <button
               type="button"
               onClick={exportToExcel}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
             >
-              <Download size={14} /> <span className="hidden sm:inline">Export</span>
+              <Download size={14} /> <span className="sr-only">Export</span>
             </button>
             <button
               type="button"
@@ -662,17 +660,17 @@ export default function DashboardPage() {
                   ),
                 })
               }
-              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-[#113355] rounded-lg text-xs font-black uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3 py-2 bg-white hover:bg-slate-100 text-[#113355] rounded-lg text-xs font-black uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap"
             >
               <Plus size={15} strokeWidth={3} />
-              <span className="hidden sm:inline">
+              <span className="hidden min-[1700px]:inline">
                 {isSoftwareCategory
                   ? 'New Software'
                   : isCctvSidebarCategory
                     ? 'New Camera/NVR'
                     : 'New Asset'}
               </span>
-              <span className="sm:hidden">New</span>
+              <span className="min-[1700px]:hidden">New</span>
             </button>
           </>
         </div>

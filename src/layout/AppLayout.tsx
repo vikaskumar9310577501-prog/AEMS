@@ -68,29 +68,33 @@ export default function AppLayout() {
     !user.categories.includes('All');
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-      isActive ? 'bg-blue-100 text-black shadow-sm' : 'text-gray-600 hover:bg-gray-200 hover:text-black'
+    `w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+      isActive
+        ? 'bg-[#eaf2fb] text-[#113355] border border-[#d8e7f6] shadow-sm'
+        : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-950'
     }`;
 
   const categoryNavClass = (cat: string) => {
     const active = isDashboard && selectedCategory === cat;
-    return `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+    return `w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all ${
       active
-        ? 'bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-600 rounded-l-none'
-        : 'text-gray-600 hover:bg-gray-200 hover:text-black'
+        ? 'bg-[#eef5ff] text-[#113355] border border-[#d9e8f8] shadow-sm'
+        : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-950'
     }`;
   };
 
   return (
     <div className="h-screen bg-slate-50 flex overflow-hidden font-sans">
       <aside
-        className={`bg-gray-50 border-r border-gray-200 flex flex-col shrink-0 transition-all duration-300 ${
+        className={`bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 ${
           sidebarCollapsed ? 'w-[5.5rem]' : 'w-72'
         }`}
       >
         <div
-          className={`relative border-b border-gray-200 flex ${
-            sidebarCollapsed ? 'flex-col items-center gap-4 p-4 py-5' : 'items-center gap-3 px-5 py-4 bg-white pr-12'
+          className={`relative border-b flex ${
+            sidebarCollapsed
+              ? 'flex-col items-center gap-4 border-gray-200 p-4 py-5'
+              : 'min-h-[109px] items-center border-[#0b2744] bg-[#113355] px-4 py-4 pr-12'
           }`}
         >
           {sidebarCollapsed ? (
@@ -103,7 +107,7 @@ export default function AppLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg hover:bg-gray-200 text-black transition-colors shrink-0"
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors shrink-0"
                 title="Expand menu"
                 aria-label="Toggle sidebar"
               >
@@ -113,16 +117,17 @@ export default function AppLayout() {
           ) : (
             <>
               <div className="flex items-center gap-3 min-w-0">
-                <div className="shrink-0">
+                <div className="h-16 w-16 bg-white rounded-lg shadow-sm shrink-0 flex items-center justify-center">
                   <img
                     src={LOGO_SRC}
                     alt={APP_NAME}
-                    className="object-contain w-24 h-14 logo-sidebar-pulse transition-all"
+                    className="object-contain w-12 h-12 logo-sidebar-pulse transition-all"
                   />
                 </div>
                 <div className="min-w-0 leading-tight">
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-600">PG Group</p>
-                  <p className="mt-1 text-[13px] font-black text-slate-950 max-w-[135px] leading-[1.12]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-red-300">PG Group</p>
+                  <p className="mt-1 text-[28px] font-black text-white leading-none tracking-normal">AEMS</p>
+                  <p className="mt-1.5 max-w-[145px] text-[11px] font-bold text-slate-200 leading-[1.15]">
                     {APP_NAME}
                   </p>
                 </div>
@@ -130,7 +135,7 @@ export default function AppLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="absolute right-4 top-5 p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors shrink-0"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 text-white transition-colors shrink-0"
                 title="Collapse menu"
                 aria-label="Toggle sidebar"
               >
@@ -140,7 +145,7 @@ export default function AppLayout() {
           )}
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin">
           {!hideAllDashboard && !isHr && (
             <NavLink
               to="/dashboard"
@@ -148,13 +153,13 @@ export default function AppLayout() {
               className={({ isActive }) => navClass({ isActive: isActive && selectedCategory === 'All' })}
               title="Dashboard"
             >
-              <LayoutDashboard size={18} className="text-black shrink-0" />
-              {!sidebarCollapsed && <span className="text-black">Dashboard</span>}
+              <LayoutDashboard size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>Dashboard</span>}
             </NavLink>
           )}
 
           {!sidebarCollapsed && !isHr && (
-            <div className="px-4 pt-3 pb-1 text-[10px] font-black uppercase text-gray-400 tracking-wider">
+            <div className="px-3.5 pt-3 pb-1 text-[10px] font-black uppercase text-slate-400 tracking-[0.18em]">
               Categories
             </div>
           )}
@@ -170,7 +175,7 @@ export default function AppLayout() {
                 onClick={() => navigate(`/dashboard${categoryToQuery(cat)}`)}
                 title={cat}
               >
-                <Icon size={16} className={active ? 'text-blue-600 shrink-0' : 'text-gray-500 shrink-0'} />
+                <Icon size={16} className={active ? 'text-[#113355] shrink-0' : 'text-slate-500 shrink-0'} />
                 {!sidebarCollapsed && (
                   <span className="truncate">{cat.replace(' / ', '/')}</span>
                 )}
@@ -179,59 +184,59 @@ export default function AppLayout() {
           })}
 
           {!sidebarCollapsed && (
-            <div className="px-4 pt-3 pb-1 text-[10px] font-black uppercase text-gray-400 tracking-wider">
+            <div className="px-3.5 pt-3 pb-1 text-[10px] font-black uppercase text-slate-400 tracking-[0.18em]">
               Management
             </div>
           )}
 
           {(isAdminRole || isHr) && (
             <NavLink to="/employees" className={navClass} title="Employees">
-              <UserCircle size={18} className="text-gray-700 shrink-0" />
-              {!sidebarCollapsed && <span className="text-gray-800">Employees</span>}
+              <UserCircle size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>Employees</span>}
             </NavLink>
           )}
           {!isHr && (
             <NavLink to="/missing" className={navClass} title="Missing Items">
               <AlertTriangle size={18} className="text-amber-600 shrink-0" />
-              {!sidebarCollapsed && <span className="text-gray-800">Missing Items</span>}
+              {!sidebarCollapsed && <span>Missing Items</span>}
             </NavLink>
           )}
           {!isHr && (
             <NavLink to="/damaged-scrap" className={navClass} title="Damaged / Scrap">
               <Trash2 size={18} className="text-red-650 shrink-0" />
-              {!sidebarCollapsed && <span className="text-gray-800">Damaged / Scrap</span>}
+              {!sidebarCollapsed && <span>Damaged / Scrap</span>}
             </NavLink>
           )}
           {isAdminRole && !isHr && (
             <NavLink to="/users" className={navClass} title="User Management">
-              <Users size={18} className="text-gray-700 shrink-0" />
-              {!sidebarCollapsed && <span className="text-gray-800">User Management</span>}
+              <Users size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>User Management</span>}
             </NavLink>
           )}
           {isItAdmin && !isHr && (
             <NavLink to="/settings" className={navClass} title="Settings">
-              <Settings size={18} className="text-gray-700 shrink-0" />
-              {!sidebarCollapsed && <span className="text-gray-800">Settings</span>}
+              <Settings size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>Settings</span>}
             </NavLink>
           )}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-slate-200 bg-slate-50/60">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0">
               {user.email.charAt(0).toUpperCase()}
             </div>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-black truncate">{user.email}</p>
-                <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest">{user.role}</p>
+                <p className="text-xs font-bold text-slate-950 truncate">{user.email}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{user.role}</p>
               </div>
             )}
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-200 hover:bg-red-100 text-gray-700 hover:text-red-600 text-xs font-bold transition-all"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-red-50 hover:border-red-100 text-slate-700 hover:text-red-600 text-xs font-bold transition-all"
           >
             <LogOut size={14} />
             {!sidebarCollapsed && 'Sign Out'}
