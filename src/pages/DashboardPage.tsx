@@ -535,7 +535,7 @@ export default function DashboardPage() {
           </div>
           <div className="min-w-0 leading-tight">
             <h1 title={APP_NAME} className="text-[19px] min-[1700px]:text-[21px] font-black text-white leading-none tracking-tight whitespace-nowrap">
-              {APP_NAME}
+              Asset Management
             </h1>
             <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
               {headerLocationPlant} <span className="text-slate-500 px-1">|</span> {departmentLabel}

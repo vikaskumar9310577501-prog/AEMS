@@ -127,8 +127,8 @@ export default function AppLayout() {
                 <div className="min-w-0 leading-tight">
                   <p className="text-[10px] font-black uppercase tracking-[0.28em] text-red-300">PG Group</p>
                   <p className="mt-1 text-[28px] font-black text-white leading-none tracking-normal">AEMS</p>
-                  <p className="mt-1.5 max-w-[145px] text-[11px] font-bold text-slate-200 leading-[1.15]">
-                    {APP_NAME}
+                  <p className="mt-1.5 text-[11px] font-semibold text-white/75 leading-[1.15]">
+                    Asset Management
                   </p>
                 </div>
               </div>
