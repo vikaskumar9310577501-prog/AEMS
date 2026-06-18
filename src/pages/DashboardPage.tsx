@@ -43,6 +43,7 @@ import QRCodeDisplay from '../components/QRCodeDisplay';
 import DeleteAssetModal from '../components/DeleteAssetModal';
 import { AssetTableSkeleton } from '../components/LoadingSkeleton';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
+import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { formatFilenameDate, formatStoredDateTime } from '../lib/formatDisplayDate';
 import { SYNC_DATABASE_MSG, SYNC_DATABASE_OK, SYNC_DATABASE_ERR } from '../lib/uiLabels';
 import { syncDatabaseAssets } from '../lib/syncDatabase';
@@ -78,7 +79,7 @@ const ALL_CATEGORIES = [
   'Software / License Assets',
   'Admin / Facility Assets',
   'Maintenance Assets',
-  'Missing Items',
+  ...(MISSING_ITEMS_FEATURE_ENABLED ? ['Missing Items'] : []),
 ];
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -250,6 +251,10 @@ export default function DashboardPage() {
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
 
   const loadMissingItems = useCallback(async (force = false) => {
+    if (!MISSING_ITEMS_FEATURE_ENABLED) {
+      setMissingItemRecords([]);
+      return;
+    }
     try {
       const url = force ? '/api/missing-items?refresh=1' : '/api/missing-items';
       const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + url, { credentials: 'include' });
@@ -272,13 +277,13 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    void loadMissingItems();
+    if (MISSING_ITEMS_FEATURE_ENABLED) void loadMissingItems();
     void loadDamagedItems();
   }, [loadMissingItems, loadDamagedItems]);
 
   useEffect(() => {
     if (!loading) {
-      void loadMissingItems();
+      if (MISSING_ITEMS_FEATURE_ENABLED) void loadMissingItems();
       void loadDamagedItems();
     }
   }, [loading, loadMissingItems, loadDamagedItems]);
@@ -534,8 +539,8 @@ export default function DashboardPage() {
             <img src="/logo.png" alt={APP_NAME} className="w-14 h-8 min-[1700px]:w-16 min-[1700px]:h-9 object-contain" />
           </div>
           <div className="min-w-0 leading-tight">
-            <h1 title={APP_NAME} className="text-[19px] min-[1700px]:text-[21px] font-black text-white leading-none tracking-tight whitespace-nowrap">
-              Asset Management
+            <h1 title={APP_NAME} className="text-[17px] min-[1700px]:text-[20px] font-black text-white leading-none tracking-normal whitespace-nowrap">
+              {APP_NAME}
             </h1>
             <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
               {headerLocationPlant} <span className="text-slate-500 px-1">|</span> {departmentLabel}
@@ -629,7 +634,10 @@ export default function DashboardPage() {
                       userRole: user?.role,
                       fetchAssets,
                     });
-                    await Promise.all([loadMissingItems(true), loadDamagedItems(true)]);
+                    await Promise.all([
+                      MISSING_ITEMS_FEATURE_ENABLED ? loadMissingItems(true) : Promise.resolve(),
+                      loadDamagedItems(true),
+                    ]);
                   })(),
                   {
                     loading: SYNC_DATABASE_MSG,
@@ -730,7 +738,7 @@ export default function DashboardPage() {
                   <>
                     <option value="Maintenance">Under Maintenance</option>
                     <option value="Damaged">Damaged / Scrap</option>
-                    <option value="Lost">Lost / Missing</option>
+                    <option value="Lost">Lost</option>
                   </>
                 )}
               </select>
@@ -889,7 +897,7 @@ export default function DashboardPage() {
                 <Trash2 className="w-8 h-8 shrink-0 text-red-100" />
               </div>
               )}
-              {!isSoftwareCategory && (
+              {MISSING_ITEMS_FEATURE_ENABLED && !isSoftwareCategory && (
               <div 
                 onClick={() => navigate('/missing')}
                 className="cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between text-left border-slate-200 hover:border-amber-300"
@@ -959,7 +967,8 @@ export default function DashboardPage() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1 pb-1">
                       {ALL_CATEGORIES.filter(cat => 
-                        cat === 'Missing Items' || visibleCategories.includes(cat)
+                        visibleCategories.includes(cat) ||
+                        (MISSING_ITEMS_FEATURE_ENABLED && cat === 'Missing Items')
                       ).map((cat) => {
                         const Icon = CATEGORY_ICONS[cat] || Cpu;
                         const style = CATEGORY_STYLES[cat] || {

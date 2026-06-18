@@ -14,6 +14,7 @@ import { mapAssetsFromApi } from '../lib/assetMap';
 import { MAIN_CATEGORIES, healMisalignedCategoryFields } from '../lib/assetCatalogByType';
 import { healMisalignedAssetFields } from '../lib/healAssetFields';
 import { expandCategoriesForSidebar, assetMatchesSidebarCategory, resolveAssetMainCategory } from '../lib/dashboardCategories';
+import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import {
   formDataToOptimisticAsset,
   normAssetId,
@@ -95,6 +96,11 @@ function scopeValueIncludes(left: unknown, right: unknown): boolean {
   const r = normalizedScopeValue(right);
   return !!l && !!r && (l === r || l.includes(r));
 }
+
+const visibleMainCategories = () =>
+  MISSING_ITEMS_FEATURE_ENABLED
+    ? MAIN_CATEGORIES
+    : MAIN_CATEGORIES.filter((cat) => String(cat) !== 'Missing Items');
 
 export function useApp() {
   const ctx = useContext(AppContext);
@@ -399,10 +405,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       user.categories.length === 0 ||
       user.categories.includes('All')
     ) {
-      return expandCategoriesForSidebar(MAIN_CATEGORIES);
+      return expandCategoriesForSidebar(visibleMainCategories());
     }
     return expandCategoriesForSidebar(
-      MAIN_CATEGORIES.filter((cat) => user.categories?.includes(cat))
+      visibleMainCategories().filter((cat) => user.categories?.includes(cat))
     );
   }, [user]);
 

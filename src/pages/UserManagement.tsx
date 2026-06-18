@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { useUsersData, type AppUser } from '../hooks/useUsersData';
 import { TableSkeleton, PageHeaderSkeleton } from '../components/LoadingSkeleton';
 import { MAIN_CATEGORIES } from '../lib/assetCatalogByType';
+import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
 import {
   assignableRoles,
@@ -35,6 +36,15 @@ const emptyForm = (): AppUser => ({
   categories: [],
   allowDelete: false,
 });
+
+const MANAGEABLE_CATEGORIES = MISSING_ITEMS_FEATURE_ENABLED
+  ? MAIN_CATEGORIES
+  : MAIN_CATEGORIES.filter((cat) => String(cat) !== 'Missing Items');
+
+const sanitizeCategories = (categories: string[] = []) =>
+  MISSING_ITEMS_FEATURE_ENABLED
+    ? categories
+    : categories.filter((cat) => cat !== 'Missing Items');
 
 function sameSettingValue(left: unknown, right: unknown): boolean {
   return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
@@ -101,9 +111,9 @@ export default function UserManagement() {
 
   const allowedCategories = useMemo(() => {
     if (!loggedInUser) return [];
-    if (isITAdmin || loggedInUser.categories?.includes('All')) return [...MAIN_CATEGORIES];
+    if (isITAdmin || loggedInUser.categories?.includes('All')) return [...MANAGEABLE_CATEGORIES];
     const adminCats = loggedInUser.categories || [];
-    return MAIN_CATEGORIES.filter((cat) => adminCats.includes(cat));
+    return MANAGEABLE_CATEGORIES.filter((cat) => adminCats.includes(cat));
   }, [loggedInUser, isITAdmin]);
 
   // Filter users list so Admins only see users who share location/plant access
@@ -177,7 +187,7 @@ export default function UserManagement() {
     setForm({ ...user });
     setSelectedLocations([...user.locations]);
     setSelectedPlants([...user.plants]);
-    setSelectedCategories([...(user.categories || [])]);
+    setSelectedCategories(sanitizeCategories(user.categories || []));
     setModalOpen(true);
   };
 
@@ -362,7 +372,7 @@ export default function UserManagement() {
                     <td className="p-3 text-sm text-gray-600">{u.locations.join(', ') || '—'}</td>
                     <td className="p-3 text-sm text-gray-600">{u.plants.join(', ') || '—'}</td>
                     <td className="p-3 text-sm text-gray-600">
-                      {u.role === 'IT Admin' ? 'All' : (u.categories || []).join(', ') || '—'}
+                      {u.role === 'IT Admin' ? 'All' : sanitizeCategories(u.categories || []).join(', ') || '—'}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">

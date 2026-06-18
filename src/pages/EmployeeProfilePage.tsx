@@ -3,6 +3,7 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, Building2, MapPin, Package, History, AlertTriangle, Wrench, RotateCcw, Trash2 } from 'lucide-react';
 import type { MissingItemRecord } from '../types/redesigned';
 import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
+import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
@@ -131,7 +132,7 @@ export default function EmployeeProfilePage() {
         assetId: String(h.assetId || ''),
       });
     }
-    for (const m of missingItems) {
+    if (MISSING_ITEMS_FEATURE_ENABLED) for (const m of missingItems) {
       // Event for when it was marked missing
       events.push({
         date: m['Missing Date'] || '',
@@ -172,11 +173,16 @@ export default function EmployeeProfilePage() {
   }, [history, missingItems]);
 
   const activeMissingComponents = useMemo(() => {
+    if (!MISSING_ITEMS_FEATURE_ENABLED) return [];
     return missingItems.filter((m) => m.Status === 'Missing');
   }, [missingItems]);
 
   useEffect(() => {
     if (!employee) return;
+    if (!MISSING_ITEMS_FEATURE_ENABLED) {
+      setMissingItems([]);
+      return;
+    }
     fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/missing-items')
       .then((r) => parseJsonResponse<{ items?: MissingItemRecord[] }>(r))
       .then((data) => {
@@ -376,7 +382,7 @@ export default function EmployeeProfilePage() {
           )}
         </section>
 
-        {activeMissingComponents.length > 0 && (
+        {MISSING_ITEMS_FEATURE_ENABLED && activeMissingComponents.length > 0 && (
           <section>
             <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
               <AlertTriangle size={20} className="text-amber-600" />

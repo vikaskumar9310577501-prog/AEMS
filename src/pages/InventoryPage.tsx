@@ -9,7 +9,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Trash2,
-  AlertCircle,
   FileDown,
   UserCheck,
   Edit2,
@@ -22,6 +21,8 @@ import type { InventoryItem } from '../types/inventory';
 import { EMPTY_INVENTORY_ITEM } from '../types/inventory';
 import InventoryModal from '../components/InventoryModal';
 
+const displayInventoryStatus = (status?: string) => (status === 'Missing' ? 'Lost' : status || 'Available');
+
 export default function InventoryPage() {
   const { user, assets, visibleCategories } = useApp();
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState<InventoryItem>(EMPTY_INVENTORY_ITEM());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'inventory' | 'damaged'>('inventory');
-  const [stockFilter, setStockFilter] = useState<'Active' | 'All' | 'Available' | 'Assigned' | 'Missing' | 'Damaged' | 'LowStock'>('Active');
+  const [stockFilter, setStockFilter] = useState<'Active' | 'All' | 'Available' | 'Assigned' | 'Damaged' | 'LowStock'>('Active');
 
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
 
@@ -60,7 +61,6 @@ export default function InventoryPage() {
     if (stockFilter === 'Active') list = list.filter(a => a.status !== 'Damaged' && a.status !== 'Missing' && a.status !== 'Lost' && a.status !== 'Scrap');
     else if (stockFilter === 'Available') list = list.filter(a => a.status === 'Available');
     else if (stockFilter === 'Assigned') list = list.filter(a => a.status === 'Assigned');
-    else if (stockFilter === 'Missing') list = list.filter(a => a.status === 'Missing');
     else if (stockFilter === 'Damaged') list = list.filter(a => a.status === 'Damaged');
     else if (stockFilter === 'LowStock') list = list.filter(a => a.quantity <= a.minStock);
     return list;
@@ -94,7 +94,6 @@ export default function InventoryPage() {
     let totalItems = 0;
     let availableStock = 0;
     let assignedItems = 0;
-    let missingItems = 0;
     let damagedItems = 0;
     let lowStockItems = 0;
 
@@ -104,8 +103,6 @@ export default function InventoryPage() {
         availableStock += item.quantity;
       } else if (item.status === 'Assigned') {
         assignedItems += item.quantity;
-      } else if (item.status === 'Missing') {
-        missingItems += item.quantity;
       } else if (item.status === 'Damaged') {
         damagedItems += item.quantity;
       }
@@ -119,7 +116,6 @@ export default function InventoryPage() {
       totalItems,
       availableStock,
       assignedItems,
-      missingItems,
       damagedItems,
       lowStockItems,
     };
@@ -209,7 +205,7 @@ export default function InventoryPage() {
 
       <div className="flex-1 overflow-auto p-6 lg:p-8 space-y-6">
         {/* Stats Cards Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div onClick={() => { setActiveTab('inventory'); setStockFilter('All'); }} className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm ${activeTab === 'inventory' && stockFilter === 'All' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200'}`}>
             <div className="flex justify-between items-start">
               <div>
@@ -237,16 +233,6 @@ export default function InventoryPage() {
                 <h3 className="text-2xl font-black text-blue-600 mt-1">{stats.assignedItems}</h3>
               </div>
               <UserCheck className="w-6 h-6 text-blue-500" />
-            </div>
-          </div>
-
-          <div onClick={() => { setActiveTab('inventory'); setStockFilter('Missing'); }} className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm ${activeTab === 'inventory' && stockFilter === 'Missing' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-slate-200'}`}>
-            <div className="flex justify-between items-start">
-              <div>
-                <p className={`text-[10px] font-black uppercase tracking-wider ${stockFilter === 'Missing' ? 'text-amber-500' : 'text-slate-400'}`}>Missing Items</p>
-                <h3 className="text-2xl font-black text-amber-600 mt-1">{stats.missingItems}</h3>
-              </div>
-              <AlertCircle className="w-6 h-6 text-amber-500" />
             </div>
           </div>
 
@@ -400,12 +386,12 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                          item.status === 'Available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                          item.status === 'Assigned' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                          item.status === 'Damaged' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                          displayInventoryStatus(item.status) === 'Available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          displayInventoryStatus(item.status) === 'Assigned' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                          displayInventoryStatus(item.status) === 'Damaged' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
                           'bg-amber-50 text-amber-700 border border-amber-100'
                         }`}>
-                          {item.status}
+                          {displayInventoryStatus(item.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">

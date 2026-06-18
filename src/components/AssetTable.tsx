@@ -38,6 +38,8 @@ const isCctvAsset = (asset: Asset) =>
   asset.assetType === "NVR" ||
   asset.subCategory === "CCTV / Security Device";
 
+const displayAssetStatus = (status?: string) => (status === "Missing" ? "Lost" : status || "Available");
+
 export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewAsset, role, viewMode = "table" }: AssetTableProps) {
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -112,7 +114,7 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
   const cctvTableLayout = hideAssigneeColumn;
 
   const getStatusBadgeClass = (status?: string) => {
-    const s = status || "Available";
+    const s = displayAssetStatus(status);
     switch (s) {
       case "Available":
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
@@ -158,7 +160,7 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
 
   // Accent color for VEMS-style cards, derived from status
   const getStatusAccent = (status?: string) => {
-    const s = status || "Available";
+    const s = displayAssetStatus(status);
     switch (s) {
       case "Available":
         return "bg-emerald-500";
@@ -331,7 +333,7 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                         "text-[9px] px-2 py-0.5 rounded-full font-black border uppercase tracking-wider whitespace-nowrap",
                         getStatusBadgeClass(asset.status)
                       )}>
-                        {asset.status || 'Available'}
+                        {displayAssetStatus(asset.status)}
                       </span>
                     </div>
                   </div>
@@ -419,7 +421,7 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                     "text-[9px] px-2 py-0.5 rounded-full font-black border uppercase tracking-wider w-fit",
                     getStatusBadgeClass(asset.status)
                   )}>
-                    {asset.status || 'Available'}
+                    {displayAssetStatus(asset.status)}
                   </span>
 
                   <div className="space-y-1.5">
@@ -549,7 +551,7 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                                     "text-[9px] px-1.5 py-0.5 rounded-sm font-black uppercase tracking-widest border animate-pulse",
                                     getStatusBadgeClass(asset.condition === 'Damaged' ? 'Damaged' : asset.status)
                                   )}>
-                                    {asset.condition === 'Damaged' && asset.status !== 'Damaged' ? 'Damaged' : asset.status}
+                                    {asset.condition === 'Damaged' && asset.status !== 'Damaged' ? 'Damaged' : displayAssetStatus(asset.status)}
                                   </span>
                                 )}
                               </div>
@@ -729,7 +731,7 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                           "text-[9px] px-2.5 py-1 rounded-full font-black border uppercase tracking-wider",
                           getStatusBadgeClass(asset.status)
                         )}>
-                          {asset.status || "Available"}
+                          {displayAssetStatus(asset.status)}
                         </span>
                       </td>
                     </>

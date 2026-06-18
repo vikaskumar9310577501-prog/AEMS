@@ -15,6 +15,8 @@ import { looksLikeEmail, looksLikeUrl, looksLikeDate, formatSelectedTypeLabel } 
 import { formatStoredDateTime, isDateFieldLabel } from "../lib/formatDisplayDate";
 import { SOFTWARE_LICENSE_CATEGORY } from "../lib/softwareLicense";
 
+const displayAssetStatus = (status?: string) => (status === "Missing" ? "Lost" : status || "Available");
+
 interface AssetDetailsProps {
   asset: Asset;
   layout?: "modal" | "page";
@@ -237,7 +239,7 @@ export default function AssetDetails({
             )}
             {asset.status && (
               <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded uppercase">
-                {asset.status}
+                {displayAssetStatus(asset.status)}
               </span>
             )}
           </div>
@@ -372,7 +374,7 @@ export default function AssetDetails({
           value={asset.serialNumber}
         />
         <Field label="Condition" value={asset.condition || "Good"} color="text-amber-600" />
-        <Field label="Status" value={asset.status || "Available"} color="text-emerald-600 font-bold" />
+        <Field label="Status" value={displayAssetStatus(asset.status)} color="text-emerald-600 font-bold" />
         {asset.accountAssetCode && (
           <Field label="Account Asset Code" value={asset.accountAssetCode} />
         )}

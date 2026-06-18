@@ -8,6 +8,7 @@ import RoutePersistence from './components/RoutePersistence';
 import AppLayout from './layout/AppLayout';
 import SplashScreen, { shouldShowSplash } from './components/SplashScreen';
 import { APP_NAME, LOGO_SRC } from './lib/constants';
+import { MISSING_ITEMS_FEATURE_ENABLED } from './lib/features';
 import { resolvePostAuthRoute } from './lib/lastRoute';
 import DashboardPage from './pages/DashboardPage';
 import NewAssetPage from './pages/NewAssetPage';
@@ -70,7 +71,7 @@ function AppRoutes() {
             <Route path="assets/:assetId/edit" element={<EditAssetPage />} />
             <Route path="employees" element={<EmployeesPage />} />
             <Route path="employees/:employeeId" element={<EmployeeProfilePage />} />
-            <Route path="missing" element={<MissingItemsPage />} />
+            {MISSING_ITEMS_FEATURE_ENABLED && <Route path="missing" element={<MissingItemsPage />} />}
             <Route path="damaged-scrap" element={<DamagedScrapPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="users" element={<UserManagement key="users-page" />} />

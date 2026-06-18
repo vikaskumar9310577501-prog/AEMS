@@ -23,6 +23,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
+import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
 import { canAccessUserManagement, isItAdminRole, isHrRole } from '../lib/userPermissions';
 import { SIDEBAR_CCTV_CATEGORY } from '../lib/dashboardCategories';
@@ -126,9 +127,9 @@ export default function AppLayout() {
                 </div>
                 <div className="min-w-0 leading-tight">
                   <p className="text-[10px] font-black uppercase tracking-[0.28em] text-red-300">PG Group</p>
-                  <p className="mt-1 text-[28px] font-black text-white leading-none tracking-normal">AEMS</p>
-                  <p className="mt-1.5 text-[11px] font-semibold text-white/75 leading-[1.15]">
-                    Asset Management
+                  <p className="mt-1 text-[15px] font-black text-white leading-[1.08] tracking-normal">
+                    <span className="block">Asset Entry</span>
+                    <span className="block">Management System</span>
                   </p>
                 </div>
               </div>
@@ -195,7 +196,7 @@ export default function AppLayout() {
               {!sidebarCollapsed && <span>Employees</span>}
             </NavLink>
           )}
-          {!isHr && (
+          {MISSING_ITEMS_FEATURE_ENABLED && !isHr && (
             <NavLink to="/missing" className={navClass} title="Missing Items">
               <AlertTriangle size={18} className="text-amber-600 shrink-0" />
               {!sidebarCollapsed && <span>Missing Items</span>}

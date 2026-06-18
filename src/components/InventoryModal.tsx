@@ -16,7 +16,7 @@ interface InventoryModalProps {
   onSaved: (item: InventoryItem) => void;
 }
 
-const STATUSES = ['Available', 'Assigned', 'Missing', 'Damaged'];
+const STATUSES = ['Available', 'Assigned', 'Damaged'];
 
 export default function InventoryModal({ open, initial, onClose, onSaved }: InventoryModalProps) {
   const [form, setForm] = useState<InventoryItem>(EMPTY_INVENTORY_ITEM());
