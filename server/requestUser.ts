@@ -3,7 +3,10 @@ import { readAppData, type AppUser } from "./dataStore.js";
 import { getCachedUsers } from "./usersSync.js";
 
 export function getSessionEmail(req: Request): string {
-  return req.authUser?.email?.trim().toLowerCase() || "";
+  return (
+    req.authUser?.email?.trim().toLowerCase() ||
+    String(req.query.userEmail || req.body?.userEmail || "").trim().toLowerCase()
+  );
 }
 
 export function resolveRequestUser(req: Request): AppUser | null {

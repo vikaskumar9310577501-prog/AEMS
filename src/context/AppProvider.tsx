@@ -565,7 +565,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await fetch(
             `${import.meta.env.VITE_API_BASE_URL || ''}/api/assets/${id}?userEmail=${encodeURIComponent(user.email)}`,
-            { method: 'DELETE' }
+            { method: 'DELETE', credentials: 'include' }
           );
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'Delete failed');

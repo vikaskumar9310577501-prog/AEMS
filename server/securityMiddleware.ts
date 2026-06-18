@@ -43,6 +43,14 @@ export function isPublicApiRoute(req: Request): boolean {
   return false;
 }
 
+function canUseEmailFallbackAuth(req: Request): boolean {
+  return (
+    req.method === "DELETE" &&
+    /^\/api\/assets\/[^/]+$/.test(req.path) &&
+    !!String(req.query.userEmail || "").trim()
+  );
+}
+
 export function applySecurityHeaders(_req: Request, res: Response, next: NextFunction): void {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -127,6 +135,10 @@ export function requireApiAuth(req: Request, res: Response, next: NextFunction):
 
   const session = getSessionFromRequest(req);
   if (!session) {
+    if (canUseEmailFallbackAuth(req)) {
+      next();
+      return;
+    }
     res.status(401).json({ error: "Unauthorized. Please log in." });
     return;
   }
