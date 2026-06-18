@@ -529,16 +529,22 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
       <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-2 flex items-center gap-3 shrink-0 overflow-visible">
-        <div className="flex flex-col justify-center leading-snug shrink-0 pr-3 border-r border-slate-300 min-w-[220px] max-w-[320px]">
-          <span title={APP_NAME} className="text-sm lg:text-base font-black text-slate-900 tracking-wide leading-tight whitespace-normal">
+        <div className="flex flex-col justify-center leading-snug shrink-0 pr-3 border-r border-slate-300 min-w-[210px] max-w-[300px]">
+          <span title={APP_NAME} className="text-lg font-black text-slate-950 tracking-wide leading-none">
+            {APP_SHORT_NAME}
+          </span>
+          <span className="text-[9px] font-black uppercase tracking-wide text-slate-400 mt-0.5 truncate">
             {APP_NAME}
           </span>
-          <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 truncate max-w-[130px] sm:max-w-[220px] lg:max-w-[280px] mt-0.5">
-            {headerLocationPlant}
-          </span>
-          <span className="text-[10px] sm:text-[11px] font-bold text-violet-600 truncate max-w-[130px] sm:max-w-[220px]">
-            {departmentLabel}
-          </span>
+          <div className="mt-1 flex items-center gap-1.5 min-w-0">
+            <span className="text-[10px] font-bold text-emerald-600 truncate max-w-[145px]">
+              {headerLocationPlant}
+            </span>
+            <span className="h-1 w-1 rounded-full bg-slate-300 shrink-0" />
+            <span className="text-[10px] font-bold text-violet-600 truncate max-w-[80px]">
+              {departmentLabel}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-x-auto">
           <div className="relative flex-none w-[260px] max-w-[28vw] min-w-[180px]">

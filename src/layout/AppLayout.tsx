@@ -116,11 +116,14 @@ export default function AppLayout() {
                 <img
                   src={LOGO_SRC}
                   alt={APP_NAME}
-                  className="object-contain shrink-0 w-32 h-28 logo-sidebar-pulse transition-all"
+                  className="object-contain shrink-0 w-32 h-24 logo-sidebar-pulse transition-all"
                 />
-                <p className="mt-1 text-center text-[11px] font-black uppercase tracking-wide leading-tight text-slate-800 max-w-[190px]">
-                  {APP_NAME}
-                </p>
+                <div className="mt-1 text-center leading-tight">
+                  <p className="text-base font-black tracking-wide text-slate-950">AEMS</p>
+                  <p className="mt-0.5 text-[9px] font-black uppercase tracking-wide text-slate-400 max-w-[180px]">
+                    {APP_NAME}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
