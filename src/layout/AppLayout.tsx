@@ -130,7 +130,7 @@ export default function AppLayout() {
                   <p className="mt-1 text-[15px] font-black text-white leading-[1.08] tracking-normal">
                     <span className="block">Asset Entry</span>
                     <span className="block">
-                      Management <span className="pl-1">System</span>
+                      Management <span className="relative -left-[78px]">System</span>
                     </span>
                   </p>
                 </div>
