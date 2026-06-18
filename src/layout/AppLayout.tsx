@@ -112,15 +112,15 @@ export default function AppLayout() {
             </>
           ) : (
             <>
-              <div className="flex flex-col items-center min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <img
                   src={LOGO_SRC}
                   alt={APP_NAME}
-                  className="object-contain shrink-0 w-32 h-24 logo-sidebar-pulse transition-all"
+                  className="object-contain shrink-0 w-20 h-16 logo-sidebar-pulse transition-all"
                 />
-                <div className="mt-2 text-center leading-tight">
+                <div className="min-w-0 leading-tight">
                   <p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-600">PG Group</p>
-                  <p className="mt-1 text-[11px] font-black text-slate-900 max-w-[180px]">
+                  <p className="mt-1 text-[13px] font-black text-slate-950 max-w-[145px] leading-[1.12]">
                     {APP_NAME}
                   </p>
                 </div>

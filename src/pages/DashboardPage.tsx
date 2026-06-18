@@ -528,26 +528,26 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
-      <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-2 flex items-center gap-3 shrink-0 overflow-visible">
-        <div className="flex flex-col justify-center leading-snug shrink-0 pr-4 border-r border-slate-300 min-w-[235px] max-w-[300px]">
-          <span className="text-[9px] font-black uppercase tracking-[0.18em] text-red-600 leading-none">
-            PG Group
-          </span>
-          <span title={APP_NAME} className="mt-1 text-[13px] lg:text-sm font-black text-slate-950 leading-tight">
-            {APP_NAME}
-          </span>
-          <div className="mt-1 flex items-center gap-1.5 min-w-0">
-            <span className="text-[10px] font-bold text-emerald-600 truncate max-w-[145px]">
-              {headerLocationPlant}
+      <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-2.5 grid grid-cols-[minmax(220px,280px)_minmax(260px,1fr)_auto] items-center gap-4 shrink-0 overflow-visible">
+        <div className="min-w-0 pr-4 border-r border-slate-200 leading-tight">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-red-600 shrink-0">
+              PG Group
             </span>
             <span className="h-1 w-1 rounded-full bg-slate-300 shrink-0" />
-            <span className="text-[10px] font-bold text-violet-600 truncate max-w-[80px]">
+            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400 truncate">
               {departmentLabel}
             </span>
           </div>
+          <h1 title={APP_NAME} className="mt-1 text-[15px] font-black text-slate-950 leading-none truncate">
+            {APP_NAME}
+          </h1>
+          <p className="mt-1 text-[10px] font-bold text-emerald-600 truncate">
+            {headerLocationPlant}
+          </p>
         </div>
-        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-x-auto">
-          <div className="relative flex-none w-[260px] max-w-[28vw] min-w-[180px]">
+        <div className="min-w-0">
+          <div className="relative w-full max-w-2xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input
               type="text"
@@ -558,11 +558,11 @@ export default function DashboardPage() {
                   ? 'Search software...'
                   : 'Search assets...'
               }
-              className="w-full pl-8 pr-3 py-2 bg-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+              className="w-full pl-8 pr-3 py-2.5 bg-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-slate-400"
             />
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 flex-nowrap overflow-visible">
+        <div className="flex items-center justify-end gap-1.5 shrink-0 flex-nowrap overflow-visible">
           <>
             <button
               type="button"
