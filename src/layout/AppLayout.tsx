@@ -126,7 +126,7 @@ export default function AppLayout() {
                   />
                 </div>
                 <div className="min-w-0 leading-tight">
-                  <p className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/70">PG Group</p>
+                  <p className="w-[92px] text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/70">PG Group</p>
                   <p className="mt-1 text-[15px] font-black text-white leading-[1.08] tracking-normal">
                     <span className="block">Asset Entry</span>
                     <span className="block">Management System</span>
