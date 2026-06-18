@@ -125,13 +125,12 @@ export default function AppLayout() {
                     className="object-contain w-12 h-12 logo-sidebar-pulse transition-all"
                   />
                 </div>
-                <div className="min-w-0 leading-tight">
+                <div className="min-w-0 w-[145px] leading-tight">
                   <p className="w-[92px] text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/70">PG Group</p>
                   <p className="mt-1 text-[15px] font-black text-white leading-[1.08] tracking-normal">
                     <span className="block">Asset Entry</span>
-                    <span className="block">
-                      Management <span className="relative -left-[78px]">System</span>
-                    </span>
+                    <span className="block">Management</span>
+                    <span className="block pl-2">System</span>
                   </p>
                 </div>
               </div>
