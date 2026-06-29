@@ -11,7 +11,7 @@ export function normalizeUser(raw: Record<string, unknown>): AppUser {
   };
 }
 
-const IT_ADMIN_ROLES = new Set(["IT Admin", "IT_ADMIN", "it admin"]);
+const IT_ADMIN_ROLES = new Set(["IT Admin", "IT_ADMIN", "IT ADMIN", "it admin"]);
 
 export function isItAdminRole(role: string | undefined | null): boolean {
   return !!role && IT_ADMIN_ROLES.has(role);

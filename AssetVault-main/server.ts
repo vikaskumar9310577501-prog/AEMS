@@ -1940,7 +1940,7 @@ app.delete("/api/assignment-history/:id", async (req, res) => {
     if (!user) {
       return res.status(403).json({ error: "Authentication required." });
     }
-    if (user.role !== "IT Admin") {
+    if (!isItAdminRole(user.role)) {
       return res.status(403).json({ error: "Only IT Admin can delete assignment history." });
     }
 
@@ -2053,7 +2053,7 @@ app.put("/api/employees/:employeeId", async (req, res) => {
 app.delete("/api/employees/:employeeId", async (req, res) => {
   try {
     const requestUser = resolveRequestUser(req);
-    if (!requestUser || requestUser.role !== "IT Admin") {
+    if (!requestUser || !isItAdminRole(requestUser.role)) {
       return res.status(403).json({ error: "Only IT Admin is authorized to delete employee profiles." });
     }
     const eid = decodeURIComponent(req.params.employeeId);
