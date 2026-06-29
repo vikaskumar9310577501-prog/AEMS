@@ -1,0 +1,8 @@
+{
+  "name": "AssetQR Tracker",
+  "description": "Professional IT asset management system with Google Sheets backend, QR code generation, and 5-digit unique code tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

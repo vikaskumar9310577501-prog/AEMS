@@ -1,0 +1,12 @@
+[
+  {
+    "Log ID": "L-294379",
+    "User Email": "software.2040@pgel.in",
+    "Action": "ADD_ASSET",
+    "Target ID": "015",
+    "Date & Time": "2026-06-29T16:08:56.880Z",
+    "Old Value": "",
+    "New Value": "{\"location\":\"BHIWADI\",\"plantCode\":\"2040\",\"department\":\"ppc\",\"make\":\"Acer\",\"model\":\"Veriton X\",\"serialNumber\":\"865432456789\",\"assetCode\":\"IT-2026-00014\",\"accountAssetCode\":\"\",\"vendorName\":\"UNKNOWN\",\"warrantyStartDate\":\"\",\"warrantyEndDate\":\"\",\"ram\":\"16GB\",\"ssd\":\"1TB\",\"cpu\":\"Core i7\",\"windowsVersion\":\"Windows 10 Pro\",\"assetType\":\"Desktop\",\"accessories\":{\"mouse\":false,\"keyboard\":false,\"monitor\":false,\"ups\":false},\"monitorSerial\":\"567890\",\"monitorAssetCode\":\"\",\"keyboardSerial\":\"87654\",\"keyboardAssetCode\":\"\",\"mouseSerial\":\"78654\",\"mouseAssetCode\":\"\",\"upsSerial\":\"87656\",\"upsAssetCode\":\"\",\"macAddress\":\"00:1A:B3:C4:D5:D1\",\"ipAddress\":\"192.168.6.9\",\"hostName\":\"HOST_NAME\",\"contactName\":\"SACHIN \",\"contactEmail\":\"sachin.01@pgel.in\",\"contactMobile\":\"8765787678\",\"documentUrl\":\"https://drive.google.com/file/d/1jAWCHOKDh7kPRU8__FR54-7P844aAvCd/preview\",\"imageUrl\":\"https://drive.google.com/file/d/1jAWCHOKDh7kPRU8__FR54-7P844aAvCd/preview\",\"additionalItems\":\"PRINTER:SR.NO:876578908\",\"assetName\":\"Acer Veriton X\",\"mainCategory\":\"IT Assets\",\"subCategory\":\"Laptop / Desktop\",\"quantity\":\"1\",\"employeeId\":\"PGTL0045\",\"purchaseDate\":\"\",\"purchaseCost\":\"\",\"invoiceNumber\":\"\",\"condition\":\"EXISTING ASSETS\",\"status\":\"Assigned\",\"maintenanceRequired\":\"No\",\"lastMaintenanceDate\":\"\",\"nextMaintenanceDate\":\"\",\"createdBy\":\"software.2040@pgel.in\",\"createdDate\":\"2026-06-29T16:08:29.336Z\",\"updatedBy\":\"software.2040@pgel.in\",\"updatedDate\":\"2026-06-29T16:08:29.336Z\",\"extraItems\":\"\",\"missingItems\":\"\",\"assignedDate\":\"2026-06-29\",\"returnDate\":\"\",\"amcVendor\":\"\",\"amcStartDate\":\"\",\"amcEndDate\":\"\",\"amcCost\":\"\",\"dynamicDetails\":{\"processor\":\"Core i7\",\"ram\":\"16GB\",\"rom\":\"1TB\",\"windows_version\":\"Windows 10 Pro\"},\"assetTypeId\":\"laptop\",\"id\":\"015\",\"uniqueCode\":\"IT-2026-00014\",\"qrCodeText\":\"http://localhost:3000/scan/IT-2026-00014\"}",
+    "Remarks": "Added asset 015 (Acer Veriton X)"
+  }
+]

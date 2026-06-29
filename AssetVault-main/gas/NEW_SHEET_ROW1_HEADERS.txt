@@ -1,0 +1,10 @@
+Paste this EXACTLY as Row 1 in your "IT Assets" tab (59 columns). Other category tabs use columns A through Contact Number only (42 columns — stop before RAM).
+
+Asset ID	Asset Code	Account Asset Code	Asset Name	Main Category	Sub Category	Asset Type	Brand	Model	Serial Number	Quantity	Plant Name	Location	Department	Assigned To	Employee ID	Assigned Date	Purchase Date	Purchase Cost	Vendor Name	Invoice Number	Warranty Start Date	Warranty Expiry Date	Condition	Status	Maintenance Required	Last Maintenance Date	Next Maintenance Date	AMC Vendor	AMC Start Date	AMC End Date	AMC Cost	Photo URL / Photo Upload	Document URL / Attached Documents	QR Code / Barcode	Remarks	Created By	Created Date	Updated By	Updated Date	Contact Email	Contact Number	RAM	SSD	CPU	Windows Version	MAC Address	IP Address	Host Name	Unique Code	Binary Code	Monitor Serial	Monitor Asset Code	Keyboard Serial	Keyboard Asset Code	Mouse Serial	Mouse Asset Code	UPS Serial	UPS Asset Code
+
+Required tabs: IT Assets, Office Assets, Electrical Assets, Production Assets, Safety Assets, Vehicle Assets, Furniture Assets, Software License Assets, Admin Facility Assets, Maintenance Assets, Users, Locations, Plants, Employees, Assignment_History, Asset_Details, Category_Definitions, Inventory, Options, Damaged_Items, Missing_Items, Audit_Logs
+
+After creating the sheet: Extensions > Apps Script > paste WebApp.gs > Deploy > copy Web App URL into .env GAS_WEBAPP_URL and set USERS_SHEET_GID from Users tab URL.
+
+=== EXAMPLE ROW 2 for IT Assets (asset #001 — correct mapping) ===
+1	IT-2026-00001		AST-76543567898	IT Assets	Laptop / Desktop	Laptop	Acer	Aspire 5	SN123456789	1	BHW-01	BHIWADI	IT	HIMANSHU	NGM0138	2026-06-15		DAKSh			EXISTING ASSETS	Assigned	No								http://localhost:3002/scan/IT-2026-00001			software.2040@pgel.in	9034812153	8GB	256GB	Apple M4	Windows 11 Pro	DE:E4:75:A3:9E:E0	192.168.7.89	Host-PC-001	FER-001	0

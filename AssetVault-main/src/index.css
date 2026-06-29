@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-slate-50 text-slate-900;
+  }
+}
+
+.geometric-card {
+  @apply bg-white rounded-xl shadow-sm border border-slate-200;
+}
+
+.label-caps {
+  @apply text-[11px] font-bold text-slate-500 uppercase tracking-widest;
+}
+
+.input-geometric {
+  @apply bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400;
+}
+
+.btn-primary-geometric {
+  @apply px-8 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-50;
+}
+
+.btn-secondary-geometric {
+  @apply px-6 py-2.5 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition-all active:scale-[0.98];
+}
+
+@keyframes splash-logo {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.06) rotate(2deg); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-splash-logo {
+  /* Static logo - no animation */
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out forwards;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 0.6s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.logo-sidebar-pulse {
+  /* Static logo - no animation */
+}

@@ -1,0 +1,968 @@
+{
+  "users": [
+    {
+      "email": "software.2040@pgel.in",
+      "role": "IT Admin",
+      "locations": [
+        "All"
+      ],
+      "plants": [
+        "All"
+      ],
+      "categories": [
+        "All"
+      ],
+      "allowDelete": false
+    },
+    {
+      "email": "ankit.singh8@pgel.in",
+      "role": "Admin",
+      "locations": [
+        "BHIWADI"
+      ],
+      "plants": [
+        "4020",
+        "2040"
+      ],
+      "categories": [
+        "IT Assets",
+        "Software / License Assets"
+      ],
+      "allowDelete": false
+    },
+    {
+      "email": "yogesh.yadav8@pgel.in",
+      "role": "Admin",
+      "locations": [
+        "BHIWADI"
+      ],
+      "plants": [],
+      "categories": [
+        "Safety Assets"
+      ],
+      "allowDelete": false
+    }
+  ],
+  "settings": {
+    "locations": [
+      "BHIWADI"
+    ],
+    "plants": [
+      {
+        "code": "4020",
+        "name": "NEXT GENRATION MANUFACTURES",
+        "location": "BHIWADI"
+      },
+      {
+        "code": "2040",
+        "name": "PG TECHNOPLAST",
+        "location": "BHIWADI"
+      }
+    ],
+    "assetFields": [
+      {
+        "key": "department",
+        "label": "Department",
+        "enabled": true
+      },
+      {
+        "key": "make",
+        "label": "Brand/Make",
+        "enabled": true
+      },
+      {
+        "key": "model",
+        "label": "Model",
+        "enabled": true
+      },
+      {
+        "key": "vendorName",
+        "label": "Vendor Name",
+        "enabled": true
+      },
+      {
+        "key": "ram",
+        "label": "RAM",
+        "enabled": true
+      },
+      {
+        "key": "ssd",
+        "label": "Storage",
+        "enabled": true
+      },
+      {
+        "key": "cpu",
+        "label": "CPU",
+        "enabled": true
+      },
+      {
+        "key": "windowsVersion",
+        "label": "Windows Version",
+        "enabled": true
+      },
+      {
+        "key": "macAddress",
+        "label": "MAC Address",
+        "enabled": true
+      },
+      {
+        "key": "contactName",
+        "label": "Contact Person",
+        "enabled": true
+      },
+      {
+        "key": "contactEmail",
+        "label": "Contact Email",
+        "enabled": true
+      },
+      {
+        "key": "contactMobile",
+        "label": "Contact Mobile",
+        "enabled": true
+      }
+    ],
+    "catalog": {
+      "brands": {
+        "Dell": [
+          "Latitude 5420",
+          "Latitude 5430",
+          "OptiPlex 7090",
+          "Precision 3560",
+          "Latitude 5440",
+          "OptiPlex 7010",
+          "PowerEdge R740"
+        ],
+        "HP": [
+          "EliteBook 840 G8",
+          "ProBook 450 G9",
+          "ProDesk 400 G9",
+          "EliteBook 850 G9",
+          "ZBook Firefly 14",
+          "LaserJet Pro M404"
+        ],
+        "Lenovo": [
+          "ThinkPad T14",
+          "ThinkPad E14",
+          "ThinkCentre M70q",
+          "ThinkPad L14",
+          "IdeaPad Slim 5",
+          "Legion 5"
+        ],
+        "Apple": [
+          "MacBook Air M2",
+          "MacBook Pro 14",
+          "Mac Mini M2",
+          "iMac 24"
+        ],
+        "Asus": [
+          "VivoBook 15",
+          "ZenBook 14",
+          "ExpertBook B1",
+          "ROG Strix G15"
+        ],
+        "Acer": [
+          "Aspire 5",
+          "TravelMate P2",
+          "Predator Helios",
+          "Veriton X"
+        ],
+        "Cisco": [
+          "Catalyst 2960",
+          "Meraki MR46",
+          "ISR 4331",
+          "ASA 5506"
+        ],
+        "Fortinet": [
+          "FortiGate 60F",
+          "FortiGate 100F",
+          "FortiSwitch 108E"
+        ],
+        "Logitech": [
+          "MX Master 3",
+          "K380 Keyboard",
+          "C920 Webcam",
+          "M185 Mouse"
+        ],
+        "Samsung": [
+          "27\" UR55 Monitor",
+          "990 Pro SSD",
+          "Galaxy Tab S9"
+        ],
+        "LG": [
+          "24MP88 Monitor",
+          "Gram 16",
+          "Gram 16 Laptop",
+          "27UL850 Monitor"
+        ],
+        "Epson": [
+          "L3250 Printer",
+          "DS-530 Scanner",
+          "L6290 Printer"
+        ],
+        "Canon": [
+          "LBP6030 Printer",
+          "CanoScan LiDE",
+          "imageCLASS MF301"
+        ],
+        "Microsoft": [
+          "Surface Laptop 5",
+          "Surface Pro 9"
+        ]
+      },
+      "vendors": [
+        "BLUE STAR",
+        "DAKSh",
+        "Dell India",
+        "HCL Infosystems",
+        "HP Enterprise",
+        "Ingram Micro",
+        "Intech Systems",
+        "Lenovo India",
+        "Rashi Peripherals",
+        "Redington",
+        "Savex Technologies",
+        "Softcell",
+        "microsoft",
+        "woodIndia"
+      ],
+      "departments": [
+        "Admin",
+        "Engineering",
+        "Finance",
+        "HR",
+        "IT",
+        "Maintenance",
+        "PPC",
+        "Production",
+        "Purchase",
+        "Quality",
+        "Sales",
+        "Security",
+        "Store"
+      ]
+    },
+    "typeDefinitions": {
+      "types": [
+        {
+          "id": "laptop",
+          "name": "Laptop",
+          "mainCategory": "IT Assets",
+          "subCategory": "Laptop / Desktop",
+          "useLegacyItForm": true,
+          "fields": [
+            {
+              "key": "processor",
+              "label": "Processor",
+              "type": "text",
+              "required": true,
+              "legacyKey": "cpu"
+            },
+            {
+              "key": "ram",
+              "label": "RAM",
+              "type": "select",
+              "required": true,
+              "options": [
+                "4GB",
+                "8GB",
+                "16GB",
+                "32GB",
+                "64GB"
+              ],
+              "legacyKey": "ram"
+            },
+            {
+              "key": "rom",
+              "label": "ROM / Storage",
+              "type": "select",
+              "required": true,
+              "options": [
+                "128GB",
+                "256GB",
+                "512GB",
+                "1TB",
+                "2TB"
+              ],
+              "legacyKey": "ssd"
+            },
+            {
+              "key": "windows_version",
+              "label": "Windows Version",
+              "type": "select",
+              "options": [
+                "Windows 10 Pro",
+                "Windows 11 Pro",
+                "Windows 11 Home",
+                "macOS",
+                "Linux"
+              ],
+              "legacyKey": "windowsVersion"
+            },
+            {
+              "key": "charger_available",
+              "label": "Charger Available",
+              "type": "select",
+              "options": [
+                "Yes",
+                "No"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "desktop",
+          "name": "Desktop",
+          "mainCategory": "IT Assets",
+          "subCategory": "Laptop / Desktop",
+          "useLegacyItForm": true,
+          "fields": [
+            {
+              "key": "processor",
+              "label": "Processor",
+              "type": "text",
+              "required": true,
+              "legacyKey": "cpu"
+            },
+            {
+              "key": "ram",
+              "label": "RAM",
+              "type": "select",
+              "required": true,
+              "options": [
+                "4GB",
+                "8GB",
+                "16GB",
+                "32GB"
+              ],
+              "legacyKey": "ram"
+            },
+            {
+              "key": "rom",
+              "label": "Storage",
+              "type": "select",
+              "required": true,
+              "options": [
+                "256GB",
+                "512GB",
+                "1TB",
+                "2TB"
+              ],
+              "legacyKey": "ssd"
+            },
+            {
+              "key": "windows_version",
+              "label": "Windows Version",
+              "type": "select",
+              "legacyKey": "windowsVersion",
+              "options": [
+                "Windows 10 Pro",
+                "Windows 11 Pro"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "vehicle",
+          "name": "Car / Vehicle",
+          "mainCategory": "Vehicle Assets",
+          "fields": [
+            {
+              "key": "vehicle_number",
+              "label": "Vehicle Number",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "vehicle_type",
+              "label": "Vehicle Type",
+              "type": "select",
+              "options": [
+                "Car",
+                "Bike",
+                "Truck",
+                "Forklift",
+                "E-Rickshaw"
+              ]
+            },
+            {
+              "key": "rc_number",
+              "label": "RC Number",
+              "type": "text"
+            },
+            {
+              "key": "insurance_expiry",
+              "label": "Insurance Expiry",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "pollution_expiry",
+              "label": "Pollution Expiry",
+              "type": "date"
+            },
+            {
+              "key": "driver_assigned",
+              "label": "Driver Assigned",
+              "type": "text"
+            },
+            {
+              "key": "fuel_type",
+              "label": "Fuel Type",
+              "type": "select",
+              "options": [
+                "Petrol",
+                "Diesel",
+                "CNG",
+                "Electric",
+                "Hybrid"
+              ]
+            },
+            {
+              "key": "kilometers",
+              "label": "Kilometers",
+              "type": "number"
+            }
+          ]
+        },
+        {
+          "id": "fan",
+          "name": "Fan",
+          "mainCategory": "Office Assets",
+          "subCategory": "Fan",
+          "fields": [
+            {
+              "key": "fan_type",
+              "label": "Fan Type",
+              "type": "select",
+              "options": [
+                "Ceiling",
+                "Table",
+                "Wall",
+                "Exhaust",
+                "Industrial"
+              ]
+            },
+            {
+              "key": "fan_size",
+              "label": "Size",
+              "type": "text"
+            },
+            {
+              "key": "installation_date",
+              "label": "Installation Date",
+              "type": "date"
+            },
+            {
+              "key": "maintenance_status",
+              "label": "Maintenance Status",
+              "type": "select",
+              "options": [
+                "OK",
+                "Due",
+                "Overdue"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ac",
+          "name": "Air Conditioner (AC)",
+          "mainCategory": "Office Assets",
+          "subCategory": "AC",
+          "fields": [
+            {
+              "key": "tonnage",
+              "label": "Tonnage / Capacity",
+              "type": "select",
+              "options": [
+                "1.0 Ton",
+                "1.5 Ton",
+                "2.0 Ton",
+                "3.0 Ton",
+                "Other"
+              ]
+            },
+            {
+              "key": "star_rating",
+              "label": "Energy Star Rating",
+              "type": "select",
+              "options": [
+                "1 Star",
+                "2 Star",
+                "3 Star",
+                "4 Star",
+                "5 Star"
+              ]
+            },
+            {
+              "key": "compressor_type",
+              "label": "Compressor Type",
+              "type": "select",
+              "options": [
+                "Inverter",
+                "Non-Inverter"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "office_asset_gen",
+          "name": "Office Asset (General)",
+          "mainCategory": "Office Assets",
+          "fields": [
+            {
+              "key": "material",
+              "label": "Material",
+              "type": "select",
+              "options": [
+                "Wood",
+                "Metal",
+                "Plastic",
+                "Glass",
+                "Other"
+              ]
+            },
+            {
+              "key": "dimensions",
+              "label": "Dimensions",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "printer",
+          "name": "Printer",
+          "mainCategory": "IT Assets",
+          "subCategory": "Printer / Scanner",
+          "fields": [
+            {
+              "key": "printer_type",
+              "label": "Printer Type",
+              "type": "select",
+              "options": [
+                "Laser",
+                "Inkjet",
+                "Dot Matrix",
+                "Thermal"
+              ]
+            },
+            {
+              "key": "ip_address",
+              "label": "IP Address",
+              "type": "text",
+              "legacyKey": "ipAddress"
+            },
+            {
+              "key": "toner_model",
+              "label": "Toner Model",
+              "type": "text"
+            },
+            {
+              "key": "network_location",
+              "label": "Location",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "monitor",
+          "name": "Monitor",
+          "mainCategory": "IT Assets",
+          "subCategory": "Output Device",
+          "fields": [
+            {
+              "key": "screen_size",
+              "label": "Screen Size",
+              "type": "text",
+              "placeholder": "e.g. 24 inch"
+            },
+            {
+              "key": "resolution",
+              "label": "Resolution",
+              "type": "text",
+              "placeholder": "e.g. 1920x1080"
+            },
+            {
+              "key": "panel_type",
+              "label": "Panel Type",
+              "type": "select",
+              "options": [
+                "IPS",
+                "VA",
+                "TN",
+                "OLED"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "network_device",
+          "name": "Network Device",
+          "mainCategory": "IT Assets",
+          "subCategory": "Network Device",
+          "fields": [
+            {
+              "key": "ip_address",
+              "label": "IP Address",
+              "type": "text",
+              "legacyKey": "ipAddress"
+            },
+            {
+              "key": "ports_count",
+              "label": "Number of Ports",
+              "type": "number"
+            },
+            {
+              "key": "firmware_version",
+              "label": "Firmware Version",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "cctv_security",
+          "name": "CCTV / Security Device",
+          "mainCategory": "IT Assets",
+          "subCategory": "CCTV / Security Device",
+          "fields": [
+            {
+              "key": "camera_resolution",
+              "label": "Camera Resolution",
+              "type": "select",
+              "options": [
+                "2MP",
+                "4MP",
+                "5MP",
+                "8MP (4K)",
+                "N/A"
+              ]
+            },
+            {
+              "key": "channel_count",
+              "label": "Channels (for NVR)",
+              "type": "select",
+              "options": [
+                "4 Channel",
+                "8 Channel",
+                "16 Channel",
+                "32 Channel",
+                "N/A"
+              ]
+            },
+            {
+              "key": "location_name",
+              "label": "Location Name",
+              "type": "text",
+              "placeholder": "e.g. Main Gate, Warehouse A",
+              "legacyKey": "hostName"
+            }
+          ]
+        },
+        {
+          "id": "server_ups",
+          "name": "Server / UPS",
+          "mainCategory": "IT Assets",
+          "subCategory": "Server / UPS",
+          "fields": [
+            {
+              "key": "capacity_rating",
+              "label": "Capacity / Rating",
+              "type": "text",
+              "placeholder": "e.g. 1000VA, 2U Server"
+            },
+            {
+              "key": "ip_address",
+              "label": "Management IP (if any)",
+              "type": "text",
+              "legacyKey": "ipAddress"
+            },
+            {
+              "key": "battery_replacement_due",
+              "label": "Battery Replacement Due",
+              "type": "date"
+            }
+          ]
+        },
+        {
+          "id": "software_license",
+          "name": "Software License",
+          "mainCategory": "Software / License Assets",
+          "fields": [
+            {
+              "key": "email_id",
+              "label": "Email ID",
+              "type": "email",
+              "required": true
+            },
+            {
+              "key": "purchase_date",
+              "label": "Purchase Date",
+              "type": "date",
+              "legacyKey": "purchaseDate"
+            },
+            {
+              "key": "license_type",
+              "label": "License Type",
+              "type": "select",
+              "options": [
+                "Standard",
+                "Basic",
+                "With Teams",
+                "Without Teams",
+                "Perpetual",
+                "Subscription (Monthly)",
+                "Subscription (Annual)",
+                "Open Source",
+                "OEM"
+              ]
+            },
+            {
+              "key": "renewal_date",
+              "label": "Renewal Date",
+              "type": "date",
+              "legacyKey": "warrantyEndDate"
+            },
+            {
+              "key": "seats",
+              "label": "Seats / License Count",
+              "type": "number"
+            }
+          ]
+        },
+        {
+          "id": "generator",
+          "name": "Generator",
+          "mainCategory": "Electrical Assets",
+          "subCategory": "Generator",
+          "fields": [
+            {
+              "key": "capacity_kva",
+              "label": "Capacity (kVA)",
+              "type": "number",
+              "required": true
+            },
+            {
+              "key": "fuel_type",
+              "label": "Fuel Type",
+              "type": "select",
+              "options": [
+                "Diesel",
+                "Gas",
+                "Petrol",
+                "Other"
+              ]
+            },
+            {
+              "key": "phase",
+              "label": "Phase Type",
+              "type": "select",
+              "options": [
+                "Three Phase",
+                "Single Phase"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "inverter",
+          "name": "Inverter",
+          "mainCategory": "Electrical Assets",
+          "subCategory": "Inverter",
+          "fields": [
+            {
+              "key": "capacity_kva",
+              "label": "Capacity (kVA)",
+              "type": "text"
+            },
+            {
+              "key": "inverter_type",
+              "label": "Inverter Type",
+              "type": "select",
+              "options": [
+                "Sine Wave",
+                "Square Wave",
+                "Hybrid",
+                "Other"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "battery",
+          "name": "Battery",
+          "mainCategory": "Electrical Assets",
+          "subCategory": "Battery",
+          "fields": [
+            {
+              "key": "battery_capacity_ah",
+              "label": "Capacity (AH)",
+              "type": "number",
+              "required": true
+            },
+            {
+              "key": "voltage_rating",
+              "label": "Voltage Rating",
+              "type": "select",
+              "options": [
+                "12V",
+                "24V",
+                "48V",
+                "Other"
+              ]
+            },
+            {
+              "key": "battery_type",
+              "label": "Battery Type",
+              "type": "select",
+              "options": [
+                "Tubular",
+                "Flat Plate",
+                "SMF / VRLA",
+                "Lithium-Ion"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "electrical_asset",
+          "name": "Electrical Asset (General)",
+          "mainCategory": "Electrical Assets",
+          "fields": [
+            {
+              "key": "power_rating",
+              "label": "Power Rating (Watts/kW)",
+              "type": "text"
+            },
+            {
+              "key": "voltage",
+              "label": "Operating Voltage",
+              "type": "select",
+              "options": [
+                "220V (Single Phase)",
+                "415V (Three Phase)",
+                "12V / 24V DC",
+                "Other"
+              ]
+            },
+            {
+              "key": "capacity",
+              "label": "Capacity (AH/KVA)",
+              "type": "text",
+              "placeholder": "e.g. 150AH, 10KVA"
+            }
+          ]
+        },
+        {
+          "id": "production_asset",
+          "name": "Production Asset",
+          "mainCategory": "Production Assets",
+          "fields": [
+            {
+              "key": "power_source",
+              "label": "Power Source",
+              "type": "select",
+              "options": [
+                "Electricity",
+                "Pneumatic (Air)",
+                "Hydraulic",
+                "Manual",
+                "Other"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "safety_asset",
+          "name": "Safety Asset",
+          "mainCategory": "Safety Assets",
+          "fields": [
+            {
+              "key": "safety_standard",
+              "label": "Safety Standard / Cert",
+              "type": "text",
+              "placeholder": "e.g. ISI, CE"
+            }
+          ]
+        },
+        {
+          "id": "furniture_asset",
+          "name": "Furniture Asset",
+          "mainCategory": "Furniture Assets",
+          "fields": [
+            {
+              "key": "material",
+              "label": "Material Type",
+              "type": "select",
+              "options": [
+                "Wood",
+                "Metal",
+                "Plastic",
+                "Glass",
+                "Leather",
+                "Fabric",
+                "Other"
+              ]
+            },
+            {
+              "key": "dimensions",
+              "label": "Dimensions (L x W x H)",
+              "type": "text"
+            },
+            {
+              "key": "color",
+              "label": "Color",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "admin_facility_asset",
+          "name": "Admin / Facility Asset",
+          "mainCategory": "Admin / Facility Assets",
+          "fields": [
+            {
+              "key": "facility_use",
+              "label": "Facility Use / Location",
+              "type": "text"
+            },
+            {
+              "key": "consumable",
+              "label": "Consumable Type",
+              "type": "select",
+              "options": [
+                "Asset",
+                "Semi-Consumable",
+                "Consumable"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "maintenance_asset",
+          "name": "Maintenance Tool / Asset",
+          "mainCategory": "Maintenance Assets",
+          "fields": [
+            {
+              "key": "tool_type",
+              "label": "Tool Category",
+              "type": "select",
+              "options": [
+                "Hand Tool",
+                "Power Tool",
+                "Measuring Instrument",
+                "Safety Gear",
+                "Other"
+              ]
+            },
+            {
+              "key": "calibration_due_date",
+              "label": "Calibration Due Date",
+              "type": "date"
+            }
+          ]
+        }
+      ],
+      "updatedAt": "2026-06-15T18:24:13.084Z"
+    }
+  }
+}

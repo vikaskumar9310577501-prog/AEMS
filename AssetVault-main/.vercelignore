@@ -1,0 +1,7 @@
+.env
+.env.*
+scratch/
+uploads/
+data/cache/
+node_modules/
+dist/
