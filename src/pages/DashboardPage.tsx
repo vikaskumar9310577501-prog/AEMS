@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Navigate, useOutletContext } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -189,6 +190,7 @@ function missingItemMatchesCategory(m: MissingItemRecord, category: string): boo
 }
 
 export default function DashboardPage() {
+  const { headerPortalNode } = useOutletContext<{ headerPortalNode: HTMLDivElement | null }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, assets, loading, visibleCategories, fetchAssets, filterAssets, executeDelete, handleSubmit } =
@@ -533,21 +535,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
-      <header className="bg-[#113355] border-b border-[#0b2744] px-4 lg:px-5 py-3 flex items-center gap-3 shrink-0 overflow-visible shadow-sm">
-        <div className="flex items-center gap-3 shrink-0 w-[310px] min-[1450px]:w-[380px] min-[1700px]:w-[500px]">
-          <div className="bg-white rounded-md px-2.5 py-1.5 shadow-sm shrink-0">
-            <img src="/logo.png" alt={APP_NAME} className="w-14 h-8 min-[1700px]:w-16 min-[1700px]:h-9 object-contain" />
-          </div>
-          <div className="min-w-0 leading-tight">
-            <h1 title={APP_NAME} className="text-[13px] min-[1450px]:text-[16px] min-[1700px]:text-[20px] font-black text-white leading-none tracking-normal whitespace-nowrap">
-              {APP_NAME}
-            </h1>
-            <p className="mt-1 text-[11px] font-semibold text-slate-300 truncate">
-              {headerLocationPlant} <span className="text-slate-500 px-1">|</span> {departmentLabel}
-            </p>
-          </div>
-        </div>
-        <div className="relative flex-1 min-w-0">
+      {headerPortalNode && createPortal(
+        <div className="flex items-center gap-3 w-full justify-end pr-4 lg:pr-5">
+          <div className="relative flex-1 max-w-md min-w-[150px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
@@ -558,11 +548,10 @@ export default function DashboardPage() {
                   ? 'Search software...'
                   : 'Search assets...'
               }
-              className="w-full pl-10 pr-4 py-2.5 bg-white/95 border border-white/10 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300/50 transition-all placeholder:text-slate-400"
+              className="w-full pl-10 pr-4 py-2 bg-white/95 border border-white/10 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300/50 transition-all placeholder:text-slate-400"
             />
-        </div>
-        <div className="ml-auto flex items-center justify-end gap-1.5 shrink-0 flex-nowrap overflow-visible">
-          <>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => setFiltersOpen((o) => !o)}
@@ -680,9 +669,10 @@ export default function DashboardPage() {
               </span>
               <span className="min-[1700px]:hidden">New</span>
             </button>
-          </>
-        </div>
-      </header>
+          </div>
+        </div>,
+        headerPortalNode
+      )}
 
       {filtersOpen && (
         <div className="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 shrink-0 w-full">
