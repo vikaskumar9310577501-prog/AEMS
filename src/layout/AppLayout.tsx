@@ -51,7 +51,6 @@ function categoryToQuery(cat: string) {
 export default function AppLayout() {
   const { user, handleLogout, visibleCategories } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [headerPortalNode, setHeaderPortalNode] = useState<HTMLDivElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -86,156 +85,170 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden font-sans bg-slate-50">
-      {/* Global Top Navbar */}
-      <header className="bg-[#113355] border-b border-[#0b2744] h-16 flex items-center px-4 justify-between shrink-0 shadow-sm z-30">
-        <div className="flex items-center gap-4">
-          {/* Static Hamburger Menu Button in Navbar */}
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors shrink-0"
-            title={sidebarCollapsed ? "Expand menu" : "Collapse menu"}
-            aria-label="Toggle sidebar"
-          >
-            <Menu size={20} />
-          </button>
-
-          {/* Logo and Title */}
-          <div className="flex items-center gap-3">
-            <div className="bg-white rounded-md px-2.5 py-1 shadow-sm shrink-0 flex items-center justify-center h-8">
-              <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
-            </div>
-            <h1 className="text-sm sm:text-base md:text-lg font-black text-white leading-none whitespace-nowrap">
-              {APP_NAME}
-            </h1>
-          </div>
-        </div>
-
-        {/* Portal root for page-specific header elements */}
+    <div className="h-screen bg-slate-50 flex overflow-hidden font-sans">
+      <aside
+        className={`bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 ${
+          sidebarCollapsed ? 'w-[5.5rem]' : 'w-72'
+        }`}
+      >
         <div
-          ref={setHeaderPortalNode}
-          id="portal-header-root"
-          className="flex-1 h-full flex items-center justify-end gap-3 min-w-0"
-        >
-          {!isDashboard && (
-            <div className="flex items-center gap-3 text-white text-xs font-bold">
-              <span className="hidden sm:inline text-slate-300">{user.email} ({user.role})</span>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main layout below Navbar */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        <aside
-          className={`bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 ${
-            sidebarCollapsed ? 'w-[5.5rem]' : 'w-72'
+          className={`relative border-b flex ${
+            sidebarCollapsed
+              ? 'flex-col items-center gap-4 border-gray-200 p-4 py-5'
+              : 'min-h-[109px] items-center border-[#0b2744] bg-[#113355] px-4 py-4 pr-12'
           }`}
         >
-          <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin">
-            {!hideAllDashboard && !isHr && (
-              <NavLink
-                to="/dashboard"
-                end
-                className={({ isActive }) => navClass({ isActive: isActive && selectedCategory === 'All' })}
-                title="Dashboard"
+          {sidebarCollapsed ? (
+            <>
+              <img
+                src={LOGO_SRC}
+                alt={APP_NAME}
+                className="object-contain shrink-0 w-16 h-16 logo-sidebar-pulse transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors shrink-0"
+                title="Expand menu"
+                aria-label="Toggle sidebar"
               >
-                <LayoutDashboard size={18} className="shrink-0" />
-                {!sidebarCollapsed && <span>Dashboard</span>}
-              </NavLink>
-            )}
-
-            {!sidebarCollapsed && !isHr && (
-              <div className="px-3.5 pt-3 pb-1 text-[10px] font-black uppercase text-slate-400 tracking-[0.18em]">
-                Categories
-              </div>
-            )}
-
-            {!isHr && visibleCategories.map((cat) => {
-              const Icon = CATEGORY_ICONS[cat] || Cpu;
-              const active = isDashboard && selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  className={categoryNavClass(cat)}
-                  onClick={() => navigate(`/dashboard${categoryToQuery(cat)}`)}
-                  title={cat}
-                >
-                  <Icon size={16} className={active ? 'text-[#113355] shrink-0' : 'text-slate-500 shrink-0'} />
-                  {!sidebarCollapsed && (
-                    <span className="truncate">{cat.replace(' / ', '/')}</span>
-                  )}
-                </button>
-              );
-            })}
-
-            {!sidebarCollapsed && (
-              <div className="px-3.5 pt-3 pb-1 text-[10px] font-black uppercase text-slate-400 tracking-[0.18em]">
-                Management
-              </div>
-            )}
-
-            {(isAdminRole || isHr) && (
-              <NavLink to="/employees" className={navClass} title="Employees">
-                <UserCircle size={18} className="shrink-0" />
-                {!sidebarCollapsed && <span>Employees</span>}
-              </NavLink>
-            )}
-            {MISSING_ITEMS_FEATURE_ENABLED && !isHr && (
-              <NavLink to="/missing" className={navClass} title="Missing Items">
-                <AlertTriangle size={18} className="text-amber-600 shrink-0" />
-                {!sidebarCollapsed && <span>Missing Items</span>}
-              </NavLink>
-            )}
-            {!isHr && (
-              <NavLink to="/damaged-scrap" className={navClass} title="Damaged / Scrap">
-                <Trash2 size={18} className="text-red-650 shrink-0" />
-                {!sidebarCollapsed && <span>Damaged / Scrap</span>}
-              </NavLink>
-            )}
-            {isAdminRole && !isHr && (
-              <NavLink to="/users" className={navClass} title="User Management">
-                <Users size={18} className="shrink-0" />
-                {!sidebarCollapsed && <span>User Management</span>}
-              </NavLink>
-            )}
-            {isItAdmin && !isHr && (
-              <NavLink to="/settings" className={navClass} title="Settings">
-                <Settings size={18} className="shrink-0" />
-                {!sidebarCollapsed && <span>Settings</span>}
-              </NavLink>
-            )}
-          </nav>
-
-          <div className="p-4 border-t border-slate-200 bg-slate-50/60">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0">
-                {user.email.charAt(0).toUpperCase()}
-              </div>
-              {!sidebarCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-950 truncate">{user.email}</p>
-                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{user.role}</p>
+                <Menu size={20} />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-16 w-16 bg-white rounded-lg shadow-sm shrink-0 flex items-center justify-center">
+                  <img
+                    src={LOGO_SRC}
+                    alt={APP_NAME}
+                    className="object-contain w-12 h-12 logo-sidebar-pulse transition-all"
+                  />
                 </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-red-50 hover:border-red-100 text-slate-700 hover:text-red-600 text-xs font-bold transition-all"
-            >
-              <LogOut size={14} />
-              {!sidebarCollapsed && 'Sign Out'}
-            </button>
-          </div>
-        </aside>
+                <div className="min-w-0 w-[145px] leading-tight">
+                  <p className="w-[92px] text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/70">PG Group</p>
+                  <p className="mt-1 text-[15px] font-black text-white leading-[1.08] tracking-normal">
+                    <span className="block">Asset Entry</span>
+                    <span className="block">Management</span>
+                    <span className="block pl-2">System</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 text-white transition-colors shrink-0"
+                title="Collapse menu"
+                aria-label="Toggle sidebar"
+              >
+                <Menu size={20} />
+              </button>
+            </>
+          )}
+        </div>
 
-        <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <Outlet context={{ headerPortalNode }} />
-        </main>
-      </div>
+        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin">
+          {!hideAllDashboard && !isHr && (
+            <NavLink
+              to="/dashboard"
+              end
+              className={({ isActive }) => navClass({ isActive: isActive && selectedCategory === 'All' })}
+              title="Dashboard"
+            >
+              <LayoutDashboard size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>Dashboard</span>}
+            </NavLink>
+          )}
+
+          {!sidebarCollapsed && !isHr && (
+            <div className="px-3.5 pt-3 pb-1 text-[10px] font-black uppercase text-slate-400 tracking-[0.18em]">
+              Categories
+            </div>
+          )}
+
+          {!isHr && visibleCategories.map((cat) => {
+            const Icon = CATEGORY_ICONS[cat] || Cpu;
+            const active = isDashboard && selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                className={categoryNavClass(cat)}
+                onClick={() => navigate(`/dashboard${categoryToQuery(cat)}`)}
+                title={cat}
+              >
+                <Icon size={16} className={active ? 'text-[#113355] shrink-0' : 'text-slate-500 shrink-0'} />
+                {!sidebarCollapsed && (
+                  <span className="truncate">{cat.replace(' / ', '/')}</span>
+                )}
+              </button>
+            );
+          })}
+
+          {!sidebarCollapsed && (
+            <div className="px-3.5 pt-3 pb-1 text-[10px] font-black uppercase text-slate-400 tracking-[0.18em]">
+              Management
+            </div>
+          )}
+
+          {(isAdminRole || isHr) && (
+            <NavLink to="/employees" className={navClass} title="Employees">
+              <UserCircle size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>Employees</span>}
+            </NavLink>
+          )}
+          {MISSING_ITEMS_FEATURE_ENABLED && !isHr && (
+            <NavLink to="/missing" className={navClass} title="Missing Items">
+              <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+              {!sidebarCollapsed && <span>Missing Items</span>}
+            </NavLink>
+          )}
+          {!isHr && (
+            <NavLink to="/damaged-scrap" className={navClass} title="Damaged / Scrap">
+              <Trash2 size={18} className="text-red-650 shrink-0" />
+              {!sidebarCollapsed && <span>Damaged / Scrap</span>}
+            </NavLink>
+          )}
+          {isAdminRole && !isHr && (
+            <NavLink to="/users" className={navClass} title="User Management">
+              <Users size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>User Management</span>}
+            </NavLink>
+          )}
+          {isItAdmin && !isHr && (
+            <NavLink to="/settings" className={navClass} title="Settings">
+              <Settings size={18} className="shrink-0" />
+              {!sidebarCollapsed && <span>Settings</span>}
+            </NavLink>
+          )}
+        </nav>
+
+        <div className="p-4 border-t border-slate-200 bg-slate-50/60">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0">
+              {user.email.charAt(0).toUpperCase()}
+            </div>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-950 truncate">{user.email}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{user.role}</p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-red-50 hover:border-red-100 text-slate-700 hover:text-red-600 text-xs font-bold transition-all"
+          >
+            <LogOut size={14} />
+            {!sidebarCollapsed && 'Sign Out'}
+          </button>
+        </div>
+      </aside>
+
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Outlet />
+      </main>
     </div>
   );
 }

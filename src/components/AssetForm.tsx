@@ -8,7 +8,7 @@ import { getDocumentViewUrl, getDeviceImageUrl } from "../lib/fileUrls";
 import { formatSelectedTypeLabel } from "../lib/assetDisplay";
 import DeviceThumb from "./DeviceThumb";
 import SmartSelect from "./SmartSelect";
-import { APP_NAME, LOGO_SRC } from "../lib/constants";
+import { APP_NAME } from "../lib/constants";
 import { formatStoredDateTime, toDateInputValue } from "../lib/formatDisplayDate";
 import WarrantyDateField from "./WarrantyDateField";
 import {
@@ -1184,7 +1184,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
           <div className="grid md:grid-cols-5 gap-0">
             <div className="md:col-span-2 p-6 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-              <img src={LOGO_SRC} alt={APP_NAME} className="w-12 h-12 object-contain mb-4" />
+              <img src="/logo.png" alt={APP_NAME} className="w-12 h-12 object-contain mb-4" />
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Step 1</p>
               <h4 className="text-2xl font-black mt-1">Select Asset Category</h4>
               <p className="text-sm text-slate-300 mt-2">Choose the main asset category and its specific sub-category to proceed.</p>
