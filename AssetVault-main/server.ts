@@ -1011,12 +1011,38 @@ async function assertSavedEmployeeProfile(
         plant: String(assetData.plantCode || "").trim(),
         status: "Active" as const,
       };
-      employee = createEmployee(newEmp);
-      if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
-        const gas = await persistEmployeeToGas("add", employee, proxyToGas, SPREADSHEET_ID);
-        if (!gas.ok) {
-          deleteEmployee(employee.employeeId);
-          throw new Error("Failed to auto-create employee profile: " + (gas.error || "Sync failed"));
+
+      try {
+        employee = createEmployee(newEmp);
+        if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
+          const gas = await persistEmployeeToGas("add", employee, proxyToGas, SPREADSHEET_ID);
+          if (!gas.ok) {
+            const errMsg = String(gas.error || "").toLowerCase();
+            if (errMsg.includes("already exists") || errMsg.includes("alreadyexist") || errMsg.includes("exist")) {
+              console.log(`[AMS] Employee ${employeeId} already exists in Sheet. Proceeding.`);
+              const freshList = readEmployees();
+              employee = findEmployeeById(freshList, employeeId) || employee;
+            } else {
+              deleteEmployee(employee.employeeId);
+              throw new Error("Failed to auto-create employee profile: " + (gas.error || "Sync failed"));
+            }
+          }
+        }
+      } catch (err: any) {
+        const errMsg = String(err.message || "").toLowerCase();
+        if (errMsg.includes("already exists") || errMsg.includes("alreadyexist") || errMsg.includes("exist")) {
+          console.log(`[AMS] Employee ${employeeId} already exists locally. Proceeding.`);
+          const freshList = readEmployees();
+          employee = findEmployeeById(freshList, employeeId);
+          if (!employee) {
+            employee = {
+              ...newEmp,
+              updatedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+            };
+          }
+        } else {
+          throw err;
         }
       }
     } else {
@@ -1699,6 +1725,7 @@ app.get("/api/settings", async (req, res) => {
       data.settings.plants = cached.plants;
     }
 
+    data.settings.catalog = mergeCatalog(data.settings.catalog);
     res.json(data.settings);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to fetch settings" });
