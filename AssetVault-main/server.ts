@@ -3164,8 +3164,13 @@ app.post("/api/assets", async (req, res) => {
     }));
     const assets = await getAssetsForOps();
     const mainCat = String(assetData.mainCategory || "IT Assets").trim();
-    if (!isManualAssetCodeCategory(mainCat) && !String(assetData.assetCode || "").trim()) {
-      assetData.assetCode = generateAssetCode(assets, mainCat);
+    if (!isManualAssetCodeCategory(mainCat)) {
+      const isCodeTaken = String(assetData.assetCode || "").trim() && 
+        assets.some(a => String(a.assetCode || "").trim().toLowerCase() === String(assetData.assetCode).trim().toLowerCase());
+      if (!String(assetData.assetCode || "").trim() || isCodeTaken) {
+        assetData.assetCode = generateAssetCode(assets, mainCat);
+        console.log(`[AMS] Concurrency detected. Auto-assigned new code: ${assetData.assetCode}`);
+      }
     }
 
     await assertAssetUnique(assetData);
