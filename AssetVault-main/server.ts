@@ -41,6 +41,9 @@ import {
   isCacheForDifferentSpreadsheet,
   touchCacheSpreadsheetId,
   getCacheSpreadsheetId,
+  readCache,
+  writeCache,
+  readCacheStale,
 } from "./server/cacheStore.js";
 import {
   readInventory,
@@ -1673,13 +1676,27 @@ app.get("/api/settings", async (req, res) => {
     const data = readAppData();
     const force = req.query.refresh === "1";
 
-    if (GAS_WEBAPP_URL && (force || process.env.VERCEL || process.env.NETLIFY || data.settings.locations.length === 0)) {
+    const CACHE_KEY = "locations_plants";
+    const cacheAge = 10 * 60 * 1000; // 10 minutes cache
+    let cached = force ? null : readCache<{ locations: string[]; plants: any[] }>(CACHE_KEY, cacheAge);
+
+    if (!cached && GAS_WEBAPP_URL) {
       const fromGas = await fetchLocationsPlantsFromGas(proxyToGas, GAS_WEBAPP_URL);
-      if (fromGas) {
+      if (fromGas && fromGas.locations.length > 0) {
         data.settings.locations = fromGas.locations;
         data.settings.plants = fromGas.plants;
         writeAppData(data);
+        writeCache(CACHE_KEY, { locations: fromGas.locations, plants: fromGas.plants });
+      } else {
+        const stale = readCacheStale<{ locations: string[]; plants: any[] }>(CACHE_KEY);
+        if (stale && stale.locations.length > 0) {
+          data.settings.locations = stale.locations;
+          data.settings.plants = stale.plants;
+        }
       }
+    } else if (cached) {
+      data.settings.locations = cached.locations;
+      data.settings.plants = cached.plants;
     }
 
     res.json(data.settings);
@@ -1693,9 +1710,18 @@ app.post("/api/settings", async (req, res) => {
     const incoming = req.body as Partial<AppSettings>;
     const syncSheet = (req.body as { syncSheet?: boolean }).syncSheet !== false;
     const data = readAppData();
+
+    // Safety guard: do not overwrite locations/plants with empty arrays due to transient load failures
+    const locations = Array.isArray(incoming.locations) && incoming.locations.length > 0
+      ? incoming.locations
+      : data.settings.locations;
+    const plants = Array.isArray(incoming.plants) && incoming.plants.length > 0
+      ? incoming.plants
+      : data.settings.plants;
+
     data.settings = {
-      locations: Array.isArray(incoming.locations) ? incoming.locations : data.settings.locations,
-      plants: Array.isArray(incoming.plants) ? incoming.plants : data.settings.plants,
+      locations,
+      plants,
       assetFields: Array.isArray(incoming.assetFields)
         ? incoming.assetFields
         : data.settings.assetFields,
@@ -1711,6 +1737,7 @@ app.post("/api/settings", async (req, res) => {
       dbMode: data.settings.dbMode,
     };
     writeAppData(data);
+    writeCache("locations_plants", { locations: data.settings.locations, plants: data.settings.plants });
 
     let sheetWarning: string | undefined;
     if (syncSheet && GAS_WEBAPP_URL) {
