@@ -495,6 +495,10 @@ function doPost(e) {
 
     setupSheetsOnFirstRun_(ss);
 
+    if (action === "next_code_lock") {
+      return json_(getNextCodeLock_(body.category));
+    }
+
     if (action === "list_users" || action === "get_users" || action === "read_users") {
       return json_(listUsersFromSheet_());
     }
@@ -603,55 +607,98 @@ function doPost(e) {
     if (action === "get_file_base64") return json_(handleGetFileBase64_(body));
 
     if (action === "add") {
-      var row = body.row;
-      if (body.sheet === "Users" || body.sheet === "users") {
-        return json_({ error: "Invalid action: 'add' is not supported for Users. Use 'add_user' instead." });
-      }
-      var mainCat = String(row[3] || "").trim() || "IT Assets";
-      var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
-      
-      var sh = ss.getSheetByName(sheetName);
-      if (!sh) {
-        setupSheets();
-        sh = ss.getSheetByName(sheetName);
-      }
-      
-      var sheetHeaders = sh.getDataRange().getValues()[0];
-      var newRow = new Array(sheetHeaders.length).fill("");
-      
-      var serial = String(row[0] || "").trim();
-      if (!serial) {
-        var totalRows = 0;
-        for (var c = 0; c < CATEGORIES.length; c++) {
-          var s = ss.getSheetByName(CATEGORIES[c]);
-          if (s) totalRows += (s.getLastRow() - 1);
-        }
-        function padSerial_(num) { return ("000" + num).slice(-3); }
-        serial = padSerial_(totalRows + 1);
-        row[0] = serial;
-      }
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000); // Wait up to 30 seconds
 
-      var masterHeaders = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
-      for (var h = 0; h < sheetHeaders.length; h++) {
-        var hName = sheetHeaders[h];
-        var srcIdx = indexOfNormalized_(masterHeaders, hName);
-        if (srcIdx !== -1) {
-          newRow[h] = row[srcIdx];
-        } else {
-          var hNameNorm = String(hName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-          if (hNameNorm === "email" || hNameNorm === "mailid") {
-            var emailIdx = indexOfNormalized_(masterHeaders, "Contact Email");
-            if (emailIdx !== -1) newRow[h] = row[emailIdx];
-          } else if (hNameNorm === "mobile" || hNameNorm === "contactnumber") {
-            var mobileIdx = indexOfNormalized_(masterHeaders, "Contact Number");
-            if (mobileIdx !== -1) newRow[h] = row[mobileIdx];
+        var row = body.row;
+        if (body.sheet === "Users" || body.sheet === "users") {
+          return json_({ error: "Invalid action: 'add' is not supported for Users. Use 'add_user' instead." });
+        }
+        var mainCat = String(row[3] || "").trim() || "IT Assets";
+        var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
+        
+        var sh = ss.getSheetByName(sheetName);
+        if (!sh) {
+          setupSheets();
+          sh = ss.getSheetByName(sheetName);
+        }
+
+        var sheetHeaders = sh.getDataRange().getValues()[0];
+        var newRow = new Array(sheetHeaders.length).fill("");
+
+        // 1. Assign ID (S No) dynamically if empty or duplicate
+        var serial = String(row[0] || "").trim();
+        var isIdExists = function(idVal) {
+          var idStr = String(idVal).replace(/^0+/, "").trim();
+          for (var c = 0; c < CATEGORIES.length; c++) {
+            var s = ss.getSheetByName(CATEGORIES[c]);
+            if (s) {
+              var sData = s.getDataRange().getValues();
+              for (var j = 1; j < sData.length; j++) {
+                if (String(sData[j][0]).replace(/^0+/, "").trim() === idStr) return true;
+              }
+            }
+          }
+          return false;
+        };
+
+        if (!serial || isIdExists(serial)) {
+          var maxId = 0;
+          for (var c = 0; c < CATEGORIES.length; c++) {
+            var s = ss.getSheetByName(CATEGORIES[c]);
+            if (s) {
+              var sData = s.getDataRange().getValues();
+              for (var j = 1; j < sData.length; j++) {
+                var idVal = parseInt(sData[j][0], 10) || 0;
+                if (idVal > maxId) maxId = idVal;
+              }
+            }
+          }
+          serial = ("000" + (maxId + 1)).slice(-3);
+          row[0] = serial;
+        }
+
+        // 2. Check if Asset Code is duplicate in this sheet
+        var assetCode = String(row[1] || "").trim(); // Asset Code is index 1
+        var isCodeExists = function(codeVal) {
+          var codeNorm = String(codeVal).trim().toLowerCase();
+          var data = sh.getDataRange().getValues();
+          for (var j = 1; j < data.length; j++) {
+            if (String(data[j][1]).trim().toLowerCase() === codeNorm) return true;
+          }
+          return false;
+        };
+
+        if (assetCode && isCodeExists(assetCode)) {
+          assetCode = generateAssetCode_(ss, mainCat);
+          row[1] = assetCode;
+        }
+        
+        var masterHeaders = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
+        for (var h = 0; h < sheetHeaders.length; h++) {
+          var hName = sheetHeaders[h];
+          var srcIdx = indexOfNormalized_(masterHeaders, hName);
+          if (srcIdx !== -1) {
+            newRow[h] = row[srcIdx];
+          } else {
+            var hNameNorm = String(hName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (hNameNorm === "email" || hNameNorm === "mailid") {
+              var emailIdx = indexOfNormalized_(masterHeaders, "Contact Email");
+              if (emailIdx !== -1) newRow[h] = row[emailIdx];
+            } else if (hNameNorm === "mobile" || hNameNorm === "contactnumber") {
+              var mobileIdx = indexOfNormalized_(masterHeaders, "Contact Number");
+              if (mobileIdx !== -1) newRow[h] = row[mobileIdx];
+            }
           }
         }
-      }
 
-      sh.appendRow(newRow);
-      syncLocationAndPlantAssetSheets_(ss);
-      return json_({ success: true, message: "Asset added", id: serial });
+        sh.appendRow(newRow);
+        syncLocationAndPlantAssetSheets_(ss);
+        return json_({ success: true, message: "Asset added", id: serial, assetCode: assetCode });
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     if (action === "update") {
@@ -2870,5 +2917,123 @@ function syncLocationAndPlantAssetSheets_(ss) {
         return false;
       }, "#0f766e");
     })(plants[pi]);
+  }
+}
+
+var CATEGORY_PREFIX_ = {
+  "IT Assets": "IT",
+  "Office Assets": "OFF",
+  "Electrical Assets": "ELE",
+  "Production Assets": "PRD",
+  "Safety Assets": "SAF",
+  "Vehicle Assets": "VEH",
+  "Furniture Assets": "FUR",
+  "Software License Assets": "SW",
+  "Software / License Assets": "SW",
+  "Admin Facility Assets": "ADM",
+  "Maintenance Assets": "MNT"
+};
+
+function generateAssetCode_(ss, mainCategory) {
+  var prefix = CATEGORY_PREFIX_[mainCategory] || "AST";
+  var year = new Date().getFullYear();
+  var pattern = new RegExp("^" + prefix + "-" + year + "-(\\d+)$", "i");
+  
+  var sheetName = CATEGORY_SHEET_MAP_[mainCategory] || "IT Assets";
+  var sh = ss.getSheetByName(sheetName);
+  var maxSeq = 0;
+  if (sh) {
+    var data = sh.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      var code = String(data[i][1] || "").trim();
+      var match = code.match(pattern);
+      if (match) {
+        var seq = parseInt(match[1], 10) || 0;
+        if (seq > maxSeq) maxSeq = seq;
+      }
+    }
+  }
+  
+  var nextSeq = maxSeq + 1;
+  return prefix + "-" + year + "-" + ("00000" + nextSeq).slice(-5);
+}
+
+function getNextCodeLock_(category) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000); // wait up to 10 seconds
+    
+    var props = PropertiesService.getScriptProperties();
+    var raw = props.getProperty("active_reservations");
+    var reservations = [];
+    if (raw) {
+      try {
+        reservations = JSON.parse(raw) || [];
+      } catch(e) {}
+    }
+    
+    var now = new Date().getTime();
+    reservations = reservations.filter(function(r) { return r.expiresAt > now; });
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var mainCat = String(category || "IT Assets").trim();
+    var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
+    var sh = ss.getSheetByName(sheetName);
+    if (!sh) {
+      setupSheets();
+      sh = ss.getSheetByName(sheetName);
+    }
+    
+    var data = sh.getDataRange().getValues();
+    var prefix = CATEGORY_PREFIX_[mainCat] || "AST";
+    var year = new Date().getFullYear();
+    var pattern = new RegExp("^" + prefix + "-" + year + "-(\\d+)$", "i");
+    var maxSeq = 0;
+    for (var i = 1; i < data.length; i++) {
+      var code = String(data[i][1] || "").trim();
+      var match = code.match(pattern);
+      if (match) {
+        maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
+      }
+    }
+    
+    var maxId = 0;
+    for (var c = 0; c < CATEGORIES.length; c++) {
+      var s = ss.getSheetByName(CATEGORIES[c]);
+      if (s) {
+        var sData = s.getDataRange().getValues();
+        for (var j = 1; j < sData.length; j++) {
+          var idVal = parseInt(sData[j][0], 10) || 0;
+          maxId = Math.max(maxId, idVal);
+        }
+      }
+    }
+    
+    for (var k = 0; k < reservations.length; k++) {
+      var res = reservations[k];
+      if (res.category === mainCat) {
+        maxSeq = Math.max(maxSeq, res.seq);
+      }
+      maxId = Math.max(maxId, res.idVal);
+    }
+    
+    var nextSeq = maxSeq + 1;
+    var nextId = maxId + 1;
+    var nextCode = prefix + "-" + year + "-" + ("00000" + nextSeq).slice(-5);
+    var padId = ("000" + nextId).slice(-3);
+    
+    reservations.push({
+      category: mainCat,
+      seq: nextSeq,
+      idVal: nextId,
+      expiresAt: now + 5 * 60 * 1000
+    });
+    props.setProperty("active_reservations", JSON.stringify(reservations));
+    
+    return { success: true, code: nextCode, id: padId };
+  } catch (error) {
+    return { error: error.message || "Failed to generate code lock" };
+  } finally {
+    lock.releaseLock();
   }
 }

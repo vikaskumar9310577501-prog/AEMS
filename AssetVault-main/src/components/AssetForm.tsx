@@ -841,10 +841,18 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data && !data.manual && data.code) {
-          setFormData((prev) => ({ ...prev, assetCode: data.code }));
+          setFormData((prev) => ({ 
+            ...prev, 
+            assetCode: data.code,
+            id: prev.id || data.id
+          }));
           setIsAssetCodeEdited(false);
         } else if (data?.manual) {
-          setFormData((prev) => ({ ...prev, assetCode: prev.assetCode || "" }));
+          setFormData((prev) => ({ 
+            ...prev, 
+            assetCode: prev.assetCode || "",
+            id: prev.id || data.id
+          }));
           setIsAssetCodeEdited(false);
         }
       })

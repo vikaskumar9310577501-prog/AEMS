@@ -841,10 +841,34 @@ app.get("/api/assets/next-code", async (req, res) => {
   try {
     const category = String(req.query.category || "").trim() || "IT Assets";
     if (isManualAssetCodeCategory(category)) {
-      return res.json({ manual: true, code: "" });
+      return res.json({ manual: true, code: "", id: "" });
     }
+
+    if (GAS_WEBAPP_URL) {
+      try {
+        const result = (await proxyToGas({ action: "next_code_lock", category })) as {
+          success?: boolean;
+          code?: string;
+          id?: string;
+          error?: string;
+        };
+        if (result && result.success && result.code && result.id) {
+          return res.json({ manual: false, code: result.code, id: result.id });
+        }
+        if (result && result.error) {
+          console.warn("[AMS] GAS next_code_lock error, using local fallback:", result.error);
+        }
+      } catch (err) {
+        console.warn("[AMS] GAS next_code_lock request failed, using local fallback:", err);
+      }
+    }
+
+    // Local Fallback if GAS is offline/unreachable
     const assets = await getAssetsForOps();
-    res.json({ manual: false, code: generateAssetCode(assets, category) });
+    const code = generateAssetCode(assets, category);
+    const maxId = assets.reduce((max, a) => Math.max(max, parseInt(a.id, 10) || 0), 0);
+    const id = String(maxId + 1).padStart(3, "0");
+    res.json({ manual: false, code, id });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to generate code" });
   }
@@ -1701,6 +1725,14 @@ app.get("/api/settings", async (req, res) => {
   try {
     const data = readAppData();
     const force = req.query.refresh === "1";
+
+    if (force && GAS_WEBAPP_URL) {
+      try {
+        await refreshAssetsNow(GAS_WEBAPP_URL);
+      } catch (err) {
+        console.warn("[AMS] Failed to force refresh assets on settings load:", err);
+      }
+    }
 
     const CACHE_KEY = "locations_plants";
     const cacheAge = 10 * 60 * 1000; // 10 minutes cache
@@ -3271,28 +3303,51 @@ app.post("/api/assets", async (req, res) => {
     let localRow: string[];
     if (dbMode === "redesigned") {
       const row = buildRedesignedAssetRow(assetData, assetId, String(assetData.qrCodeText ?? ""));
-      result = await proxyToGas({ action: "add_asset_redesigned", row });
+      result = (await proxyToGas({ action: "add_asset_redesigned", row })) as any;
       localRow = buildMasterAssetRow(assetData);
     } else {
       const row = buildMasterAssetRow(assetData);
       logAssetMappingAudit("sheet-write-add", assetData as Record<string, unknown>, masterHeaders, row);
       console.log("[AMS] Sheet row payload (add):", row.length, "columns");
-      result = await proxyToGas({ action: "add", row });
+      result = (await proxyToGas({ action: "add", row })) as any;
       localRow = row;
     }
 
     if (result.error) throw new Error(result.error);
+
+    const finalAssetId = result.id ? String(result.id) : assetId;
+    const finalAssetCode = result.assetCode ? String(result.assetCode) : String(assetData.assetCode || "");
+
+    if (finalAssetId !== assetId || finalAssetCode !== String(assetData.assetCode || "")) {
+      console.log(`[AMS] Concurrency resolution: S No reassigned to ${finalAssetId}, Code reassigned to ${finalAssetCode}`);
+      assetData.id = finalAssetId;
+      assetData.assetCode = finalAssetCode;
+      assetData.uniqueCode = assetData.uniqueCode === assetId || assetData.uniqueCode === String(assetData.assetCode || "")
+        ? finalAssetId
+        : assetData.uniqueCode;
+
+      const baseUrl = getBaseUrl(req);
+      const tempAsset = mapSheetRow({
+        ...assetData,
+        id: finalAssetId,
+        "S No": finalAssetId,
+        "Unique Code": assetData.uniqueCode,
+      });
+      assetData.qrCodeText = getScanUrl(baseUrl, tempAsset);
+      localRow = buildMasterAssetRow(assetData);
+    }
+
     await insertAssetLocal(localCategory, localRow, masterHeaders);
     releaseIssuedCode(localCategory, String(assetData.assetCode || ""));
 
-    console.log("[AMS] POST /api/assets — response:", { id: assetId, success: true });
+    console.log("[AMS] POST /api/assets — response:", { id: finalAssetId, success: true });
 
-    persistAssetDynamicDetails(assetId, assetData).catch(err => {
+    persistAssetDynamicDetails(finalAssetId, assetData).catch(err => {
       console.warn("[AMS] Background dynamic details sync failed:", err);
     });
 
     const hist = recordAssignmentChange({
-      assetId,
+      assetId: finalAssetId,
       previous: {},
       next: {
         employeeId: String(assetData.employeeId || ""),
@@ -3309,22 +3364,21 @@ app.post("/api/assets", async (req, res) => {
       });
     }
 
-    // Audit log
     addAuditLog(
       req.body.createdBy || "",
       "ADD_ASSET",
-      assetId,
+      finalAssetId,
       "",
       JSON.stringify(assetData),
-      `Added asset ${assetId} (${assetData.assetName})`,
+      `Added asset ${finalAssetId} (${assetData.assetName})`,
       proxyToGas
     );
 
     const savedAsset = mapSheetRow({
       ...assetData,
-      id: assetId,
-      "S No": assetId,
-      "Asset ID": assetId,
+      id: finalAssetId,
+      "S No": finalAssetId,
+      "Asset ID": finalAssetId,
       "Unique Code": assetData.uniqueCode,
       "QR Code / Barcode": assetData.qrCodeText,
     });
