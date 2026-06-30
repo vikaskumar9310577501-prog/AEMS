@@ -496,7 +496,7 @@ function doPost(e) {
     setupSheetsOnFirstRun_(ss);
 
     if (action === "next_code_lock") {
-      return json_(getNextCodeLock_(body.category));
+      return json_(getNextCodeLock_(body.category, body.dbMode));
     }
 
     if (action === "list_users" || action === "get_users" || action === "read_users") {
@@ -3051,7 +3051,7 @@ function generateAssetCode_(ss, mainCategory) {
   return prefix + "-" + year + "-" + ("00000" + nextSeq).slice(-5);
 }
 
-function getNextCodeLock_(category) {
+function getNextCodeLock_(category, dbMode) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000); // wait up to 10 seconds
@@ -3076,7 +3076,7 @@ function getNextCodeLock_(category) {
     var maxSeq = 0;
     var maxId = 0;
     
-    var isRedesigned = ss.getSheetByName("Assets") !== null;
+    var isRedesigned = (dbMode === "redesigned");
     if (isRedesigned) {
       var sh = ss.getSheetByName("Assets");
       var data = sh.getDataRange().getValues();

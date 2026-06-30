@@ -849,7 +849,8 @@ app.get("/api/assets/next-code", async (req, res) => {
 
     if (GAS_WEBAPP_URL) {
       try {
-        const result = (await proxyToGas({ action: "next_code_lock", category })) as {
+        const dbMode = readAppData().settings.dbMode;
+        const result = (await proxyToGas({ action: "next_code_lock", category, dbMode })) as {
           success?: boolean;
           code?: string;
           id?: string;
