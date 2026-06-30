@@ -75,6 +75,38 @@ export function isSavingCode(code: string): boolean {
   return activeSavingCodes.has(normCode(code));
 }
 
+// -------------------------------------------------------
+// In-memory registry of Asset IDs (S No) currently being
+// saved - prevents two parallel requests getting same ID
+// -------------------------------------------------------
+const activeReservingIds = new Set<number>();
+
+export function reserveAssetId(id: number) { activeReservingIds.add(id); }
+export function releaseAssetId(id: number) { activeReservingIds.delete(id); }
+export function isAssetIdReserved(id: number): boolean { return activeReservingIds.has(id); }
+
+/**
+ * Returns next unique Asset ID (S No) not in DB and not reserved
+ * by another concurrent in-flight request. Immediately reserves it.
+ */
+export function generateNextAssetId(assets: MappedAsset[]): string {
+  let maxId = 0;
+  for (const a of assets) {
+    const n = parseInt(String(a.id || ""), 10);
+    if (!isNaN(n) && n > maxId) maxId = n;
+  }
+  let candidate = maxId + 1;
+  while (
+    activeReservingIds.has(candidate) ||
+    assets.some((a) => parseInt(String(a.id || ""), 10) === candidate)
+  ) {
+    candidate += 1;
+  }
+  reserveAssetId(candidate);
+  console.log(`[AssetCodeGenerator] Reserved S No ${candidate} (active locks: ${activeReservingIds.size})`);
+  return String(candidate).padStart(3, "0");
+}
+
 /** IT Assets and Software / License use manual codes; other categories are auto-generated. */
 export function isManualAssetCodeCategory(mainCategory: string): boolean {
   const cat = (mainCategory || "IT Assets").trim();

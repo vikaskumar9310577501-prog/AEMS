@@ -32,7 +32,7 @@ import {
   getAssetsSyncMeta,
   scheduleAssetsSyncIfStale,
 } from "./server/assetCache.js";
-import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode } from "./server/assetCodeGenerator.js";
+import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode, generateNextAssetId, releaseAssetId } from "./server/assetCodeGenerator.js";
 import { healMisalignedAssetFields } from "./src/lib/healAssetFields.js";
 import { mapMasterRowToSheetHeaders } from "./server/sheetRowMapper.js";
 import { getUsersWithCache, syncUsersNow, getCachedUsers, getUsersSyncMeta, invalidateUsersCache } from "./server/usersSync.js";
@@ -3274,12 +3274,14 @@ app.post("/api/assets", async (req, res) => {
 
     const savingCode = String(assetData.assetCode || "");
     registerSavingCode(savingCode);
+    // Also reserve the numeric ID to block concurrent requests from grabbing the same S No
+    const reservedIdNum = parseInt(assetId, 10);
 
     try {
       await assertAssetUnique(assetData);
 
-    const maxId = assets.reduce((max, a) => Math.max(max, parseInt(a.id, 10) || 0), 0);
-    const assetId = assetData.id?.toString() || String(maxId + 1).padStart(3, "0");
+    // Use generateNextAssetId so concurrent requests get unique IDs atomically
+    const assetId = assetData.id?.toString() || generateNextAssetId(assets);
     // Stamp the resolved id onto the payload so the sheet row carries it and the
     // GAS backend does not auto-generate a different id (which would drift the
     // local cache vs sheet and cause dedupe/reconcile to drop the entry).
@@ -3392,6 +3394,7 @@ app.post("/api/assets", async (req, res) => {
     res.json({ success: true, asset: savedAsset });
     } finally {
       releaseSavingCode(savingCode);
+      releaseAssetId(reservedIdNum);
     }
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to add asset" });
