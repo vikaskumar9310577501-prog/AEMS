@@ -82,7 +82,7 @@ export default function EmployeeSelector({
     onEmployeeResolved?.(emp);
   };
 
-  const lookup = async (employeeId: string, email: string) => {
+  const lookup = async (employeeId: string, email: string, active: boolean) => {
     if (skipLookupRef.current) {
       skipLookupRef.current = false;
       return;
@@ -113,6 +113,7 @@ export default function EmployeeSelector({
       if (em) params.set('email', em);
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/employees/lookup?${params}`);
       const data = await parseJsonResponse<{ employee?: Employee; assetCount?: number }>(res);
+      if (!active) return;
       if (data.employee) {
         applyEmployee(data.employee as Employee, typeof data.assetCount === 'number' ? data.assetCount : null);
       } else {
@@ -122,19 +123,24 @@ export default function EmployeeSelector({
         onEmployeeResolved?.(null);
       }
     } catch {
+      if (!active) return;
       setMatched(null);
       onEmployeeResolved?.(null);
     } finally {
-      setLookupLoading(false);
+      if (active) {
+        setLookupLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    let active = true;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      void lookup(values.employeeId || '', values.contactEmail || '');
+      void lookup(values.employeeId || '', values.contactEmail || '', active);
     }, 450);
     return () => {
+      active = false;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [values.employeeId, values.contactEmail]);
