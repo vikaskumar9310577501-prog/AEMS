@@ -518,9 +518,78 @@ function doPost(e) {
       return json_({ success: true, message: "Database reset complete. All old data cleared. Default admin and locations restored." });
     }
     if (action === "add_asset_redesigned") {
-      var addDup = checkAssetIdentifierDuplicates_(body.row, null);
-      if (addDup) return json_(addDup);
-      return json_(addRedesignedRow_("Assets", body.row, "Asset ID"));
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000); // wait up to 30 seconds
+        
+        var rowData = body.row;
+        var category = String(rowData["Category"] || "IT Assets").trim();
+        var code = String(rowData["Asset Code"] || "").trim();
+        var assetId = String(rowData["Asset ID"] || "").trim();
+        
+        // 1. Resolve Duplicate Asset ID
+        var isIdExists = function(idVal) {
+          var idStr = String(idVal).replace(/^0+/, "").trim();
+          var list = listRedesignedTable_("Assets");
+          for (var i = 0; i < list.length; i++) {
+            if (String(list[i]["Asset ID"]).replace(/^0+/, "").trim() === idStr) return true;
+          }
+          return false;
+        };
+        
+        if (!assetId || isIdExists(assetId)) {
+          var maxId = 0;
+          var list = listRedesignedTable_("Assets");
+          for (var i = 0; i < list.length; i++) {
+            var val = parseInt(list[i]["Asset ID"], 10) || 0;
+            if (val > maxId) maxId = val;
+          }
+          assetId = ("000" + (maxId + 1)).slice(-3);
+          rowData["Asset ID"] = assetId;
+        }
+        
+        // 2. Resolve Duplicate Asset Code
+        var isCodeExists = function(codeVal) {
+          var codeNorm = String(codeVal).trim().toLowerCase();
+          var list = listRedesignedTable_("Assets");
+          for (var i = 0; i < list.length; i++) {
+            if (String(list[i]["Asset Code"]).trim().toLowerCase() === codeNorm) return true;
+          }
+          return false;
+        };
+        
+        if (code && isCodeExists(code)) {
+          var prefix = CATEGORY_PREFIX_[category] || "AST";
+          var year = new Date().getFullYear();
+          var pattern = new RegExp("^" + prefix + "-" + year + "-(\\d+)$", "i");
+          var maxSeq = 0;
+          var list = listRedesignedTable_("Assets");
+          for (var i = 0; i < list.length; i++) {
+            if (String(list[i]["Category"]).trim().toLowerCase() === category.toLowerCase()) {
+              var rCode = String(list[i]["Asset Code"] || "").trim();
+              var match = rCode.match(pattern);
+              if (match) {
+                maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
+              }
+            }
+          }
+          var nextSeq = maxSeq + 1;
+          code = prefix + "-" + year + "-" + ("00000" + nextSeq).slice(-5);
+          rowData["Asset Code"] = code;
+        }
+        
+        var addDup = checkAssetIdentifierDuplicates_(rowData, null);
+        if (addDup) return json_(addDup);
+        
+        var resObj = addRedesignedRow_("Assets", rowData, "Asset ID");
+        if (resObj.success) {
+          resObj.id = assetId;
+          resObj.assetCode = code;
+        }
+        return json_(resObj);
+      } finally {
+        lock.releaseLock();
+      }
     }
     if (action === "update_asset_redesigned") {
       var updDup = checkAssetIdentifierDuplicates_(body.row, body.id);
@@ -782,10 +851,22 @@ function doPost(e) {
       return json_({ success: true, message: "Type definitions saved" });
     }
     if (action === "add_employee") {
-      return json_(addEmployee_(body.employee || {}));
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+        return json_(addEmployee_(body.employee || {}));
+      } finally {
+        lock.releaseLock();
+      }
     }
     if (action === "update_employee") {
-      return json_(updateEmployee_(body.employee || {}));
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+        return json_(updateEmployee_(body.employee || {}));
+      } finally {
+        lock.releaseLock();
+      }
     }
     if (action === "delete_employee") {
       return json_(deleteEmployee_(body.employee || {}));
@@ -826,7 +907,19 @@ function doPost(e) {
     if (action === "add_option") {
       var optSh = ss.getSheetByName("Options");
       if (!optSh) return json_({ error: "Options sheet not found" });
-      optSh.appendRow([body.type, body.value]);
+      var typeVal = String(body.type).trim();
+      var valueVal = String(body.value).trim();
+      var optData = optSh.getDataRange().getValues();
+      var exists = false;
+      for (var i = 1; i < optData.length; i++) {
+        if (String(optData[i][0]).trim() === typeVal && String(optData[i][1]).trim() === valueVal) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        optSh.appendRow([typeVal, valueVal]);
+      }
       return json_({ success: true, message: "Option added" });
     }
     if (action === "delete_option") {
@@ -2977,34 +3070,53 @@ function getNextCodeLock_(category) {
     
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var mainCat = String(category || "IT Assets").trim();
-    var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
-    var sh = ss.getSheetByName(sheetName);
-    if (!sh) {
-      setupSheets();
-      sh = ss.getSheetByName(sheetName);
-    }
-    
-    var data = sh.getDataRange().getValues();
     var prefix = CATEGORY_PREFIX_[mainCat] || "AST";
     var year = new Date().getFullYear();
     var pattern = new RegExp("^" + prefix + "-" + year + "-(\\d+)$", "i");
     var maxSeq = 0;
-    for (var i = 1; i < data.length; i++) {
-      var code = String(data[i][1] || "").trim();
-      var match = code.match(pattern);
-      if (match) {
-        maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
-      }
-    }
-    
     var maxId = 0;
-    for (var c = 0; c < CATEGORIES.length; c++) {
-      var s = ss.getSheetByName(CATEGORIES[c]);
-      if (s) {
-        var sData = s.getDataRange().getValues();
-        for (var j = 1; j < sData.length; j++) {
-          var idVal = parseInt(sData[j][0], 10) || 0;
-          maxId = Math.max(maxId, idVal);
+    
+    var isRedesigned = ss.getSheetByName("Assets") !== null;
+    if (isRedesigned) {
+      var sh = ss.getSheetByName("Assets");
+      var data = sh.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        var rowCat = String(row[1] || "").trim().toLowerCase();
+        var rowCode = String(row[9] || "").trim();
+        var rowIdVal = parseInt(row[0], 10) || 0;
+        
+        maxId = Math.max(maxId, rowIdVal);
+        if (rowCat === mainCat.toLowerCase()) {
+          var match = rowCode.match(pattern);
+          if (match) {
+            maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
+          }
+        }
+      }
+    } else {
+      var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
+      var sh = ss.getSheetByName(sheetName);
+      if (!sh) {
+        setupSheets();
+        sh = ss.getSheetByName(sheetName);
+      }
+      var data = sh.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        var code = String(data[i][1] || "").trim();
+        var match = code.match(pattern);
+        if (match) {
+          maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
+        }
+      }
+      for (var c = 0; c < CATEGORIES.length; c++) {
+        var s = ss.getSheetByName(CATEGORIES[c]);
+        if (s) {
+          var sData = s.getDataRange().getValues();
+          for (var j = 1; j < sData.length; j++) {
+            var idVal = parseInt(sData[j][0], 10) || 0;
+            maxId = Math.max(maxId, idVal);
+          }
         }
       }
     }

@@ -279,10 +279,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   );
 
   const lastResolvedTypeIdRef = useRef<string | null>(null);
+  const hasLoadedInitialRef = useRef<string | null>(null);
 
-  /** Reload all fields when opening edit or when sheet data refreshes for same asset. */
+  /** Reload all fields only when opening edit for a different asset ID. */
   useEffect(() => {
     if (!initialData?.id) return;
+    if (hasLoadedInitialRef.current === String(initialData.id)) return;
+    hasLoadedInitialRef.current = String(initialData.id);
+
     const fd = assetToFormData(initialData);
     setFormData(fd);
     setDynamicDetails(fd.dynamicDetails || {});
@@ -1094,7 +1098,11 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     const { name, value } = e.target;
     
     if (name === "assetCode") {
-      setIsAssetCodeEdited(true);
+      if (!value.trim()) {
+        setIsAssetCodeEdited(false);
+      } else {
+        setIsAssetCodeEdited(true);
+      }
     }
     
     if (name === "macAddress") {
@@ -1369,6 +1377,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     setIncludeKeyboard(false);
                     setIncludeMouse(false);
                     setIncludeUps(false);
+                    setIsAssetCodeEdited(false);
                   }
                 }}
                 className="w-full input-geometric font-bold bg-white text-sm py-3 px-4 focus:ring-2 focus:ring-blue-500/50"
@@ -1484,6 +1493,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     })
                   );
                   setDynamicFieldErrors({});
+                  if (!isEditMode) {
+                    setIsAssetCodeEdited(false);
+                  }
                 }}
                 onAddCustom={(v) =>
                   persistCatalog((c) => addSubCategory(c, formData.mainCategory || "", v))

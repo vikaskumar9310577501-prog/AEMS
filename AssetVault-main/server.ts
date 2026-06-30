@@ -177,7 +177,7 @@ import {
   rateLimitAuth,
   requireApiAuth,
 } from "./server/securityMiddleware.js";
-import { gasGetUrl } from "./server/gasClient.js";
+import { gasGetUrl, gasGet } from "./server/gasClient.js";
 import { resolveRequestUser } from "./server/requestUser.js";
 import { getEnv, maskValue, setCleanEnv, setCleanEnvAlias } from "./server/env.js";
 
@@ -838,6 +838,9 @@ app.get("/api/assets", async (req, res) => {
 });
 
 app.get("/api/assets/next-code", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   try {
     const category = String(req.query.category || "").trim() || "IT Assets";
     if (isManualAssetCodeCategory(category)) {
@@ -1759,6 +1762,59 @@ app.get("/api/settings", async (req, res) => {
 
     data.settings.catalog = mergeCatalog(data.settings.catalog);
 
+    // Fetch custom options from Google Sheets to merge into local catalog
+    if (GAS_WEBAPP_URL) {
+      try {
+        const gasResult = await gasGet(GAS_WEBAPP_URL, { type: "options" }) as { success?: boolean; options?: Record<string, string[]> };
+        if (gasResult && gasResult.success && gasResult.options) {
+          const gasOpts = gasResult.options;
+          
+          if (!data.settings.catalog) {
+            data.settings.catalog = { brands: {}, vendors: [], departments: [] };
+          }
+          const cat = data.settings.catalog;
+          
+          // 1. Merge Departments
+          if (Array.isArray(gasOpts.departments)) {
+            cat.departments = Array.from(new Set([...(cat.departments || []), ...gasOpts.departments]));
+          }
+          // 2. Merge Vendors
+          if (Array.isArray(gasOpts.vendors)) {
+            cat.vendors = Array.from(new Set([...(cat.vendors || []), ...gasOpts.vendors]));
+          }
+          // 3. Merge Brands
+          if (Array.isArray(gasOpts.brands)) {
+            for (const b of gasOpts.brands) {
+              if (!cat.brands[b]) cat.brands[b] = [];
+            }
+          }
+          // 4. Merge Models (format: Brand:Model)
+          if (Array.isArray(gasOpts.models)) {
+            for (const item of gasOpts.models) {
+              const parts = item.split(":");
+              if (parts.length >= 2) {
+                const b = parts[0];
+                const m = parts.slice(1).join(":");
+                if (!cat.brands[b]) cat.brands[b] = [];
+                if (!cat.brands[b].includes(m)) {
+                  cat.brands[b].push(m);
+                }
+              }
+            }
+          }
+          // 5. Merge RAM, SSD, CPU, windowsVersion, licenseTypes
+          const dynamicFields = ["ram", "ssd", "cpu", "windowsVersion", "licenseTypes"] as const;
+          for (const field of dynamicFields) {
+            if (Array.isArray(gasOpts[field])) {
+              cat[field] = Array.from(new Set([...(cat[field] || []), ...gasOpts[field]]));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[AMS] Failed to fetch settings options from GAS:", err);
+      }
+    }
+
     // Also inject departments from the live employees list so they never disappear
     try {
       const liveEmployees = readEmployees();
@@ -1786,13 +1842,70 @@ app.post("/api/settings", async (req, res) => {
     const syncSheet = (req.body as { syncSheet?: boolean }).syncSheet !== false;
     const data = readAppData();
 
-    // Safety guard: do not overwrite locations/plants with empty arrays due to transient load failures
-    const locations = Array.isArray(incoming.locations) && incoming.locations.length > 0
-      ? incoming.locations
-      : data.settings.locations;
-    const plants = Array.isArray(incoming.plants) && incoming.plants.length > 0
-      ? incoming.plants
-      : data.settings.plants;
+    // Only update locations/plants if they are explicitly sent in the payload (non-empty body keys)
+    const hasIncomingLocations = Array.isArray(incoming.locations);
+    const hasIncomingPlants = Array.isArray(incoming.plants);
+
+    const locations = hasIncomingLocations ? incoming.locations! : data.settings.locations;
+    const plants = hasIncomingPlants ? incoming.plants! : data.settings.plants;
+
+    // Sync newly added catalog options back to Google Sheets
+    if (GAS_WEBAPP_URL && incoming.catalog) {
+      try {
+        const current = data.settings.catalog || { brands: {}, vendors: [], departments: [] };
+        const incomingCat = incoming.catalog;
+        
+        const syncOption = async (type: string, value: string) => {
+          await proxyToGas({ action: "add_option", type, value }).catch(() => {});
+        };
+
+        // 1. Sync Departments
+        if (Array.isArray(incomingCat.departments)) {
+          for (const dept of incomingCat.departments) {
+            if (!current.departments?.includes(dept)) {
+              void syncOption("departments", dept);
+            }
+          }
+        }
+        // 2. Sync Vendors
+        if (Array.isArray(incomingCat.vendors)) {
+          for (const v of incomingCat.vendors) {
+            if (!current.vendors?.includes(v)) {
+              void syncOption("vendors", v);
+            }
+          }
+        }
+        // 3. Sync Brands & Models
+        if (incomingCat.brands && typeof incomingCat.brands === "object") {
+          for (const [brand, models] of Object.entries(incomingCat.brands)) {
+            if (!current.brands[brand]) {
+              void syncOption("brands", brand);
+            }
+            if (Array.isArray(models)) {
+              const existingModels = current.brands[brand] || [];
+              for (const m of models) {
+                if (!existingModels.includes(m)) {
+                  void syncOption("models", `${brand}:${m}`);
+                }
+              }
+            }
+          }
+        }
+        // 4. Sync Dynamic Attributes
+        const fields = ["ram", "ssd", "cpu", "windowsVersion", "licenseTypes"] as const;
+        for (const field of fields) {
+          if (Array.isArray(incomingCat[field])) {
+            for (const val of incomingCat[field]) {
+              if (!current[field]?.includes(val)) {
+                void syncOption(field, val);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[AMS] Failed to sync new catalog options to GAS:", err);
+      }
+    }
 
     data.settings = {
       locations,
@@ -1815,9 +1928,9 @@ app.post("/api/settings", async (req, res) => {
     writeCache("locations_plants", { locations: data.settings.locations, plants: data.settings.plants });
 
     let sheetWarning: string | undefined;
-    if (syncSheet && GAS_WEBAPP_URL) {
+    if (syncSheet && GAS_WEBAPP_URL && (hasIncomingLocations || hasIncomingPlants)) {
       const gas = await persistLocationsPlantsToGas(
-        { locations: data.settings.locations, plants: data.settings.plants },
+        { locations, plants },
         proxyToGas
       );
       if (!gas.ok) sheetWarning = gas.error || "Could not save to Locations / Plants sheets";
