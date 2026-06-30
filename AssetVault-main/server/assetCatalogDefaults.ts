@@ -1,3 +1,7 @@
+import fs from "fs";
+import path from "path";
+import os from "os";
+
 export interface AssetCatalog {
   brands: Record<string, string[]>;
   vendors: string[];
@@ -52,20 +56,154 @@ export function defaultCatalog(): AssetCatalog {
 
 export function mergeCatalog(saved?: any): any {
   const base = defaultCatalog();
-  if (!saved) return base;
+  const catalog = saved || {};
+  const deleted = catalog.deletedOptions || {};
+
+  const filterDeleted = (list: string[], key: string) => {
+    const delList = deleted[key] || [];
+    return list.filter((item: string) => !delList.includes(item));
+  };
+
+  // 1. Read cached assets to dynamically extract custom values
+  let assets: any[] = [];
+  try {
+    const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";
+    const CACHE_DIR = isServerless 
+      ? path.join(os.tmpdir(), "assetqr-cache") 
+      : path.join(process.cwd(), "data", "cache");
+    const assetsFile = path.join(CACHE_DIR, "assets.json");
+    if (fs.existsSync(assetsFile)) {
+      const raw = JSON.parse(fs.readFileSync(assetsFile, "utf-8"));
+      assets = Array.isArray(raw?.data) ? raw.data : [];
+    }
+  } catch (e) {
+    console.warn("[Catalog Sync] Failed to read cached assets for dropdown extraction:", e);
+  }
+
+  // 2. Merge Brands & Models
   const brands = { ...base.brands };
-  if (saved.brands) {
-    for (const [brand, models] of Object.entries(saved.brands as Record<string, string[]>)) {
+  if (catalog.brands) {
+    for (const [brand, models] of Object.entries(catalog.brands as Record<string, string[]>)) {
       const existing = brands[brand] || [];
       brands[brand] = Array.from(new Set([...existing, ...(models || [])]));
     }
   }
+  for (const asset of assets) {
+    const mk = String(asset.make || "").trim();
+    const md = String(asset.model || "").trim();
+    if (mk && md) {
+      const existing = brands[mk] || [];
+      if (!existing.includes(md)) {
+        brands[mk] = [...existing, md];
+      }
+    }
+  }
+
+  // 3. Merge Brands & Models by Asset Type
+  const brandsByType: Record<string, Record<string, string[]>> = catalog.brandsByType ? { ...catalog.brandsByType } : {};
+  for (const asset of assets) {
+    const type = String(asset.assetType || "").trim();
+    const mk = String(asset.make || "").trim();
+    const md = String(asset.model || "").trim();
+    if (type && mk && md) {
+      if (!brandsByType[type]) brandsByType[type] = {};
+      if (!brandsByType[type][mk]) brandsByType[type][mk] = [];
+      if (!brandsByType[type][mk].includes(md)) {
+        brandsByType[type][mk].push(md);
+      }
+    }
+  }
+
+  // Filter out deleted brands/models by type
+  for (const assetType of Object.keys(brandsByType)) {
+    const brandMap = brandsByType[assetType];
+    if (brandMap) {
+      for (const brand of Object.keys(brandMap)) {
+        if ((deleted.brands || []).includes(`${assetType}:${brand}`)) {
+          delete brandMap[brand];
+          continue;
+        }
+        const models = brandMap[brand] || [];
+        brandMap[brand] = models.filter(
+          (m) => !(deleted.models || []).includes(`${assetType}:${brand}:${m}`)
+        );
+      }
+    }
+  }
+
+  // 4. Merge Sub Categories
+  const subCategories: Record<string, string[]> = catalog.subCategories ? { ...catalog.subCategories } : {};
+  for (const asset of assets) {
+    const main = String(asset.mainCategory || "").trim();
+    const sub = String(asset.subCategory || "").trim();
+    if (main && sub) {
+      if (!subCategories[main]) subCategories[main] = [];
+      if (!subCategories[main].includes(sub)) {
+        subCategories[main].push(sub);
+      }
+    }
+  }
+  for (const mainCat of Object.keys(subCategories)) {
+    const list = subCategories[mainCat] || [];
+    subCategories[mainCat] = list.filter(
+      (s) => !(deleted.subCategories || []).includes(`${mainCat}:${s}`)
+    );
+  }
+
+  // 5. Merge Vendors
+  const vendorsSet = new Set([...base.vendors, ...(catalog.vendors || [])]);
+  for (const asset of assets) {
+    const v = String(asset.vendorName || "").trim();
+    if (v) vendorsSet.add(v);
+  }
+  const vendors = filterDeleted(Array.from(vendorsSet), "vendors").sort();
+
+  // 6. Merge Departments
+  const departments = filterDeleted(
+    Array.from(new Set([...base.departments, ...(catalog.departments || [])])),
+    "departments"
+  ).sort();
+
+  // 7. Dynamic attributes (RAM, SSD, CPU, Windows Versions)
+  const ramSet = new Set([...(catalog.ram || [])]);
+  const ssdSet = new Set([...(catalog.ssd || [])]);
+  const cpuSet = new Set([...(catalog.cpu || [])]);
+  const winSet = new Set([...(catalog.windowsVersion || [])]);
+  for (const asset of assets) {
+    const r = String(asset.ram || "").trim();
+    const s = String(asset.ssd || "").trim();
+    const c = String(asset.cpu || "").trim();
+    const w = String(asset.windowsVersion || "").trim();
+    if (r) ramSet.add(r);
+    if (s) ssdSet.add(s);
+    if (c) cpuSet.add(c);
+    if (w) winSet.add(w);
+  }
+
+  const ram = filterDeleted(Array.from(ramSet), "ram");
+  const ssd = filterDeleted(Array.from(ssdSet), "ssd");
+  const cpu = filterDeleted(Array.from(cpuSet), "cpu");
+  const windowsVersion = filterDeleted(Array.from(winSet), "windowsVersion");
+
+  // 8. License types
+  const licenseTypesSet = new Set([...(catalog.licenseTypes || [])]);
+  for (const asset of assets) {
+    const l = String(asset.licenseType || asset.dynamicDetails?.license_type || "").trim();
+    if (l) licenseTypesSet.add(l);
+  }
+  const licenseTypes = filterDeleted(Array.from(licenseTypesSet), "licenseTypes");
+
   return {
-    ...saved,
+    ...catalog,
     brands,
-    vendors: Array.from(new Set([...base.vendors, ...(saved.vendors || [])])).sort(),
-    departments: Array.from(
-      new Set([...base.departments, ...(saved.departments || [])])
-    ).sort(),
+    brandsByType,
+    subCategories,
+    vendors,
+    departments,
+    ram,
+    ssd,
+    cpu,
+    windowsVersion,
+    licenseTypes,
   };
 }
