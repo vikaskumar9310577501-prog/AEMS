@@ -393,7 +393,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const interval = window.setInterval(pollSheetChanges, 60 * 1000);
+    // Poll every 15 seconds — fast enough to show other users' new assets
+    const interval = window.setInterval(pollSheetChanges, 15 * 1000);
     return () => window.clearInterval(interval);
   }, [user, fetchAssets]);
 
@@ -504,9 +505,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         if (saved) {
           persistAssets(patchAssetsList(assetsRef.current, saved, editingAsset));
-        } else {
-          await fetchAssets({ silent: true });
         }
+        // Always force-refresh from server after save so the saving user
+        // sees the final count (including any concurrency-resolved ID changes)
+        void fetchAssets({ silent: true, force: true }).catch(() => {});
         toast.success(editingAsset ? 'Asset updated!' : 'Asset registered!');
       } catch (err: unknown) {
         persistAssets(previousSnapshot);
