@@ -833,7 +833,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   }, [formData.serialNumber, formData.assetCode, formData.macAddress, initialData?.id, entryProfile.manualAssetCode]);
 
   useEffect(() => {
-    if (initialData?.id) return;
+    if (initialData?.id || isAssetCodeEdited || formData.assetCode?.trim()) return;
     const cat = formData.mainCategory || "IT Assets";
     fetch(
       `${import.meta.env.VITE_API_BASE_URL || ""}/api/assets/next-code?category=${encodeURIComponent(cat)}`
@@ -849,7 +849,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         }
       })
       .catch(() => {});
-  }, [formData.mainCategory, formData.subCategory, formData.assetType, initialData?.id]);
+  }, [formData.mainCategory, formData.subCategory, formData.assetType, formData.assetCode, isAssetCodeEdited, initialData?.id]);
 
   const loggedInUser = React.useMemo(() => {
     try {
@@ -918,8 +918,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     if (!allowedCategories.includes(prefillMainCategory)) return;
     const subs = CATEGORY_SUBCATEGORIES[prefillMainCategory] || [];
     const firstSub = prefillMainCategory === "IT Assets" ? (subs[0] || "") : "";
-    setFormData((prev) => applyCategorySelection(prev, prefillMainCategory, firstSub, typeConfig));
-  }, [prefillMainCategory, prefillAssetType, allowedCategories, initialData?.id, typeConfig]);
+    if (formData.mainCategory !== prefillMainCategory || formData.subCategory !== firstSub) {
+      setFormData((prev) => applyCategorySelection(prev, prefillMainCategory, firstSub, typeConfig));
+    }
+  }, [prefillMainCategory, prefillAssetType, allowedCategories, initialData?.id, typeConfig, formData.mainCategory, formData.subCategory]);
 
   /** When opened from Camera/NVR sidebar — IT Assets + type selector, jump to step 2 */
   useEffect(() => {

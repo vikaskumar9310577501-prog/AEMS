@@ -9,3 +9,4 @@ server.js
 !.env.example
 scratch/
 uploads/
+data/cache/issued_codes.json
