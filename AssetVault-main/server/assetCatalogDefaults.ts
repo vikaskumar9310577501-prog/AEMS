@@ -99,6 +99,26 @@ export function mergeCatalog(saved?: any): any {
     console.warn("[Catalog Sync] Failed to read cached assets for dropdown extraction:", e);
   }
 
+  // 1b. Read cached employees to extract departments they already have
+  let employeeDepartments: string[] = [];
+  try {
+    const isServerless2 = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";
+    const EMP_CACHE_DIR = isServerless2
+      ? path.join(os.tmpdir(), "assetqr-data", "cache")
+      : path.join(process.cwd(), "data", "cache");
+    const empFile = path.join(EMP_CACHE_DIR, "employees.json");
+    if (fs.existsSync(empFile)) {
+      const raw = JSON.parse(fs.readFileSync(empFile, "utf-8"));
+      const emps: any[] = Array.isArray(raw) ? raw : [];
+      for (const emp of emps) {
+        const dept = String(emp.department || "").trim();
+        if (dept) employeeDepartments.push(dept);
+      }
+    }
+  } catch (e) {
+    console.warn("[Catalog Sync] Failed to read cached employees for department extraction:", e);
+  }
+
   // 2. Merge Brands & Models
   const brands = { ...base.brands };
   if (catalog.brands) {
@@ -177,9 +197,13 @@ export function mergeCatalog(saved?: any): any {
   }
   const vendors = filterDeleted(Array.from(vendorsSet), "vendors").sort();
 
-  // 6. Merge Departments
+  // 6. Merge Departments — also from employees cache so they never disappear
   const departments = filterDeleted(
-    Array.from(new Set([...base.departments, ...(catalog.departments || [])])),
+    Array.from(new Set([
+      ...base.departments,
+      ...(catalog.departments || []),
+      ...employeeDepartments,
+    ])),
     "departments"
   ).sort();
 

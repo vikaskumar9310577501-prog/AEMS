@@ -1758,7 +1758,23 @@ app.get("/api/settings", async (req, res) => {
     }
 
     data.settings.catalog = mergeCatalog(data.settings.catalog);
+
+    // Also inject departments from the live employees list so they never disappear
+    try {
+      const liveEmployees = readEmployees();
+      const empDepts = liveEmployees
+        .map((e: any) => String(e.department || "").trim())
+        .filter(Boolean);
+      if (empDepts.length > 0) {
+        const existing: string[] = data.settings.catalog?.departments || [];
+        data.settings.catalog.departments = Array.from(
+          new Set([...existing, ...empDepts])
+        ).sort();
+      }
+    } catch (_) { /* silent */ }
+
     res.json(data.settings);
+
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to fetch settings" });
   }
