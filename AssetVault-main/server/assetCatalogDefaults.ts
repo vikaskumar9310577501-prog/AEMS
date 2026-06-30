@@ -50,17 +50,18 @@ export function defaultCatalog(): AssetCatalog {
   };
 }
 
-export function mergeCatalog(saved?: Partial<AssetCatalog> | null): AssetCatalog {
+export function mergeCatalog(saved?: any): any {
   const base = defaultCatalog();
   if (!saved) return base;
   const brands = { ...base.brands };
   if (saved.brands) {
-    for (const [brand, models] of Object.entries(saved.brands)) {
+    for (const [brand, models] of Object.entries(saved.brands as Record<string, string[]>)) {
       const existing = brands[brand] || [];
       brands[brand] = Array.from(new Set([...existing, ...(models || [])]));
     }
   }
   return {
+    ...saved,
     brands,
     vendors: Array.from(new Set([...base.vendors, ...(saved.vendors || [])])).sort(),
     departments: Array.from(

@@ -9,7 +9,7 @@ import { formatSelectedTypeLabel } from "../lib/assetDisplay";
 import DeviceThumb from "./DeviceThumb";
 import SmartSelect from "./SmartSelect";
 import { APP_NAME, LOGO_SRC } from "../lib/constants";
-import { formatStoredDateTime, toDateInputValue } from "../lib/formatDisplayDate";
+import { formatStoredDateTime, toDateInputValue, toDisplayDateInput, parseStoredDateTime } from "../lib/formatDisplayDate";
 import WarrantyDateField from "./WarrantyDateField";
 import {
   mergeCatalog,
@@ -403,7 +403,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     if (!hasAssignee || formData.assignedDate?.trim()) return;
     setFormData((prev) => ({
       ...prev,
-      assignedDate: toDateInputValue(new Date().toISOString()),
+      assignedDate: toDisplayDateInput(new Date().toISOString()),
     }));
   }, [formData.employeeId, formData.contactName, formData.assignedDate]);
 
@@ -664,10 +664,16 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         return false;
       }
       if (!linkedEmployee) {
-        toast.error("Create or link a saved employee profile before registering this asset");
-        return false;
+        const hasFullDetails =
+          !!formData.employeeId?.trim() &&
+          !!formData.contactName?.trim() &&
+          !!formData.contactEmail?.trim();
+        if (!hasFullDetails) {
+          toast.error("Create or link a saved employee profile before registering this asset");
+          return false;
+        }
       }
-      if (isInactiveEmployee(linkedEmployee.status)) {
+      if (linkedEmployee && isInactiveEmployee(linkedEmployee.status)) {
         const sameExistingAssignee =
           !!initialData?.id &&
           !!initialData.employeeId &&
@@ -683,6 +689,11 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       }
       if (!formData.assignedDate?.trim()) {
         toast.error("Assigned date is required when an employee is assigned");
+        return false;
+      }
+      const parsedDate = parseStoredDateTime(formData.assignedDate);
+      if (!parsedDate || isNaN(parsedDate.getTime())) {
+        toast.error("Invalid Assigned Date. Please enter a valid date in DD/MM/YYYY format.");
         return false;
       }
       return true;
@@ -771,7 +782,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   }, [formData.serialNumber, formData.assetCode, formData.macAddress, initialData?.id, entryProfile.manualAssetCode]);
 
   useEffect(() => {
-    if (entryProfile.manualAssetCode || initialData?.id) return;
+    if (initialData?.id) return;
     const cat = formData.mainCategory || "IT Assets";
     fetch(
       `${import.meta.env.VITE_API_BASE_URL || ""}/api/assets/next-code?category=${encodeURIComponent(cat)}`
@@ -785,7 +796,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         }
       })
       .catch(() => {});
-  }, [formData.mainCategory, entryProfile.manualAssetCode, initialData?.id]);
+  }, [formData.mainCategory, initialData?.id]);
 
   const loggedInUser = React.useMemo(() => {
     try {
@@ -2391,8 +2402,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           <div className="space-y-1.5 font-mono max-w-md">
             <label className="label-caps">Assigned Date *</label>
             <input
-              type="date"
+              type="text"
               name="assignedDate"
+              placeholder="DD/MM/YYYY"
               required={!!formData.employeeId?.trim() || !!formData.contactName?.trim()}
               value={formData.assignedDate || ""}
               onChange={handleChange}

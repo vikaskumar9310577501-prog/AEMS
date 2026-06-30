@@ -1,6 +1,6 @@
 import type { Asset, AssetFormData, AssetType, DesktopAccessories } from "../types";
 import { normalizeWarrantyDate } from "./warrantyDate";
-import { toDateInputValue } from "./formatDisplayDate";
+import { toDateInputValue, toDisplayDateInput } from "./formatDisplayDate";
 import { healMisalignedAssetFields } from "./healAssetFields";
 import { PERIPHERAL_TYPES } from "./assetCatalogByType";
 import { legacyToDynamicDetails, resolveTypeDefinition, defaultTypeDefinitionsConfig } from "./typeDefinitions";
@@ -198,7 +198,7 @@ export function assetToFormData(asset?: Asset | null): AssetFormData {
     updatedDate: asset.updatedDate || "",
     extraItems: asset.extraItems || "",
     missingItems: asset.missingItems || "",
-    assignedDate: toDateInputValue(asset.assignedDate) || "",
+    assignedDate: toDisplayDateInput(asset.assignedDate) || "",
     returnDate: asset.returnDate || "",
     amcVendor: asset.amcVendor || "",
     amcStartDate: asset.amcStartDate || "",

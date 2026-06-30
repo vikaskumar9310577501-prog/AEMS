@@ -975,10 +975,10 @@ async function getFreshAssetsForMutation(): Promise<MappedAsset[]> {
   return getAssetsForOps();
 }
 
-function assertSavedEmployeeProfile(
+async function assertSavedEmployeeProfile(
   assetData: Record<string, unknown>,
   existing?: { employeeId?: string; contactEmail?: string }
-): Employee | null {
+): Promise<Employee | null> {
   const employeeId = String(assetData.employeeId || "").trim();
   const email = normalizeEmail(String(assetData.contactEmail || ""));
   const contactName = String(assetData.contactName || "").trim();
@@ -995,9 +995,32 @@ function assertSavedEmployeeProfile(
     (email ? findEmployeeByEmail(employees, email) : undefined);
 
   if (!employee) {
-    throw new Error(
-      "A saved employee profile is required. Create the employee under Employees, then assign the asset."
-    );
+    if (employeeId && contactName && email) {
+      // Auto-create employee profile!
+      const newEmp = {
+        employeeId,
+        name: contactName,
+        email,
+        phone: String(assetData.contactMobile || "").replace(/\D/g, "").slice(0, 10),
+        department: String(assetData.department || "").trim(),
+        location: String(assetData.location || "").trim(),
+        designation: "",
+        plant: String(assetData.plantCode || "").trim(),
+        status: "Active" as const,
+      };
+      employee = createEmployee(newEmp);
+      if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
+        const gas = await persistEmployeeToGas("add", employee, proxyToGas, SPREADSHEET_ID);
+        if (!gas.ok) {
+          deleteEmployee(employee.employeeId);
+          throw new Error("Failed to auto-create employee profile: " + (gas.error || "Sync failed"));
+        }
+      }
+    } else {
+      throw new Error(
+        "A saved employee profile is required. Create the employee under Employees, then assign the asset."
+      );
+    }
   }
   if (isInactiveEmployeeStatus(employee.status)) {
     const prevId = normalizeEmployeeId(existing?.employeeId || "");
@@ -1047,10 +1070,10 @@ function ensureAssignedDate(
   assetData.assignedDate = fromExisting || new Date().toISOString();
 }
 
-function validateAssetPayload(
+async function validateAssetPayload(
   assetData: Record<string, unknown>,
   existingAsset?: { employeeId?: string; contactEmail?: string; assignedDate?: string }
-): void {
+): Promise<void> {
   const mainCat = String(assetData.mainCategory || "IT Assets").trim();
   const isSoftware = mainCat === "Software / License Assets";
   const isCctv = isCctvSecurityAsset(assetData);
@@ -1081,7 +1104,7 @@ function validateAssetPayload(
       if (!String(assetData.contactEmail || "").trim()) {
         throw new Error("Assignee email is required");
       }
-      assertSavedEmployeeProfile(assetData, existingAsset);
+      await assertSavedEmployeeProfile(assetData, existingAsset);
     }
   }
 
@@ -1097,10 +1120,10 @@ function validateAssetPayload(
   if (purchaseErr) throw new Error(purchaseErr);
 }
 
-function prepareAssetPayload(
+async function prepareAssetPayload(
   assetData: Record<string, unknown>,
   existingAsset?: { employeeId?: string; contactEmail?: string; assignedDate?: string }
-) {
+): Promise<Record<string, unknown>> {
   const fieldHealed = healMisalignedAssetFields(assetData) as Record<string, unknown>;
   const healed = healMisalignedCategoryFields({
     mainCategory: String(fieldHealed.mainCategory || ""),
@@ -1131,7 +1154,7 @@ function prepareAssetPayload(
     mapped.serialNumber = details.vehicle_number;
   }
   ensureAssignedDate(mapped, existingAsset);
-  validateAssetPayload(mapped, existingAsset);
+  await validateAssetPayload(mapped, existingAsset);
   return mapped;
 }
 
@@ -3124,7 +3147,7 @@ app.delete("/api/damaged-items/:recordId", async (req, res) => {
 
 app.post("/api/assets", async (req, res) => {
   try {
-    const assetData = prepareAssetPayload(req.body as Record<string, unknown>);
+    const assetData = await prepareAssetPayload(req.body as Record<string, unknown>);
     console.log("[AMS] POST /api/assets — received payload:", JSON.stringify({
       cpu: assetData.cpu,
       ram: assetData.ram,
@@ -3242,7 +3265,7 @@ app.put("/api/assets/:id", async (req, res) => {
     const existing = findMappedAssetByAnyId(assets, id);
     const canonicalId = String(existing?.id || id);
     const mergedInput = mergeAssetEditPayload({ ...req.body, id: canonicalId } as Record<string, unknown>, existing as unknown as Record<string, unknown> | undefined);
-    const assetData = prepareAssetPayload(mergedInput, existing);
+    const assetData = await prepareAssetPayload(mergedInput, existing);
     await assertAssetUnique(assetData, canonicalId);
 
     if (existing && existing.employeeId && assetData.employeeId && String(existing.employeeId).trim() !== "" && String(existing.employeeId).trim() !== String(assetData.employeeId).trim()) {
@@ -3362,7 +3385,7 @@ app.post("/api/assets/:id/deassign", async (req, res) => {
       return res.json({ success: true, asset: currentAsset, message: "Asset is already deassigned" });
     }
 
-    const assetData = prepareAssetPayload({
+    const assetData = await prepareAssetPayload({
       ...existing,
       id: canonicalId,
       status: "Available",

@@ -68,6 +68,17 @@ export function toDateInputValue(value?: string | null): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+export function toDisplayDateInput(value?: string | null): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const parsed = parseStoredDateTime(raw);
+  if (!parsed) return raw;
+  const dd = String(parsed.getDate()).padStart(2, '0');
+  const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+  const yyyy = parsed.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 export function isDateFieldLabel(label: string): boolean {
   return /date|warranty start|warranty exp|amc start|amc end|assigned date|created|updated|purchase date|maintenance|missing|damage|recovered/i.test(
     label
