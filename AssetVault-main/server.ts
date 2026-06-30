@@ -2271,7 +2271,11 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
         },
         assignedBy: updatedBy || "System",
       });
-      if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+      if (GAS_WEBAPP_URL) {
+        syncHistoryEntriesToGas(hist, proxyToGas).catch(err => {
+          console.warn("[AMS] Background history sync failed:", err);
+        });
+      }
 
       res.json({ success: true, message: "Asset assigned successfully" });
     } else {
@@ -2419,7 +2423,11 @@ app.post("/api/inventory/:itemId/return", async (req, res) => {
         assignedBy: updatedBy,
         remarks,
       });
-      if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+      if (GAS_WEBAPP_URL) {
+        syncHistoryEntriesToGas(hist, proxyToGas).catch(err => {
+          console.warn("[AMS] Background history sync failed:", err);
+        });
+      }
 
       res.json({ success: true, message: "Asset returned successfully" });
     } else {
@@ -2574,7 +2582,11 @@ app.post("/api/inventory/:itemId/transfer", async (req, res) => {
         assignedBy: updatedBy || "System",
         remarks: remarks || `Transferred from employee ${sourceEmployeeId} to ${targetEmp.employeeId}`,
       });
-      if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+      if (GAS_WEBAPP_URL) {
+        syncHistoryEntriesToGas(hist, proxyToGas).catch(err => {
+          console.warn("[AMS] Background history sync failed:", err);
+        });
+      }
 
       res.json({ success: true, message: "Asset transferred successfully" });
     } else {
@@ -3215,7 +3227,9 @@ app.post("/api/assets", async (req, res) => {
 
     console.log("[AMS] POST /api/assets — response:", { id: assetId, success: true });
 
-    await persistAssetDynamicDetails(assetId, assetData);
+    persistAssetDynamicDetails(assetId, assetData).catch(err => {
+      console.warn("[AMS] Background dynamic details sync failed:", err);
+    });
 
     const hist = recordAssignmentChange({
       assetId,
@@ -3229,7 +3243,11 @@ app.post("/api/assets", async (req, res) => {
       assignedBy: String(assetData.createdBy || assetData.updatedBy || ""),
       assignedDate: String(assetData.assignedDate || ""),
     });
-    if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+    if (GAS_WEBAPP_URL) {
+      syncHistoryEntriesToGas(hist, proxyToGas).catch(err => {
+        console.warn("[AMS] Background history sync failed:", err);
+      });
+    }
 
     // Audit log
     addAuditLog(
@@ -3316,7 +3334,9 @@ app.put("/api/assets/:id", async (req, res) => {
     if (result.error) throw new Error(result.error);
     await updateAssetLocal(localCategory, canonicalId, localRow, masterHeaders);
 
-    await persistAssetDynamicDetails(canonicalId, assetData);
+    persistAssetDynamicDetails(canonicalId, assetData).catch(err => {
+      console.warn("[AMS] Background dynamic details sync failed:", err);
+    });
 
     const hist = recordAssignmentChange({
       assetId: canonicalId,
@@ -3335,7 +3355,11 @@ app.put("/api/assets/:id", async (req, res) => {
       assignedBy: String(assetData.updatedBy || ""),
       assignedDate: String(assetData.assignedDate || ""),
     });
-    if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+    if (GAS_WEBAPP_URL) {
+      syncHistoryEntriesToGas(hist, proxyToGas).catch(err => {
+        console.warn("[AMS] Background history sync failed:", err);
+      });
+    }
 
     // Audit log
     addAuditLog(
@@ -3441,7 +3465,9 @@ app.post("/api/assets/:id/deassign", async (req, res) => {
 
     if (result?.error) throw new Error(result.error);
     await updateAssetLocal(localCategory, canonicalId, localRow, masterHeaders);
-    await persistAssetDynamicDetails(canonicalId, assetData);
+    persistAssetDynamicDetails(canonicalId, assetData).catch(err => {
+      console.warn("[AMS] Background dynamic details sync failed:", err);
+    });
 
     const hist = recordAssignmentChange({
       assetId: canonicalId,
@@ -3460,7 +3486,11 @@ app.post("/api/assets/:id/deassign", async (req, res) => {
       assignedBy: actor,
       remarks,
     });
-    if (GAS_WEBAPP_URL) await syncHistoryEntriesToGas(hist, proxyToGas);
+    if (GAS_WEBAPP_URL) {
+      syncHistoryEntriesToGas(hist, proxyToGas).catch(err => {
+        console.warn("[AMS] Background history sync failed:", err);
+      });
+    }
 
     addAuditLog(
       actor,
