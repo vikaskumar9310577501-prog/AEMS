@@ -32,7 +32,7 @@ import {
   getAssetsSyncMeta,
   scheduleAssetsSyncIfStale,
 } from "./server/assetCache.js";
-import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode } from "./server/assetCodeGenerator.js";
+import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode } from "./server/assetCodeGenerator.js";
 import { healMisalignedAssetFields } from "./src/lib/healAssetFields.js";
 import { mapMasterRowToSheetHeaders } from "./server/sheetRowMapper.js";
 import { getUsersWithCache, syncUsersNow, getCachedUsers, getUsersSyncMeta, invalidateUsersCache } from "./server/usersSync.js";
@@ -3205,14 +3205,19 @@ app.post("/api/assets", async (req, res) => {
     const mainCat = String(assetData.mainCategory || "IT Assets").trim();
     if (!isManualAssetCodeCategory(mainCat)) {
       const isCodeTaken = String(assetData.assetCode || "").trim() && 
-        assets.some(a => String(a.assetCode || "").trim().toLowerCase() === String(assetData.assetCode).trim().toLowerCase());
+        (assets.some(a => String(a.assetCode || "").trim().toLowerCase() === String(assetData.assetCode).trim().toLowerCase()) ||
+         isSavingCode(String(assetData.assetCode)));
       if (!String(assetData.assetCode || "").trim() || isCodeTaken) {
         assetData.assetCode = generateAssetCode(assets, mainCat);
         console.log(`[AMS] Concurrency detected. Auto-assigned new code: ${assetData.assetCode}`);
       }
     }
 
-    await assertAssetUnique(assetData);
+    const savingCode = String(assetData.assetCode || "");
+    registerSavingCode(savingCode);
+
+    try {
+      await assertAssetUnique(assetData);
 
     const maxId = assets.reduce((max, a) => Math.max(max, parseInt(a.id, 10) || 0), 0);
     const assetId = assetData.id?.toString() || String(maxId + 1).padStart(3, "0");
@@ -3304,6 +3309,9 @@ app.post("/api/assets", async (req, res) => {
     }
 
     res.json({ success: true, asset: savedAsset });
+    } finally {
+      releaseSavingCode(savingCode);
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to add asset" });
   }
@@ -3317,7 +3325,12 @@ app.put("/api/assets/:id", async (req, res) => {
     const canonicalId = String(existing?.id || id);
     const mergedInput = mergeAssetEditPayload({ ...req.body, id: canonicalId } as Record<string, unknown>, existing as unknown as Record<string, unknown> | undefined);
     const assetData = await prepareAssetPayload(mergedInput, existing);
-    await assertAssetUnique(assetData, canonicalId);
+
+    const savingCode = String(assetData.assetCode || "");
+    registerSavingCode(savingCode);
+
+    try {
+      await assertAssetUnique(assetData, canonicalId);
 
     if (existing && existing.employeeId && assetData.employeeId && String(existing.employeeId).trim() !== "" && String(existing.employeeId).trim() !== String(assetData.employeeId).trim()) {
       return res.status(400).json({ error: "Asset already assigned" });
@@ -3416,6 +3429,9 @@ app.put("/api/assets/:id", async (req, res) => {
     }
 
     res.json({ success: true, asset: updatedAsset });
+    } finally {
+      releaseSavingCode(savingCode);
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to update asset" });
   }

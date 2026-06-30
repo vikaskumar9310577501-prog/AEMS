@@ -56,6 +56,25 @@ function normCode(value: string): string {
   return value.trim().toLowerCase();
 }
 
+// In-memory registry of codes currently in the process of saving
+const activeSavingCodes = new Set<string>();
+
+export function registerSavingCode(code: string) {
+  if (code && code.trim()) {
+    activeSavingCodes.add(normCode(code));
+  }
+}
+
+export function releaseSavingCode(code: string) {
+  if (code && code.trim()) {
+    activeSavingCodes.delete(normCode(code));
+  }
+}
+
+export function isSavingCode(code: string): boolean {
+  return activeSavingCodes.has(normCode(code));
+}
+
 /** IT Assets and Software / License use manual codes; other categories are auto-generated. */
 export function isManualAssetCodeCategory(mainCategory: string): boolean {
   const cat = (mainCategory || "IT Assets").trim();
@@ -91,7 +110,7 @@ export function generateAssetCode(assets: MappedAsset[], mainCategory: string): 
     }
   }
 
-  // 3. Find the candidate seq
+  // 3. Find the candidate seq, checking BOTH assets list AND activeSavingCodes
   let candidate = "";
   let attempts = 0;
   let nextSeq = maxSeq;
@@ -101,7 +120,8 @@ export function generateAssetCode(assets: MappedAsset[], mainCategory: string): 
     attempts += 1;
   } while (
     attempts < 10000 &&
-    assets.some((a) => normCode(String(a.assetCode || "")) === normCode(candidate))
+    (assets.some((a) => normCode(String(a.assetCode || "")) === normCode(candidate)) ||
+     isSavingCode(candidate))
   );
 
   // 4. Save this new sequence to issued codes (expires in 5 minutes)
