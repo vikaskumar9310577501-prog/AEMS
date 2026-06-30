@@ -274,12 +274,7 @@ export default function EmployeeSelector({
                   onEmployeeResolved?.(null);
                   onChange({
                     contactEmail: val,
-                    employeeId: '',
-                    contactName: '',
-                    contactMobile: '',
-                    ...(hideDepartmentField ? {} : { department: '' }),
-                    location: '',
-                    plantCode: '',
+                    // Keep employeeId intact so it doesn't get wiped and overwritten!
                   });
                 } else if (!val.trim()) {
                   setMatched(null);

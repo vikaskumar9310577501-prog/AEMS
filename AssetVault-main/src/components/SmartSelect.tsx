@@ -54,6 +54,11 @@ export default function SmartSelect({
   const optionsKey = useMemo(() => finalOptions.join("\0"), [finalOptions]);
 
   useEffect(() => {
+    if (!value) {
+      setOtherMode(false);
+      setOtherText("");
+      return;
+    }
     if (otherMode) return;
     const ok = value && finalOptions.includes(value);
     if (ok) {
@@ -61,10 +66,6 @@ export default function SmartSelect({
     } else if (value && hasAddCustom) {
       setOtherMode(true);
       setOtherText(value);
-    } else {
-      if (!otherMode) {
-        setOtherText("");
-      }
     }
   }, [value, optionsKey, finalOptions, hasAddCustom]);
 
