@@ -27,13 +27,21 @@ export interface AppUser {
 
 export interface AssetCatalog {
   brands: Record<string, string[]>;
+  brandsByType?: Record<string, Record<string, string[]>>;
   vendors: string[];
+  vendorsByCategory?: Record<string, string[]>;
   departments: string[];
   subCategories?: Record<string, string[]>;
   ram?: string[];
   ssd?: string[];
   cpu?: string[];
   windowsVersion?: string[];
+  missingItemTypes?: string[];
+  missingItemNames?: string[];
+  subCategoryImages?: Record<string, string>;
+  softwareSubCategoryImages?: Record<string, string>;
+  licenseTypes?: string[];
+  deletedOptions?: Record<string, string[]>;
 }
 
 export interface AppSettings {

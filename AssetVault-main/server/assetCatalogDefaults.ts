@@ -4,8 +4,21 @@ import os from "os";
 
 export interface AssetCatalog {
   brands: Record<string, string[]>;
+  brandsByType?: Record<string, Record<string, string[]>>;
   vendors: string[];
+  vendorsByCategory?: Record<string, string[]>;
   departments: string[];
+  subCategories?: Record<string, string[]>;
+  ram?: string[];
+  ssd?: string[];
+  cpu?: string[];
+  windowsVersion?: string[];
+  missingItemTypes?: string[];
+  missingItemNames?: string[];
+  subCategoryImages?: Record<string, string>;
+  softwareSubCategoryImages?: Record<string, string>;
+  licenseTypes?: string[];
+  deletedOptions?: Record<string, string[]>;
 }
 
 export const DEFAULT_BRANDS: Record<string, string[]> = {
@@ -50,7 +63,13 @@ export function defaultCatalog(): AssetCatalog {
   return {
     brands: { ...DEFAULT_BRANDS },
     vendors: [...DEFAULT_VENDORS],
+    vendorsByCategory: { "IT Assets": [...DEFAULT_VENDORS] },
     departments: [...DEFAULT_DEPARTMENTS],
+    ram: [],
+    ssd: [],
+    cpu: [],
+    windowsVersion: [],
+    subCategories: {},
   };
 }
 
@@ -193,12 +212,32 @@ export function mergeCatalog(saved?: any): any {
   }
   const licenseTypes = filterDeleted(Array.from(licenseTypesSet), "licenseTypes");
 
+  // 9. Merge Vendors By Category
+  const vendorsByCategory: Record<string, string[]> = catalog.vendorsByCategory ? { ...catalog.vendorsByCategory } : { "IT Assets": [...base.vendors] };
+  for (const asset of assets) {
+    const main = String(asset.mainCategory || "IT Assets").trim();
+    const v = String(asset.vendorName || "").trim();
+    if (main && v) {
+      if (!vendorsByCategory[main]) vendorsByCategory[main] = [];
+      if (!vendorsByCategory[main].includes(v)) {
+        vendorsByCategory[main].push(v);
+      }
+    }
+  }
+  for (const mainCat of Object.keys(vendorsByCategory)) {
+    const list = vendorsByCategory[mainCat] || [];
+    vendorsByCategory[mainCat] = list.filter(
+      (v: string) => !(deleted.vendors || []).includes(v)
+    ).sort();
+  }
+
   return {
     ...catalog,
     brands,
     brandsByType,
     subCategories,
     vendors,
+    vendorsByCategory,
     departments,
     ram,
     ssd,

@@ -393,6 +393,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const step3LocationRef = useRef<HTMLDivElement>(null);
   const [saveReady, setSaveReady] = useState(true);
   const [linkedEmployee, setLinkedEmployee] = useState<Employee | null>(null);
+  const [isAssetCodeEdited, setIsAssetCodeEdited] = useState(false);
 
   // Local drafts state
   const [drafts, setDrafts] = useState<{ id: string; timestamp: string; label: string; data: AssetFormData }[]>([]);
@@ -639,7 +640,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         toast.error(`${entryProfile.assetCodeLabel} is required`);
         return false;
       }
-      if (fieldErrors.serialNumber || (entryProfile.manualAssetCode && fieldErrors.assetCode)) {
+      if (fieldErrors.serialNumber || (entryProfile.manualAssetCode && isAssetCodeEdited && fieldErrors.assetCode)) {
         toast.error("Serial number or asset code already exists");
         return false;
       }
@@ -719,7 +720,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           !!formData.contactName?.trim() &&
           !!formData.contactEmail?.trim();
         if (!hasFullDetails) {
-          toast.error("Create or link a saved employee profile before registering this asset");
+          toast.error("Please fill out Employee ID, Name, and Corporate Email to auto-create the employee profile, or select an existing one.");
           return false;
         }
       }
@@ -841,12 +842,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       .then((data) => {
         if (data && !data.manual && data.code) {
           setFormData((prev) => ({ ...prev, assetCode: data.code }));
+          setIsAssetCodeEdited(false);
         } else if (data?.manual) {
           setFormData((prev) => ({ ...prev, assetCode: prev.assetCode || "" }));
+          setIsAssetCodeEdited(false);
         }
       })
       .catch(() => {});
-  }, [formData.mainCategory, initialData?.id]);
+  }, [formData.mainCategory, formData.subCategory, formData.assetType, initialData?.id]);
 
   const loggedInUser = React.useMemo(() => {
     try {
@@ -1080,6 +1083,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    if (name === "assetCode") {
+      setIsAssetCodeEdited(true);
+    }
+    
     if (name === "macAddress") {
       // Extract only hexadecimal characters and convert to uppercase
       const clean = value.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
@@ -1177,7 +1184,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       }
 
       const serialOk = await checkUnique("serialNumber", dataToSubmit.serialNumber);
-      const codeOk = entryProfile.manualAssetCode
+      const codeOk = (entryProfile.manualAssetCode && isAssetCodeEdited)
         ? await checkUnique("assetCode", dataToSubmit.assetCode)
         : true;
       const macOk = (!isIT || isPeripheral || !dataToSubmit.macAddress) ? true : await checkUnique("macAddress", dataToSubmit.macAddress);
@@ -1664,14 +1671,16 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                       placeholder={isSoftwareCategory ? "Enter software code" : "AST-101"}
                       className={cn(
                         "w-full input-geometric border-blue-400 font-bold bg-white",
-                        fieldErrors.assetCode && "border-red-500 bg-red-50"
+                        isAssetCodeEdited && fieldErrors.assetCode && "border-red-500 bg-red-50"
                       )}
                     />
                     {checkingField === "assetCode" && (
                       <p className="text-[10px] text-slate-400 font-bold">Checking uniqueness…</p>
                     )}
                     {fieldErrors.assetCode && (
-                      <p className="text-[10px] text-red-600 font-bold">{fieldErrors.assetCode}</p>
+                      <p className={cn("text-[10px] font-bold", isAssetCodeEdited ? "text-red-600" : "text-amber-600")}>
+                        {fieldErrors.assetCode} {!isAssetCodeEdited && "(will auto-assign next code on save)"}
+                      </p>
                     )}
                   </>
                 ) : (
@@ -2472,7 +2481,6 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
             }}
             onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
             onEmployeeResolved={setLinkedEmployee}
-            requireSavedProfile
           />
           <div className="w-full space-y-1.5 font-mono">
             <label className="label-caps">Additional Items / Remarks</label>
