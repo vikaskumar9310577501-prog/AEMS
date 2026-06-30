@@ -3290,14 +3290,14 @@ app.post("/api/assets", async (req, res) => {
 
     const savingCode = String(assetData.assetCode || "");
     registerSavingCode(savingCode);
-    // Also reserve the numeric ID to block concurrent requests from grabbing the same S No
-    const reservedIdNum = parseInt(assetId, 10);
+    let reservedIdNum = 0; // will be set inside try after assetId is computed
 
     try {
       await assertAssetUnique(assetData);
 
     // Use generateNextAssetId so concurrent requests get unique IDs atomically
     const assetId = assetData.id?.toString() || generateNextAssetId(assets);
+    reservedIdNum = parseInt(assetId, 10) || 0;
     // Stamp the resolved id onto the payload so the sheet row carries it and the
     // GAS backend does not auto-generate a different id (which would drift the
     // local cache vs sheet and cause dedupe/reconcile to drop the entry).
