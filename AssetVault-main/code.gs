@@ -49,22 +49,68 @@ function migrateCategorySheetNames_(ss) {
 }
 
 var CATEGORY_HEADERS = [
-  "Asset ID", "Asset Code", "Asset Name", "Main Category", "Sub Category",
-  "Brand", "Model", "Serial Number", "Quantity", "Plant Name",
-  "Location", "Department", "Assigned To", "Employee ID", "Purchase Date",
-  "Purchase Cost", "Vendor Name", "Invoice Number", "Warranty Start Date", "Warranty Expiry Date",
-  "Condition", "Status", "Maintenance Required", "Last Maintenance Date", "Next Maintenance Date",
-  "Photo URL / Photo Upload", "Document URL / Attached Documents", "QR Code / Barcode", "Remarks",
-  "Created By", "Created Date", "Updated By", "Updated Date",
-  "Contact Email", "Contact Number"
+  "Asset ID",
+  "Asset Code",
+  "Account Asset Code",
+  "Asset Name",
+  "Main Category",
+  "Sub Category",
+  "Asset Type",
+  "Brand",
+  "Model",
+  "Serial Number",
+  "Quantity",
+  "Plant Name",
+  "Location",
+  "Department",
+  "Assigned To",
+  "Employee ID",
+  "Assigned Date",
+  "Purchase Date",
+  "Purchase Cost",
+  "Vendor Name",
+  "Invoice Number",
+  "Warranty Start Date",
+  "Warranty Expiry Date",
+  "Condition",
+  "Status",
+  "Maintenance Required",
+  "Last Maintenance Date",
+  "Next Maintenance Date",
+  "AMC Vendor",
+  "AMC Start Date",
+  "AMC End Date",
+  "AMC Cost",
+  "Photo URL / Photo Upload",
+  "Document URL / Attached Documents",
+  "QR Code / Barcode",
+  "Remarks",
+  "Created By",
+  "Created Date",
+  "Updated By",
+  "Updated Date",
+  "Contact Email",
+  "Contact Number"
 ];
 
 var IT_EXTRA_HEADERS = [
-  "RAM", "SSD", "CPU", "Windows Version", "MAC Address", "Unique Code", "Binary Code",
-  "Monitor Serial", "Monitor Asset Code",
-  "Keyboard Serial", "Keyboard Asset Code",
-  "Mouse Serial", "Mouse Asset Code",
-  "UPS Serial", "UPS Asset Code"
+  "RAM",
+  "SSD",
+  "CPU",
+  "Windows Version",
+  "MAC Address",
+  "IP Address",
+  "Host Name",
+  "Unique Code",
+  "Binary Code",
+  "Monitor Serial",
+  "Monitor Asset Code",
+  "Keyboard Serial",
+  "Keyboard Asset Code",
+  "Mouse Serial",
+  "Mouse Asset Code",
+  "UPS Serial",
+  "UPS Asset Code"
 ];
 
 var CATEGORY_SHEET_MAP_ = {
@@ -684,7 +730,10 @@ function doPost(e) {
         if (body.sheet === "Users" || body.sheet === "users") {
           return json_({ error: "Invalid action: 'add' is not supported for Users. Use 'add_user' instead." });
         }
-        var mainCat = String(row[3] || "").trim() || "IT Assets";
+        
+        var masterHeaders = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
+        var mainCatIdx = indexOfNormalized_(masterHeaders, "Main Category");
+        var mainCat = (mainCatIdx !== -1 ? String(row[mainCatIdx] || "") : "").trim() || "IT Assets";
         var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
         
         var sh = ss.getSheetByName(sheetName);
@@ -697,7 +746,8 @@ function doPost(e) {
         var newRow = new Array(sheetHeaders.length).fill("");
 
         // 1. Assign ID (S No) dynamically if empty or duplicate
-        var serial = String(row[0] || "").trim();
+        var serialIdx = indexOfNormalized_(masterHeaders, "Asset ID");
+        var serial = serialIdx !== -1 ? String(row[serialIdx] || "").trim() : "";
         var isIdExists = function(idVal) {
           var idStr = String(idVal).replace(/^0+/, "").trim();
           for (var c = 0; c < CATEGORIES.length; c++) {
@@ -725,11 +775,12 @@ function doPost(e) {
             }
           }
           serial = ("000" + (maxId + 1)).slice(-3);
-          row[0] = serial;
+          if (serialIdx !== -1) row[serialIdx] = serial;
         }
 
         // 2. Check if Asset Code is duplicate in this sheet
-        var assetCode = String(row[1] || "").trim(); // Asset Code is index 1
+        var assetCodeIdx = indexOfNormalized_(masterHeaders, "Asset Code");
+        var assetCode = assetCodeIdx !== -1 ? String(row[assetCodeIdx] || "").trim() : "";
         var isCodeExists = function(codeVal) {
           var codeNorm = String(codeVal).trim().toLowerCase();
           var data = sh.getDataRange().getValues();
@@ -741,7 +792,7 @@ function doPost(e) {
 
         if (assetCode && isCodeExists(assetCode)) {
           assetCode = generateAssetCode_(ss, mainCat);
-          row[1] = assetCode;
+          if (assetCodeIdx !== -1) row[assetCodeIdx] = assetCode;
         }
         
         var masterHeaders = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
@@ -773,7 +824,10 @@ function doPost(e) {
     if (action === "update") {
       var id = String(body.id);
       var row = body.row;
-      var mainCat = String(row[3] || "").trim() || "IT Assets";
+      
+      var masterHeaders = CATEGORY_HEADERS.concat(IT_EXTRA_HEADERS);
+      var mainCatIdx = indexOfNormalized_(masterHeaders, "Main Category");
+      var mainCat = (mainCatIdx !== -1 ? String(row[mainCatIdx] || "") : "").trim() || "IT Assets";
       var sheetName = CATEGORY_SHEET_MAP_[mainCat] || "IT Assets";
 
       // Clean duplicate from other sheets if Main Category changed
