@@ -32,7 +32,7 @@ import {
   getAssetsSyncMeta,
   scheduleAssetsSyncIfStale,
 } from "./server/assetCache.js";
-import { generateAssetCode, isManualAssetCodeCategory } from "./server/assetCodeGenerator.js";
+import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode } from "./server/assetCodeGenerator.js";
 import { healMisalignedAssetFields } from "./src/lib/healAssetFields.js";
 import { mapMasterRowToSheetHeaders } from "./server/sheetRowMapper.js";
 import { getUsersWithCache, syncUsersNow, getCachedUsers, getUsersSyncMeta, invalidateUsersCache } from "./server/usersSync.js";
@@ -3251,6 +3251,7 @@ app.post("/api/assets", async (req, res) => {
 
     if (result.error) throw new Error(result.error);
     await insertAssetLocal(localCategory, localRow, masterHeaders);
+    releaseIssuedCode(localCategory, String(assetData.assetCode || ""));
 
     console.log("[AMS] POST /api/assets — response:", { id: assetId, success: true });
 
@@ -3360,6 +3361,7 @@ app.put("/api/assets/:id", async (req, res) => {
 
     if (result.error) throw new Error(result.error);
     await updateAssetLocal(localCategory, canonicalId, localRow, masterHeaders);
+    releaseIssuedCode(localCategory, String(assetData.assetCode || ""));
 
     persistAssetDynamicDetails(canonicalId, assetData).catch(err => {
       console.warn("[AMS] Background dynamic details sync failed:", err);
