@@ -394,6 +394,56 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const [saveReady, setSaveReady] = useState(true);
   const [linkedEmployee, setLinkedEmployee] = useState<Employee | null>(null);
 
+  // Local drafts state
+  const [drafts, setDrafts] = useState<{ id: string; timestamp: string; label: string; data: AssetFormData }[]>([]);
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const draftsJson = localStorage.getItem("asset_vault_drafts");
+    if (draftsJson) {
+      try {
+        setDrafts(JSON.parse(draftsJson));
+      } catch {}
+    }
+  }, []);
+
+  const handleSaveDraft = () => {
+    try {
+      const draftsJson = localStorage.getItem("asset_vault_drafts");
+      const currentDrafts = draftsJson ? JSON.parse(draftsJson) : [];
+      
+      const newDraft = {
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp: new Date().toISOString(),
+        label: `${formData.mainCategory || 'Asset'} - ${formData.assetType || ''} ${formData.make || ''} ${formData.model || ''}`.trim() || 'Untitled Draft',
+        data: formData
+      };
+      
+      const updated = [...currentDrafts, newDraft];
+      localStorage.setItem("asset_vault_drafts", JSON.stringify(updated));
+      setDrafts(updated);
+      toast.success("Draft saved successfully!");
+    } catch (err) {
+      toast.error("Failed to save draft locally");
+    }
+  };
+
+  const handleLoadDraft = (draft: { id: string; timestamp: string; label: string; data: AssetFormData }) => {
+    setFormData(draft.data);
+    setLoadedDraftId(draft.id);
+    setFormStep(1);
+    toast.success(`Loaded draft: ${draft.label}`);
+  };
+
+  const handleDeleteDraft = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = drafts.filter(d => d.id !== id);
+    setDrafts(updated);
+    localStorage.setItem("asset_vault_drafts", JSON.stringify(updated));
+    toast.success("Draft deleted");
+    if (loadedDraftId === id) setLoadedDraftId(null);
+  };
+
   useEffect(() => {
     formStepRef.current = formStep;
   }, [formStep]);
@@ -1139,6 +1189,12 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       }
 
       await Promise.resolve(onSubmit(dataToSubmit));
+      if (loadedDraftId) {
+        const updated = drafts.filter(d => d.id !== loadedDraftId);
+        setDrafts(updated);
+        localStorage.setItem("asset_vault_drafts", JSON.stringify(updated));
+        setLoadedDraftId(null);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to save asset");
     } finally {
@@ -1171,6 +1227,36 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       onKeyDown={handleFormKeyDown}
       className={cn("space-y-8", isPageLayout && "space-y-10")}
     >
+      {/* Saved Drafts List */}
+      {drafts.length > 0 && !initialData && (
+        <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4 mb-2 font-mono">
+          <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-800 mb-2">Saved Drafts ({drafts.length})</h4>
+          <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+            {drafts.map(draft => (
+              <div 
+                key={draft.id}
+                onClick={() => handleLoadDraft(draft)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-amber-100/50 border rounded-xl text-xs cursor-pointer transition-colors",
+                  loadedDraftId === draft.id ? "border-amber-400 ring-1 ring-amber-300 bg-amber-50/25" : "border-amber-200"
+                )}
+              >
+                <span className="font-bold text-slate-800">{draft.label}</span>
+                <span className="text-[10px] text-slate-450 font-sans">{new Date(draft.timestamp).toLocaleDateString()}</span>
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteDraft(draft.id, e)}
+                  className="text-red-400 hover:text-red-650 ml-1 font-bold text-sm leading-none flex items-center justify-center w-4 h-4 rounded-full hover:bg-slate-100"
+                  title="Delete draft"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Step indicator */}
       <nav className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
         {STEPS.map(({ n, title, icon: Icon }) => (
@@ -2443,9 +2529,21 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
       {/* Navigation */}
       <div className="flex gap-3 justify-between pt-6 border-t border-slate-100">
-        <button type="button" onClick={onCancel} disabled={isSubmitting} className="btn-secondary-geometric disabled:opacity-50">
-          Discard
-        </button>
+        <div className="flex gap-3">
+          <button type="button" onClick={onCancel} disabled={isSubmitting} className="btn-secondary-geometric disabled:opacity-50">
+            Discard
+          </button>
+          {!initialData && (
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors"
+            >
+              Save as Draft
+            </button>
+          )}
+        </div>
         <div className="flex gap-3">
           {formStep > 1 && (
             <button type="button" onClick={goBack} disabled={isSubmitting} className="btn-secondary-geometric flex items-center gap-2 disabled:opacity-50">
