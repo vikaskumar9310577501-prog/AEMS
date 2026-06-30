@@ -40,6 +40,8 @@ export function isPublicApiRoute(req: Request): boolean {
   if (req.method === "GET" && /^\/api\/scan\/[^/]+$/.test(path)) return true;
   if (req.method === "GET" && /^\/api\/scan\/[^/]+\/pdf$/.test(path)) return true;
   if (req.method === "GET" && path === "/api/file/view") return true;
+  if (req.method === "GET" && path === "/api/assets/next-code") return true;
+  if (req.method === "GET" && path === "/api/assets/check-unique") return true;
   return false;
 }
 
