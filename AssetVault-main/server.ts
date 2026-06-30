@@ -2078,7 +2078,10 @@ function countAssetsForEmployee(assets: { employeeId: string; contactEmail: stri
   const email = normalizeEmail(emp.email);
   const name = String(emp.name || "").trim().toLowerCase();
   return assets.filter((a) => {
-    if (eid && normalizeEmployeeId(a.employeeId) === eid) return true;
+    const assetEid = normalizeEmployeeId(a.employeeId);
+    if (assetEid) {
+      return assetEid === eid;
+    }
     if (email && normalizeEmail(a.contactEmail) === email) return true;
     if (name && String(a.contactName || "").trim().toLowerCase() === name) return true;
     return false;

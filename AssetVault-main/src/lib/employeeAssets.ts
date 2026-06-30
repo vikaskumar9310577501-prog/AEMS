@@ -14,7 +14,9 @@ export function assetsForEmployee(assets: Asset[], employee: Employee): Asset[] 
 
   return assets.filter((a) => {
     const aid = normId(a.employeeId);
-    if (eid && aid && eid === aid) return true;
+    if (aid) {
+      return aid === eid;
+    }
     if (email && normalizeEmail(a.contactEmail) === email) return true;
     if (name && String(a.contactName || '').trim().toLowerCase() === name) return true;
     return false;
