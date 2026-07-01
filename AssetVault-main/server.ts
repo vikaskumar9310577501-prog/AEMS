@@ -1763,17 +1763,29 @@ app.get("/api/settings", async (req, res) => {
 
     data.settings.catalog = mergeCatalog(data.settings.catalog);
 
-    // Fetch custom options from Google Sheets to merge into local catalog
-    if (GAS_WEBAPP_URL) {
+    // Fetch custom options from Google Sheets to merge into local catalog (with 5-minute cache)
+    const OPTIONS_CACHE_KEY = "gas_options";
+    const optionsCacheAge = 5 * 60 * 1000; // 5 minutes cache
+    let gasOpts = force ? null : readCache<Record<string, string[]>>(OPTIONS_CACHE_KEY, optionsCacheAge);
+
+    if (!gasOpts && GAS_WEBAPP_URL) {
       try {
         const gasResult = await gasGet(GAS_WEBAPP_URL, { type: "options" }) as { success?: boolean; options?: Record<string, string[]> };
         if (gasResult && gasResult.success && gasResult.options) {
-          const gasOpts = gasResult.options;
-          
-          if (!data.settings.catalog) {
-            data.settings.catalog = { brands: {}, vendors: [], departments: [] };
-          }
-          const cat = data.settings.catalog;
+          gasOpts = gasResult.options;
+          writeCache(OPTIONS_CACHE_KEY, gasOpts);
+        }
+      } catch (err) {
+        console.warn("[AMS] Failed to fetch settings options from GAS:", err);
+      }
+    }
+
+    if (gasOpts) {
+      try {
+        if (!data.settings.catalog) {
+          data.settings.catalog = { brands: {}, vendors: [], departments: [] };
+        }
+        const cat = data.settings.catalog;
           
           // 1. Merge Departments
           if (Array.isArray(gasOpts.departments)) {
@@ -1810,11 +1822,10 @@ app.get("/api/settings", async (req, res) => {
               cat[field] = Array.from(new Set([...(cat[field] || []), ...gasOpts[field]]));
             }
           }
+        } catch (err) {
+          console.warn("[AMS] Failed to fetch settings options from GAS:", err);
         }
-      } catch (err) {
-        console.warn("[AMS] Failed to fetch settings options from GAS:", err);
       }
-    }
 
     // Also inject departments from the live employees list so they never disappear
     try {
@@ -1927,6 +1938,7 @@ app.post("/api/settings", async (req, res) => {
     };
     writeAppData(data);
     writeCache("locations_plants", { locations: data.settings.locations, plants: data.settings.plants });
+    writeCache("gas_options", null); // Clear options cache to force fresh pull on next GET
 
     let sheetWarning: string | undefined;
     if (syncSheet && GAS_WEBAPP_URL && (hasIncomingLocations || hasIncomingPlants)) {

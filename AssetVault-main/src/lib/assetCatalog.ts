@@ -438,7 +438,14 @@ export function addBrandForType(
   const typeMap = { ...(byType[key] || {}) };
   if (!typeMap[b]) typeMap[b] = [];
   byType[key] = typeMap;
-  return { ...catalog, brandsByType: byType };
+
+  // ALSO add to master catalog.brands list for Sheets syncing!
+  const masterBrands = { ...(catalog.brands || {}) };
+  if (!masterBrands[b]) {
+    masterBrands[b] = [];
+  }
+
+  return { ...catalog, brandsByType: byType, brands: masterBrands };
 }
 
 export function addModelForType(
@@ -456,7 +463,15 @@ export function addModelForType(
   const list = typeMap[b] || [];
   if (!list.includes(m)) typeMap[b] = [...list, m];
   byType[key] = typeMap;
-  return { ...catalog, brandsByType: byType };
+
+  // ALSO add to master catalog.brands list for Sheets syncing!
+  const masterBrands = { ...(catalog.brands || {}) };
+  const masterModels = masterBrands[b] || [];
+  if (!masterModels.includes(m)) {
+    masterBrands[b] = [...masterModels, m];
+  }
+
+  return { ...catalog, brandsByType: byType, brands: masterBrands };
 }
 
 export function addVendor(catalog: AssetCatalog, mainCategory: string, vendor: string): AssetCatalog {
@@ -466,7 +481,11 @@ export function addVendor(catalog: AssetCatalog, mainCategory: string, vendor: s
   const list = vendorsByCategory[key] || [];
   if (!v || list.includes(v)) return catalog;
   vendorsByCategory[key] = [...list, v].sort();
-  return { ...catalog, vendorsByCategory };
+
+  // ALSO add to master catalog.vendors list for Sheets syncing!
+  const masterVendors = Array.from(new Set([...(catalog.vendors || []), v])).sort();
+
+  return { ...catalog, vendorsByCategory, vendors: masterVendors };
 }
 
 export function addDepartment(catalog: AssetCatalog, dept: string): AssetCatalog {
