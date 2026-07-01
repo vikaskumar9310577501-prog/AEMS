@@ -6,6 +6,7 @@ import { EMPTY_EMPLOYEE } from '../types/employee';
 import SmartSelect from './SmartSelect';
 import { parseJsonResponse } from '../lib/apiFetch';
 import { optionsWithValue } from '../lib/formAsset';
+import { DEFAULT_DEPARTMENTS } from '../lib/assetCatalog';
 import {
   EMPLOYEE_ID_EXISTS_MESSAGE,
   validateEmployeeEmail,
@@ -14,6 +15,14 @@ import {
 } from '../lib/employeeValidation';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+const DEFAULT_SETTINGS: AppSettings = {
+  locations: [],
+  plants: [],
+  catalog: { departments: [...DEFAULT_DEPARTMENTS] },
+};
+
+let cachedSettings: AppSettings | null = null;
 
 interface AppSettings {
   locations: string[];
@@ -39,18 +48,44 @@ function sameSettingValue(left: unknown, right: unknown): boolean {
   return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
 }
 
+function mergeSettingsWithDefaults(settings?: AppSettings | null): AppSettings {
+  const departments = Array.from(
+    new Set([
+      ...DEFAULT_DEPARTMENTS,
+      ...(settings?.catalog?.departments || []),
+    ])
+  ).sort((a, b) => a.localeCompare(b));
+
+  return {
+    locations: settings?.locations || [],
+    plants: settings?.plants || [],
+    catalog: {
+      ...(settings?.catalog || {}),
+      departments,
+    },
+  };
+}
+
 export default function CreateEmployeeModal({ open, initial, onClose, onSaved, mode }: CreateEmployeeModalProps) {
   const [form, setForm] = useState<Employee>(EMPTY_EMPLOYEE());
   const [saving, setSaving] = useState(false);
   const [employeeIdError, setEmployeeIdError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<AppSettings>({ locations: [], plants: [] });
+  const [settings, setSettings] = useState<AppSettings>(() =>
+    mergeSettingsWithDefaults(cachedSettings || DEFAULT_SETTINGS)
+  );
 
   useEffect(() => {
     if (!open) return;
-    fetch(`${API_BASE}/api/settings?refresh=1`)
+    if (cachedSettings) {
+      setSettings(mergeSettingsWithDefaults(cachedSettings));
+    }
+    fetch(`${API_BASE}/api/settings`)
       .then((r) => parseJsonResponse<AppSettings>(r))
-      .then(setSettings)
-      .catch(() => setSettings({ locations: [], plants: [] }));
+      .then((next) => {
+        cachedSettings = mergeSettingsWithDefaults(next);
+        setSettings(cachedSettings);
+      })
+      .catch(() => setSettings((prev) => mergeSettingsWithDefaults(prev)));
   }, [open]);
 
   useEffect(() => {
@@ -243,7 +278,8 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
                       departments: nextDepts
                     }
                   };
-                  setSettings(nextSettings);
+                  cachedSettings = mergeSettingsWithDefaults(nextSettings);
+                  setSettings(cachedSettings);
                   fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -252,24 +288,28 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
                     .then((r) => parseJsonResponse<SettingsSaveResponse>(r))
                     .then((data) => {
                       if (data.settings) {
-                        setSettings((prev) => ({
-                          ...prev,
+                        cachedSettings = mergeSettingsWithDefaults({
                           ...data.settings,
                           catalog: {
-                            ...prev.catalog,
-                            ...data.settings?.catalog,
-                            departments: Array.from(
-                              new Set([
-                                ...(data.settings?.catalog?.departments || []),
-                                deptUpper,
-                              ])
-                            ),
+                            ...data.settings.catalog,
+                            departments: [
+                              ...(data.settings.catalog?.departments || []),
+                              deptUpper,
+                            ],
                           },
-                        }));
+                        });
+                        setSettings(cachedSettings);
                       }
                     })
                     .catch((err) => {
                       console.error("Error saving new department:", err);
+                      cachedSettings = mergeSettingsWithDefaults({
+                        ...settings,
+                        catalog: {
+                          ...settings.catalog,
+                          departments: nextDepts
+                        }
+                      });
                       setSettings(prev => ({
                         ...prev,
                         catalog: {

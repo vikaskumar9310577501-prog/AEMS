@@ -298,7 +298,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const base = import.meta.env.VITE_API_BASE_URL || '';
       const url = force ? `${base}/api/assets?refresh=1` : `${base}/api/assets`;
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         throw new Error(
@@ -322,7 +322,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAssets(nextAssets);
       localStorage.setItem(ASSETS_CACHE_KEY, JSON.stringify(nextAssets));
       try {
-        const metaRes = await fetch(`${base}/api/assets/sync-meta`, { credentials: 'include' });
+        const metaRes = await fetch(`${base}/api/assets/sync-meta`, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
         if (metaRes.ok) {
           const meta = (await metaRes.json()) as { fingerprint?: string };
           if (meta.fingerprint) assetsFingerprintRef.current = meta.fingerprint;
@@ -365,7 +368,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL || ''}/api/assets/sync-meta`,
-          { credentials: 'include' }
+          { credentials: 'include', cache: 'no-store' }
         );
         if (!res.ok) return;
 

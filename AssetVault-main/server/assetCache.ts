@@ -21,8 +21,10 @@ import {
 
 const CACHE_KEY = "assets";
 const DELETED_CACHE_KEY = "assets_deleted_tombstones";
+const RECENT_UPSERT_CACHE_KEY = "assets_recent_upserts";
 const FRESH_MS = 2 * 60 * 1000;
 const DELETE_TOMBSTONE_MS = 10 * 60 * 1000;
+const RECENT_UPSERT_MS = 3 * 60 * 1000;
 /** Minimum gap between background sheet pulls triggered by sync-meta polling. */
 const META_SYNC_MIN_INTERVAL_MS = 45 * 1000;
 
@@ -44,6 +46,7 @@ function healAssetsList(assets: MappedAsset[]): MappedAsset[] {
 }
 
 type DeletedAssetTombstone = Record<string, number>;
+type RecentUpsertMap = Record<string, number>;
 
 function readDeletedTombstones(): DeletedAssetTombstone {
   const raw = readCacheStale<DeletedAssetTombstone>(DELETED_CACHE_KEY) || {};
@@ -82,9 +85,48 @@ function filterDeletedAssets(assets: MappedAsset[]): MappedAsset[] {
   return assets.filter((asset) => !deletedIds.has(normalizeSheetId(asset.id)));
 }
 
+function readRecentUpserts(): RecentUpsertMap {
+  const raw = readCacheStale<RecentUpsertMap>(RECENT_UPSERT_CACHE_KEY) || {};
+  const now = Date.now();
+  const active: RecentUpsertMap = {};
+  for (const [id, expiresAt] of Object.entries(raw)) {
+    if (Number(expiresAt) > now) active[id] = Number(expiresAt);
+  }
+  if (Object.keys(active).length !== Object.keys(raw).length) {
+    writeCache(RECENT_UPSERT_CACHE_KEY, active);
+  }
+  return active;
+}
+
+function rememberRecentUpsert(asset: MappedAsset) {
+  const id = normalizeSheetId(asset.id);
+  if (!id) return;
+  const recent = readRecentUpserts();
+  recent[id] = Date.now() + RECENT_UPSERT_MS;
+  writeCache(RECENT_UPSERT_CACHE_KEY, recent);
+}
+
+function forgetRecentUpsertsSeenOnSheet(sheetAssets: MappedAsset[]) {
+  const recent = readRecentUpserts();
+  if (Object.keys(recent).length === 0) return;
+  let changed = false;
+  for (const asset of sheetAssets) {
+    const id = normalizeSheetId(asset.id);
+    if (id && recent[id]) {
+      delete recent[id];
+      changed = true;
+    }
+  }
+  if (changed) writeCache(RECENT_UPSERT_CACHE_KEY, recent);
+}
+
 function mergeAssetsBySyncKey(previous: MappedAsset[], incoming: MappedAsset[]): MappedAsset[] {
   const sheetKeys = buildAssetSyncKeySet(filterDeletedAssets(incoming));
-  const merged = filterDeletedAssets(previous).filter((asset) => isAssetOnSheet(asset, sheetKeys));
+  const recentUpserts = readRecentUpserts();
+  const merged = filterDeletedAssets(previous).filter((asset) => {
+    const id = normalizeSheetId(asset.id);
+    return isAssetOnSheet(asset, sheetKeys) || !!recentUpserts[id];
+  });
   for (const raw of filterDeletedAssets(incoming)) {
     const asset = healMisalignedAssetFields(raw);
     const keys = buildAssetSyncKeySet([asset]);
@@ -103,7 +145,11 @@ function reconcileSheetDeletions(sheetAssets: MappedAsset[]): number {
   if (previous.length === 0) return 0;
 
   const sheetKeys = buildAssetSyncKeySet(filterDeletedAssets(sheetAssets));
-  const removed = previous.filter((a) => !isAssetOnSheet(a, sheetKeys));
+  const recentUpserts = readRecentUpserts();
+  const removed = previous.filter((a) => {
+    const id = normalizeSheetId(a.id);
+    return !recentUpserts[id] && !isAssetOnSheet(a, sheetKeys);
+  });
 
   const guard = shouldBlockSheetDeletion({
     previousCount: previous.length,
@@ -143,6 +189,7 @@ async function pullFromSheet(gasUrl: string): Promise<MappedAsset[]> {
   }
 
   lastRemovedCount = reconcileSheetDeletions(sheetAssets);
+  forgetRecentUpsertsSeenOnSheet(sheetAssets);
   return mergeAssetsBySyncKey(previous, sheetAssets);
 }
 
@@ -243,6 +290,7 @@ export function upsertAssetInCache(asset: MappedAsset) {
   forgetDeletedAsset(String(asset.id || ""));
   const cached = readCacheStale<MappedAsset[]>(CACHE_KEY) || [];
   const healed = healMisalignedAssetFields(asset);
+  rememberRecentUpsert(healed);
   const targetId = normalizeSheetId(healed.id);
   const idx = cached.findIndex((a) => normalizeSheetId(a.id) === targetId);
   if (idx >= 0) {

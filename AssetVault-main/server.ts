@@ -643,6 +643,7 @@ app.get("/api/assets/sync-meta", async (req, res) => {
   try {
     if (GAS_WEBAPP_URL) scheduleAssetsSyncIfStale(GAS_WEBAPP_URL);
     const meta = getAssetsSyncMeta();
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("X-AMS-Syncing", meta.syncing ? "1" : "0");
     res.json(meta);
   } catch (err: unknown) {
@@ -733,6 +734,10 @@ app.post("/api/assets/sync", async (req, res) => {
 app.get("/api/assets", async (req, res) => {
   try {
     if (!GAS_WEBAPP_URL) return res.status(500).json({ error: "GAS_WEBAPP_URL is not configured" });
+
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
     const force = req.query.refresh === "1";
     let assets: MappedAsset[];

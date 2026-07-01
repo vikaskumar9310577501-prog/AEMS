@@ -89,6 +89,25 @@ const ALL_CATEGORIES = [
   ...(MISSING_ITEMS_FEATURE_ENABLED ? ['Missing Items'] : []),
 ];
 
+const DASHBOARD_FILTER_STORAGE_KEY = 'assetvault.dashboardFilters';
+
+function readSavedDashboardFilters() {
+  if (typeof window === 'undefined') {
+    return { location: 'All', plant: 'All', status: 'All' };
+  }
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_FILTER_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      location: String(parsed.location || 'All'),
+      plant: String(parsed.plant || 'All'),
+      status: String(parsed.status || 'All'),
+    };
+  } catch {
+    return { location: 'All', plant: 'All', status: 'All' };
+  }
+}
+
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   'IT Assets': Cpu,
   [SIDEBAR_CCTV_CATEGORY]: CameraIcon,
@@ -252,9 +271,21 @@ export default function DashboardPage() {
   const [plants, setPlants] = useState<{ code: string; name: string; location: string }[]>([]);
 
   // Advanced Filters
-  const [selectedLocation, setSelectedLocation] = useState('All');
-  const [selectedPlant, setSelectedPlant] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const savedFilters = useMemo(readSavedDashboardFilters, []);
+  const [selectedLocation, setSelectedLocation] = useState(savedFilters.location);
+  const [selectedPlant, setSelectedPlant] = useState(savedFilters.plant);
+  const [selectedStatus, setSelectedStatus] = useState(savedFilters.status);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      DASHBOARD_FILTER_STORAGE_KEY,
+      JSON.stringify({
+        location: selectedLocation,
+        plant: selectedPlant,
+        status: selectedStatus,
+      })
+    );
+  }, [selectedLocation, selectedPlant, selectedStatus]);
 
   useEffect(() => {
     setSelectedAssetIds([]);
@@ -382,20 +413,22 @@ export default function DashboardPage() {
     [assets, searchQuery, filterAssets]
   );
 
-  const displayAssets = useMemo(() => {
+  const locationPlantFilteredAssets = useMemo(() => {
     let list = filteredAssets;
-
-    // Filter by Location
     if (selectedLocation !== 'All') {
       list = list.filter((a) => assetMatchesLocation(a, selectedLocation));
     }
 
-    // Filter by Plant
     if (selectedPlant !== 'All') {
       list = list.filter((a) => assetMatchesPlant(a, selectedPlant, plantOptions));
     }
 
-    // Filter by Status / assetFilter
+    return list;
+  }, [filteredAssets, plantOptions, selectedLocation, selectedPlant]);
+
+  const displayAssets = useMemo(() => {
+    let list = locationPlantFilteredAssets;
+
     if (selectedStatus !== 'All') {
       if (selectedStatus === 'Assigned') {
         list = list.filter(isAssetAssignedToEmployee);
@@ -416,31 +449,31 @@ export default function DashboardPage() {
       }
     }
     return list;
-  }, [filteredAssets, plantOptions, selectedLocation, selectedPlant, selectedStatus]);
+  }, [locationPlantFilteredAssets, selectedStatus]);
 
   const dashboardAssignedCount = useMemo(
-    () => filteredAssets.filter(isAssetAssignedToEmployee).length,
-    [filteredAssets]
+    () => locationPlantFilteredAssets.filter(isAssetAssignedToEmployee).length,
+    [locationPlantFilteredAssets]
   );
 
   const dashboardAvailableCount = useMemo(() => {
-    return filteredAssets.filter((a) => !a.status || a.status === 'Available').length;
-  }, [filteredAssets]);
+    return locationPlantFilteredAssets.filter((a) => !a.status || a.status === 'Available').length;
+  }, [locationPlantFilteredAssets]);
 
   const showAssetsView = true;
 
   const dashboardMaintenanceOrExpiryCount = useMemo(() => {
     if (isSoftwareCategory) {
-      return filteredAssets.filter((a) => isSoftwareLicenseExpired(a)).length;
+      return locationPlantFilteredAssets.filter((a) => isSoftwareLicenseExpired(a)).length;
     }
-    return filteredAssets.filter(
+    return locationPlantFilteredAssets.filter(
       (a) => a.status === 'Under Maintenance' || a.maintenanceRequired === 'Yes'
     ).length;
-  }, [filteredAssets, isSoftwareCategory]);
+  }, [locationPlantFilteredAssets, isSoftwareCategory]);
 
   const dashboardRenewableSoftwareCount = useMemo(
-    () => filteredAssets.filter((a) => isSoftwareLicenseRenewable(a)).length,
-    [filteredAssets]
+    () => locationPlantFilteredAssets.filter((a) => isSoftwareLicenseRenewable(a)).length,
+    [locationPlantFilteredAssets]
   );
 
   const missingStats = useMemo(() => {
@@ -522,9 +555,7 @@ export default function DashboardPage() {
 
   const exportToExcel = () => {
     try {
-      const targetAssets =
-        user && user.role !== 'IT Admin' ? filteredAssets : assets;
-      const ws = XLSX.utils.json_to_sheet(targetAssets);
+      const ws = XLSX.utils.json_to_sheet(displayAssets);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Assets');
       XLSX.writeFile(wb, `${APP_SHORT_NAME}_Export_${formatFilenameDate()}.xlsx`);
@@ -834,7 +865,7 @@ export default function DashboardPage() {
                     <p className={`text-[10px] font-black uppercase tracking-wider ${selectedStatus === 'All' ? 'text-slate-600' : 'text-slate-400'}`}>
                       {selectedCategory === 'Software / License Assets' ? 'Total Software' : 'Total Assets'}
                     </p>
-                    <h3 className="text-2xl font-black text-slate-900 mt-1">{filteredAssets.length}</h3>
+                    <h3 className="text-2xl font-black text-slate-900 mt-1">{locationPlantFilteredAssets.length}</h3>
                   </div>
                   <Layers className={`w-6 h-6 shrink-0 ${selectedStatus === 'All' ? 'text-slate-700' : 'text-slate-400'}`} />
                 </div>
