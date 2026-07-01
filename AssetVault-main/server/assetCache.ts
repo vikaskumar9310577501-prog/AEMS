@@ -233,16 +233,11 @@ export async function getAssetsWithCache(
     force = true;
   }
 
-  const fresh = readCache<MappedAsset[]>(CACHE_KEY, FRESH_MS);
-  if (fresh && !force) {
-    void refreshAssetsInBackground(gasUrl);
-    return { assets: healAssetsList(fresh), fromCache: true, syncing: !!refreshPromise };
-  }
-
-  const stale = readCacheStale<MappedAsset[]>(CACHE_KEY);
-  if (stale && !force) {
-    void refreshAssetsInBackground(gasUrl);
-    return { assets: healAssetsList(stale), fromCache: true, syncing: true };
+  if (!force && refreshPromise) {
+    const cached = readCacheStale<MappedAsset[]>(CACHE_KEY);
+    if (cached) {
+      return { assets: healAssetsList(cached), fromCache: true, syncing: true };
+    }
   }
 
   const assets = await refreshAssetsNow(gasUrl);

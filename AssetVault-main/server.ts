@@ -1733,6 +1733,7 @@ app.get("/api/settings", async (req, res) => {
   try {
     const data = readAppData();
     const force = req.query.refresh === "1";
+    const includeRemoteOptions = req.query.options === "1" || force;
 
     if (force && GAS_WEBAPP_URL) {
       try {
@@ -1772,7 +1773,7 @@ app.get("/api/settings", async (req, res) => {
     const optionsCacheAge = 5 * 60 * 1000; // 5 minutes cache
     let gasOpts = force ? null : readCache<Record<string, string[]>>(OPTIONS_CACHE_KEY, optionsCacheAge);
 
-    if (!gasOpts && GAS_WEBAPP_URL) {
+    if (!gasOpts && GAS_WEBAPP_URL && includeRemoteOptions) {
       try {
         const gasResult = await gasGet(GAS_WEBAPP_URL, { type: "options" }) as { success?: boolean; options?: Record<string, string[]> };
         if (gasResult && gasResult.success && gasResult.options) {
@@ -2248,8 +2249,9 @@ app.post("/api/employees", async (req, res) => {
     }
 
     const list = await loadEmployeesWithSheetSync();
-    if (findEmployeeById(list, body.employeeId)) {
-      return res.status(409).json({ error: EMPLOYEE_ID_EXISTS_MESSAGE });
+    const existing = findEmployeeById(list, body.employeeId);
+    if (existing) {
+      return res.json({ success: true, employee: existing, alreadyExists: true });
     }
 
     const saved = createEmployee(body);
@@ -2259,7 +2261,12 @@ app.post("/api/employees", async (req, res) => {
       if (!gas.ok) {
         deleteEmployee(saved.employeeId);
         if (isEmployeeIdExistsError(gas.error)) {
-          return res.status(409).json({ error: EMPLOYEE_ID_EXISTS_MESSAGE });
+          const refreshed = await loadEmployeesWithSheetSync();
+          const existingAfterSync = findEmployeeById(refreshed, saved.employeeId);
+          if (existingAfterSync) {
+            return res.json({ success: true, employee: existingAfterSync, alreadyExists: true });
+          }
+          return res.json({ success: true, employee: saved, alreadyExists: true });
         }
         return res.status(502).json({ error: gas.error || "Database sync failed; employee was not saved locally." });
       }

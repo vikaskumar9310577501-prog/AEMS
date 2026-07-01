@@ -138,7 +138,7 @@ export default function EmployeeSelector({
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       void lookup(values.employeeId || '', values.contactEmail || '', active);
-    }, 450);
+    }, 150);
     return () => {
       active = false;
       if (timerRef.current) clearTimeout(timerRef.current);

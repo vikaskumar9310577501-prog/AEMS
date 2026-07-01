@@ -373,34 +373,34 @@ export async function fetchAllAssets(gasWebappUrl: string, dbMode?: string): Pro
           ["redesigned-post", () => gasPost(gasWebappUrl, { action: "list_assets_redesigned" })] as const,
         ];
 
-  let firstEmpty: { label: string; assets: MappedAsset[] } | null = null;
-  const errors: string[] = [];
+  const results = await Promise.all(
+    attempts.map(([label, reader]) => readGasAssetsAttempt(label, reader))
+  );
+  const errors = results
+    .filter((result) => result.error)
+    .map((result) => `${result.label}: ${result.error instanceof Error ? result.error.message : String(result.error)}`);
+  const nonEmpty = results.filter((result) => result.assets.length > 0);
 
-  for (const [label, reader] of attempts) {
-    const result = await readGasAssetsAttempt(label, reader);
-    if (result.assets.length > 0) {
-      if (firstEmpty) {
-        console.warn(
-          `[AMS] Asset sync fallback: ${firstEmpty.label} returned 0 rows; using ${label} with ${result.assets.length} rows.`
-        );
-      }
-      return result.assets;
+  if (nonEmpty.length > 0) {
+    const selected = nonEmpty.reduce((best, current) =>
+      current.assets.length > best.assets.length ? current : best
+    );
+    const smaller = nonEmpty.filter((result) => result.label !== selected.label);
+    if (smaller.some((result) => result.assets.length !== selected.assets.length)) {
+      console.warn(
+        `[AMS] Asset sync selected ${selected.label} with ${selected.assets.length} rows; other readers: ${
+          smaller.map((result) => `${result.label}=${result.assets.length}`).join(", ")
+        }`
+      );
     }
-    if (result.error) {
-      errors.push(`${label}: ${result.error instanceof Error ? result.error.message : String(result.error)}`);
-    } else if (!firstEmpty) {
-      firstEmpty = { label, assets: result.assets };
-    }
+    return selected.assets;
   }
 
-  if (firstEmpty) {
-    if (errors.length) {
-      console.warn(`[AMS] Asset sync returned 0 rows after fallback attempts. ${errors.join(" | ")}`);
-    }
-    return firstEmpty.assets;
+  if (errors.length) {
+    console.warn(`[AMS] Asset sync returned 0 rows after fallback attempts. ${errors.join(" | ")}`);
   }
 
-  throw new Error(errors.join(" | ") || "Failed to load assets from Database");
+  return [];
 }
 
 function normalizeScanKey(value: string): string[] {

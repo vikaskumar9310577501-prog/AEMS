@@ -97,6 +97,14 @@ function scopeValueIncludes(left: unknown, right: unknown): boolean {
   return !!l && !!r && (l === r || l.includes(r));
 }
 
+function hasAllScope(values: string[] | undefined): boolean {
+  return (values || []).some((value) => sameScopeValue(value, 'All'));
+}
+
+function scopeListIncludes(values: string[] | undefined, target: string): boolean {
+  return (values || []).some((value) => sameScopeValue(value, target));
+}
+
 const visibleMainCategories = () =>
   MISSING_ITEMS_FEATURE_ENABLED
     ? MAIN_CATEGORIES
@@ -351,8 +359,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user && !assetsLoadedRef.current) {
       assetsLoadedRef.current = true;
-      const hadCache = loadAssetsFromCache();
-      fetchAssets({ silent: hadCache });
+      void fetchAssets();
     }
     if (!user) {
       assetsLoadedRef.current = false;
@@ -425,20 +432,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         filtered = filtered.filter((a) => assetMatchesSidebarCategory(a, selectedCategory));
       }
 
-      if (user && user.role !== 'IT Admin') {
-        if (user.locations?.length && !user.locations.includes('All')) {
+      if (user && !isItAdminRole(user.role)) {
+        if (user.locations?.length && !hasAllScope(user.locations)) {
           filtered = filtered.filter((a) =>
             user.locations.some((loc) => sameScopeValue(a.location, loc) || scopeValueIncludes(a.location, loc))
           );
         }
-        if (user.plants?.length && !user.plants.includes('All')) {
+        if (user.plants?.length && !hasAllScope(user.plants)) {
           filtered = filtered.filter((a) =>
             user.plants.some((p) => sameScopeValue(a.plantCode, p) || scopeValueIncludes(a.plantCode, p))
           );
         }
-        if (user.categories?.length && !user.categories.includes('All')) {
+        if (user.categories?.length && !hasAllScope(user.categories)) {
           filtered = filtered.filter((a) =>
-            user.categories?.includes(resolveAssetMainCategory(a))
+            scopeListIncludes(user.categories, resolveAssetMainCategory(a))
           );
         }
       }

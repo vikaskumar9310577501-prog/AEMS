@@ -190,7 +190,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const [dynamicFieldErrors, setDynamicFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1')
+    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
+      credentials: 'include',
+      cache: 'no-store',
+    })
       .then((r) => r.json())
       .then((data) => {
         setAppSettings({

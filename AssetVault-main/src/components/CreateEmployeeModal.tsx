@@ -36,6 +36,14 @@ interface SettingsSaveResponse {
   error?: string;
 }
 
+interface EmployeeSaveResponse {
+  success?: boolean;
+  employee?: Employee;
+  error?: string;
+  sheetWarning?: string;
+  alreadyExists?: boolean;
+}
+
 interface CreateEmployeeModalProps {
   open: boolean;
   initial?: Partial<Employee>;
@@ -142,14 +150,6 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
     const phoneErr = validateEmployeePhone(form.phone);
     if (phoneErr) return toast.error(phoneErr);
 
-    if (!isEdit) {
-      const taken = await checkEmployeeIdTaken(form.employeeId);
-      if (taken) {
-        setEmployeeIdError(EMPLOYEE_ID_EXISTS_MESSAGE);
-        return toast.error(EMPLOYEE_ID_EXISTS_MESSAGE);
-      }
-    }
-
     setSaving(true);
     try {
       const url = isEdit
@@ -161,12 +161,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, syncSheet: true }),
       });
-      const data = await parseJsonResponse<{
-        success?: boolean;
-        employee?: Employee;
-        error?: string;
-        sheetWarning?: string;
-      }>(res);
+      const data = await parseJsonResponse<EmployeeSaveResponse>(res);
       if (!res.ok) {
         if (res.status === 409 || data.error?.toLowerCase().includes('already exists')) {
           setEmployeeIdError(EMPLOYEE_ID_EXISTS_MESSAGE);
@@ -174,7 +169,9 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
         throw new Error(data.error || (res.status === 409 ? EMPLOYEE_ID_EXISTS_MESSAGE : 'Save failed'));
       }
       const saved = (data.employee || form) as Employee;
-      if (data.sheetWarning) {
+      if (data.alreadyExists) {
+        toast.success('Employee profile linked');
+      } else if (data.sheetWarning) {
         toast.error(`Profile saved locally. Sheet sync: ${data.sheetWarning}`, { duration: 6000 });
       } else {
         toast.success(isEdit ? 'Employee profile updated' : 'Employee profile created');
