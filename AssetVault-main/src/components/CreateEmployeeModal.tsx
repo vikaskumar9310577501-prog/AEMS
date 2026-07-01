@@ -21,6 +21,12 @@ interface AppSettings {
   catalog?: { departments?: string[] };
 }
 
+interface SettingsSaveResponse {
+  success?: boolean;
+  settings?: AppSettings;
+  error?: string;
+}
+
 interface CreateEmployeeModalProps {
   open: boolean;
   initial?: Partial<Employee>;
@@ -228,25 +234,50 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
               const deptUpper = newDept.trim().toUpperCase();
               if (deptUpper) {
                 const currentDepts = settings.catalog?.departments || [];
-                if (!currentDepts.includes(deptUpper)) {
+                if (!currentDepts.some((dept) => sameSettingValue(dept, deptUpper))) {
                   const nextDepts = [...currentDepts, deptUpper];
-                  setSettings(prev => ({
-                    ...prev,
+                  const nextSettings = {
+                    ...settings,
                     catalog: {
-                      ...prev.catalog,
+                      ...settings.catalog,
                       departments: nextDepts
                     }
-                  }));
+                  };
+                  setSettings(nextSettings);
                   fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      catalog: {
-                        ...(settings.catalog || {}),
-                        departments: nextDepts
+                    body: JSON.stringify({ catalog: nextSettings.catalog }),
+                  })
+                    .then((r) => parseJsonResponse<SettingsSaveResponse>(r))
+                    .then((data) => {
+                      if (data.settings) {
+                        setSettings((prev) => ({
+                          ...prev,
+                          ...data.settings,
+                          catalog: {
+                            ...prev.catalog,
+                            ...data.settings?.catalog,
+                            departments: Array.from(
+                              new Set([
+                                ...(data.settings?.catalog?.departments || []),
+                                deptUpper,
+                              ])
+                            ),
+                          },
+                        }));
                       }
-                    }),
-                  }).catch((err) => console.error("Error saving new department:", err));
+                    })
+                    .catch((err) => {
+                      console.error("Error saving new department:", err);
+                      setSettings(prev => ({
+                        ...prev,
+                        catalog: {
+                          ...prev.catalog,
+                          departments: nextDepts
+                        }
+                      }));
+                    });
                 }
                 setForm((f) => ({ ...f, department: deptUpper }));
               }

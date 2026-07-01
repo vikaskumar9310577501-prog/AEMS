@@ -52,6 +52,12 @@ import EmployeeSelector from "./EmployeeSelector";
 import type { Employee } from "../types/employee";
 import { normalizeEmployeeId } from "../lib/employeeLookup";
 import { isInactiveEmployee } from "../lib/employeeStatus";
+import { useApp } from "../context/AppProvider";
+import {
+  buildScopedLocationOptions,
+  buildScopedPlantOptions,
+  sameScopeOption,
+} from "../lib/scopeOptions";
 import {
   resolveTypeDefinition,
   emptyDynamicValues,
@@ -173,6 +179,7 @@ function sameSettingValue(left: unknown, right: unknown): boolean {
 
 export default function AssetForm({ initialData, onSubmit, onCancel, loading, layout = "modal", prefillMainCategory, prefillAssetType, hideAssignee = false, allowedCategories: propAllowedCategories }: AssetFormProps) {
   const isPageLayout = layout === "page";
+  const { user: loggedInUser } = useApp();
   const { config: typeConfig } = useTypeDefinitions();
   const [appSettings, setAppSettings] = useState<AppSettings>({ locations: [], plants: [], assetFields: [] });
   const [catalog, setCatalog] = useState<AssetCatalog>(() => mergeCatalog());
@@ -233,6 +240,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const persistCatalog = (updater: AssetCatalog | ((prev: AssetCatalog) => AssetCatalog)) => {
     setCatalog((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
+      setAppSettings((settings) => ({ ...settings, catalog: next }));
       fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -863,38 +871,29 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       .catch(() => {});
   }, [formData.mainCategory, formData.subCategory, formData.assetType, formData.assetCode, isAssetCodeEdited, initialData?.id]);
 
-  const loggedInUser = React.useMemo(() => {
-    try {
-      const stored = localStorage.getItem('assestflow_user') || localStorage.getItem('assetflow_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  }, []);
-
   const allowedLocations = React.useMemo(() => {
-    if (!loggedInUser) return [];
-    if (loggedInUser.role === 'IT Admin' || loggedInUser.locations?.includes('All')) {
-      return appSettings.locations;
-    }
-    return appSettings.locations.filter((loc) =>
-      loggedInUser.locations?.some((allowed: string) => sameSettingValue(allowed, loc))
+    return buildScopedLocationOptions(
+      appSettings.locations,
+      appSettings.plants,
+      loggedInUser,
+      [formData.location]
     );
-  }, [appSettings.locations, loggedInUser]);
+  }, [appSettings.locations, appSettings.plants, loggedInUser, formData.location]);
 
   const allowedPlants = React.useMemo(() => {
-    if (!loggedInUser) return [];
-    if (loggedInUser.role === 'IT Admin' || loggedInUser.plants?.includes('All')) {
-      return appSettings.plants;
-    }
-    return appSettings.plants.filter((p) =>
-      loggedInUser.plants?.some((allowed: string) => sameSettingValue(allowed, p.code) || sameSettingValue(allowed, p.name))
+    return buildScopedPlantOptions(
+      appSettings.plants,
+      loggedInUser,
+      formData.plantCode
+        ? [{ code: formData.plantCode, name: formData.plantCode, location: formData.location }]
+        : [],
+      allowedLocations
     );
-  }, [appSettings.plants, loggedInUser]);
+  }, [appSettings.plants, loggedInUser, formData.plantCode, formData.location, allowedLocations]);
 
   const plantsForLocation = React.useMemo(() => {
     return allowedPlants.filter(
-      (p) => !formData.location || sameSettingValue(p.location, formData.location)
+      (p) => !formData.location || !p.location || sameScopeOption(p.location, formData.location)
     );
   }, [allowedPlants, formData.location]);
 
@@ -1618,8 +1617,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               }}
               onAddCustom={(model) => {
                 if (!formData.make) return;
+                const trimmed = model.trim();
+                if (!trimmed) return;
+                setFormData((prev) => ({
+                  ...prev,
+                  model: trimmed,
+                  assetName: (prev.mainCategory || "IT Assets") === "IT Assets" ? `${prev.make} ${trimmed}`.trim() : prev.assetName,
+                }));
                 persistCatalog((c) =>
-                  addModelForType(c, formData.assetType, formData.make, model)
+                  addModelForType(c, formData.assetType, formData.make, trimmed)
                 );
               }}
               onDeleteOption={(model) => {

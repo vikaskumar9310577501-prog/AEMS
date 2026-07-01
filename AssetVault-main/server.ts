@@ -507,13 +507,13 @@ app.get("/api/auth/session", async (req, res) => {
     if (!session) return res.status(401).json({ error: "Not logged in" });
 
     let user = findRegisteredUser(session.email);
-    if (!user) {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID || !user) {
       try {
         await syncUsersNow(userSyncDeps());
+        user = findRegisteredUser(session.email);
       } catch {
         /* cache only */
       }
-      user = findRegisteredUser(session.email);
     }
     if (!user) return res.status(401).json({ error: "User account not found" });
 

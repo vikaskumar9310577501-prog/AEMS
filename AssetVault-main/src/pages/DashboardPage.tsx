@@ -68,6 +68,11 @@ import {
 } from '../lib/dashboardCategories';
 import { useEmployees } from '../hooks/useEmployees';
 import { SUB_TO_MAIN_MAP, subCategoryForItAssetType, PERIPHERAL_TYPES } from '../lib/assetCatalogByType';
+import {
+  buildScopedLocationOptions,
+  buildScopedPlantOptions,
+  sameScopeOption,
+} from '../lib/scopeOptions';
 
 const ALL_CATEGORIES = [
   'IT Assets',
@@ -308,6 +313,30 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  const locationOptions = useMemo(
+    () => buildScopedLocationOptions(locations, plants, user, [selectedLocation]),
+    [locations, plants, user, selectedLocation]
+  );
+
+  const plantOptions = useMemo(
+    () =>
+      buildScopedPlantOptions(
+        plants,
+        user,
+        selectedPlant !== 'All'
+          ? [
+              {
+                code: selectedPlant,
+                name: selectedPlant,
+                location: selectedLocation === 'All' ? '' : selectedLocation,
+              },
+            ]
+          : [],
+        locationOptions
+      ),
+    [plants, user, selectedPlant, selectedLocation, locationOptions]
+  );
+
   useEffect(() => {
     setSelectedStatus('All');
   }, [selectedCategory]);
@@ -348,6 +377,11 @@ export default function DashboardPage() {
     [assets, searchQuery, selectedCategory, filterAssets]
   );
 
+  const scopedDashboardAssets = useMemo(
+    () => filterAssets(assets, { searchQuery, selectedCategory: 'All' }),
+    [assets, searchQuery, filterAssets]
+  );
+
   const displayAssets = useMemo(() => {
     let list = filteredAssets;
 
@@ -358,7 +392,7 @@ export default function DashboardPage() {
 
     // Filter by Plant
     if (selectedPlant !== 'All') {
-      list = list.filter((a) => assetMatchesPlant(a, selectedPlant, plants));
+      list = list.filter((a) => assetMatchesPlant(a, selectedPlant, plantOptions));
     }
 
     // Filter by Status / assetFilter
@@ -382,7 +416,7 @@ export default function DashboardPage() {
       }
     }
     return list;
-  }, [filteredAssets, plants, selectedLocation, selectedPlant, selectedStatus]);
+  }, [filteredAssets, plantOptions, selectedLocation, selectedPlant, selectedStatus]);
 
   const dashboardAssignedCount = useMemo(
     () => filteredAssets.filter(isAssetAssignedToEmployee).length,
@@ -425,7 +459,7 @@ export default function DashboardPage() {
             const matchesLocation = selectedLocation === 'All' || sameFilterValue(emp.location, selectedLocation);
             if (!matchesLocation) return false;
 
-            const matchesPlant = valueMatchesPlant(emp.plantCode, selectedPlant, plants);
+            const matchesPlant = valueMatchesPlant(emp.plantCode, selectedPlant, plantOptions);
             if (!matchesPlant) return false;
           } else {
             if (selectedLocation !== 'All' || selectedPlant !== 'All') return false;
@@ -437,7 +471,7 @@ export default function DashboardPage() {
         return true;
       }
 
-      const asset = findAssetForRecord(assets, parentAssetId);
+      const asset = findAssetForRecord(scopedDashboardAssets, parentAssetId);
       if (!asset) return false;
 
       const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
@@ -446,7 +480,7 @@ export default function DashboardPage() {
       const matchesLocation = assetMatchesLocation(asset, selectedLocation);
       if (!matchesLocation) return false;
 
-      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plants);
+      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
       if (!matchesPlant) return false;
 
       return true;
@@ -459,11 +493,11 @@ export default function DashboardPage() {
       recoveredCount: recovered.length,
       totalCount: filtered.length,
     };
-  }, [missingItemRecords, assets, employees, plants, selectedCategory, selectedLocation, selectedPlant]);
+  }, [missingItemRecords, scopedDashboardAssets, employees, plantOptions, selectedCategory, selectedLocation, selectedPlant]);
 
   const damagedStats = useMemo(() => {
     const filtered = damagedItemRecords.filter((d) => {
-      const asset = findAssetForRecord(assets, d['Asset ID']);
+      const asset = findAssetForRecord(scopedDashboardAssets, d['Asset ID']);
       if (!asset) return false;
 
       const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
@@ -472,7 +506,7 @@ export default function DashboardPage() {
       const matchesLocation = assetMatchesLocation(asset, selectedLocation);
       if (!matchesLocation) return false;
 
-      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plants);
+      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
       if (!matchesPlant) return false;
 
       return true;
@@ -483,7 +517,7 @@ export default function DashboardPage() {
       activeCount: active.length,
       totalCount: filtered.length,
     };
-  }, [damagedItemRecords, assets, plants, selectedCategory, selectedLocation, selectedPlant]);
+  }, [damagedItemRecords, scopedDashboardAssets, plantOptions, selectedCategory, selectedLocation, selectedPlant]);
 
 
   const exportToExcel = () => {
@@ -508,9 +542,9 @@ export default function DashboardPage() {
 
   const plantsFiltered = useMemo(() => {
     return selectedLocation === 'All'
-      ? plants
-      : plants.filter((p) => sameFilterValue(p.location, selectedLocation));
-  }, [plants, selectedLocation]);
+      ? plantOptions
+      : plantOptions.filter((p) => !p.location || sameScopeOption(p.location, selectedLocation));
+  }, [plantOptions, selectedLocation]);
 
   const departmentLabel = useMemo(() => {
     if (user?.role === 'HR') return 'HR';
@@ -528,7 +562,7 @@ export default function DashboardPage() {
       selectedPlant !== 'All' ? selectedPlant : user?.plants?.[0];
 
     if (plantCode) {
-      const plantRec = plants.find(
+      const plantRec = plantOptions.find(
         (p) => sameFilterValue(p.code, plantCode) || sameFilterValue(p.name, plantCode)
       );
       const plantName = plantRec?.name || plantCode;
@@ -536,7 +570,7 @@ export default function DashboardPage() {
     }
 
     return location;
-  }, [selectedLocation, selectedPlant, user, locations, plants]);
+  }, [selectedLocation, selectedPlant, user, locations, plantOptions]);
 
   const hasActiveFilters =
     selectedLocation !== 'All' || selectedPlant !== 'All' || selectedStatus !== 'All';
@@ -704,7 +738,7 @@ export default function DashboardPage() {
                 className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
               >
                 <option value="All">All Locations</option>
-                {locations.map((loc) => (
+                {locationOptions.map((loc) => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
               </select>
@@ -999,10 +1033,10 @@ export default function DashboardPage() {
                             (m) => m.Status === 'Missing' && !!String(m['Parent Asset ID'] || '').trim()
                           ).length;
                         } else {
-                          const catAssets = assets.filter(a => {
+                          const catAssets = scopedDashboardAssets.filter(a => {
                             const matchCat = assetMatchesSidebarCategory(a, cat);
                             const matchLoc = assetMatchesLocation(a, selectedLocation);
-                            const matchPlant = assetMatchesPlant(a, selectedPlant, plants);
+                            const matchPlant = assetMatchesPlant(a, selectedPlant, plantOptions);
                             return matchCat && matchLoc && matchPlant;
                           });
 
@@ -1011,11 +1045,11 @@ export default function DashboardPage() {
                           assigned = catAssets.filter(isAssetAssignedToEmployee).length;
                           const damaged = damagedItemRecords.filter((d) => {
                             if (d.Status === 'Repaired') return false;
-                            const asset = findAssetForRecord(assets, d['Asset ID']);
+                            const asset = findAssetForRecord(scopedDashboardAssets, d['Asset ID']);
                             if (!asset) return false;
                             const matchCat = assetMatchesSidebarCategory(asset, cat);
                             const matchLoc = assetMatchesLocation(asset, selectedLocation);
-                            const matchPlant = assetMatchesPlant(asset, selectedPlant, plants);
+                            const matchPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
                             return matchCat && matchLoc && matchPlant;
                           }).length;
                           if (cat === SOFTWARE_LICENSE_CATEGORY) {
