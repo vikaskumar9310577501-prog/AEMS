@@ -46,10 +46,10 @@ import DeleteAssetModal from '../components/DeleteAssetModal';
 import { AssetTableSkeleton } from '../components/LoadingSkeleton';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
-import { formatFilenameDate, formatStoredDateTime } from '../lib/formatDisplayDate';
+import { formatFilenameDate } from '../lib/formatDisplayDate';
 import { SYNC_DATABASE_MSG, SYNC_DATABASE_OK, SYNC_DATABASE_ERR } from '../lib/uiLabels';
 import { syncDatabaseAssets } from '../lib/syncDatabase';
-import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
+import { assetRouteId, buildAssetLookupIndex, findAssetInLookup } from '../lib/assetLookup';
 import { useApp } from '../context/AppProvider';
 import { isAssetAssignedToEmployee } from '../lib/employeeAssets';
 import {
@@ -73,6 +73,10 @@ import {
   buildScopedPlantOptions,
   sameScopeOption,
 } from '../lib/scopeOptions';
+import { normalizeEmployeeId } from '../lib/employeeLookup';
+
+type PlantOption = { code: string; name: string; location: string };
+type EmployeeScope = { location?: string; plant?: string; plantCode?: string };
 
 const ALL_CATEGORIES = [
   'IT Assets',
@@ -142,10 +146,6 @@ const CATEGORY_STYLES: Record<string, { gradient: string; text: string; iconBg: 
   'Missing Items': { gradient: 'from-rose-50 to-red-50/30', text: 'text-rose-700', iconBg: 'bg-rose-100 text-rose-700', shadow: 'hover:shadow-rose-500/5', border: 'border-rose-100' },
 };
 
-function findAssetForRecord(assets: Asset[], recordAssetId: unknown): Asset | undefined {
-  return findAssetByAnyId(assets, recordAssetId);
-}
-
 function normFilterValue(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -161,7 +161,7 @@ function assetMatchesLocation(asset: Asset, selectedLocation: string): boolean {
 function valueMatchesPlant(
   value: unknown,
   selectedPlant: string,
-  plants: { code: string; name: string; location: string }[]
+  plants: PlantOption[]
 ): boolean {
   if (selectedPlant === 'All') return true;
   const plant = plants.find(
@@ -176,7 +176,7 @@ function valueMatchesPlant(
 function assetMatchesPlant(
   asset: Asset,
   selectedPlant: string,
-  plants: { code: string; name: string; location: string }[]
+  plants: PlantOption[]
 ): boolean {
   return valueMatchesPlant(asset.plantCode, selectedPlant, plants);
 }
@@ -214,17 +214,58 @@ function missingItemMatchesCategory(m: MissingItemRecord, category: string): boo
   return mainCategory === category;
 }
 
+function isStandaloneMissingParent(parentAssetId: unknown): boolean {
+  const parent = String(parentAssetId || '').trim();
+  return !parent || parent.toUpperCase() === 'STANDALONE';
+}
+
+function employeePlantValue(employee: EmployeeScope): string {
+  return employee.plant || employee.plantCode || '';
+}
+
+function getDashboardAssetCategories(asset: Asset): string[] {
+  const categories: string[] = [];
+  for (const category of ALL_CATEGORIES) {
+    if (category !== 'Missing Items' && assetMatchesSidebarCategory(asset, category)) {
+      categories.push(category);
+    }
+  }
+  return categories;
+}
+
+type CategorySummaryStats = {
+  total: number;
+  available: number;
+  assigned: number;
+  repair: number;
+  lost: number;
+};
+
+const emptyCategorySummaryStats = (): CategorySummaryStats => ({
+  total: 0,
+  available: 0,
+  assigned: 0,
+  repair: 0,
+  lost: 0,
+});
+
 export default function DashboardPage() {
-  const { headerPortalNode } = useOutletContext<{ headerPortalNode: HTMLDivElement | null }>();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user, assets, loading, visibleCategories, fetchAssets, filterAssets, executeDelete, handleSubmit } =
-    useApp();
-  const { employees } = useEmployees({ autoLoad: true });
+  const { user } = useApp();
 
   if (user?.role === 'HR') {
     return <Navigate to="/employees" replace />;
   }
+
+  return <DashboardPageContent />;
+}
+
+function DashboardPageContent() {
+  const { headerPortalNode } = useOutletContext<{ headerPortalNode: HTMLDivElement | null }>();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, assets, loading, visibleCategories, fetchAssets, filterAssets, executeDelete } =
+    useApp();
+  const { employees } = useEmployees({ autoLoad: true });
 
   const selectedCategory = searchParams.get('category') || 'All';
   const isSoftwareCategory = selectedCategory === SOFTWARE_LICENSE_CATEGORY;
@@ -294,8 +335,6 @@ export default function DashboardPage() {
   const [missingItemRecords, setMissingItemRecords] = useState<MissingItemRecord[]>([]);
   const [damagedItemRecords, setDamagedItemRecords] = useState<DamagedItemRecord[]>([]);
 
-  const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
-
   const loadMissingItems = useCallback(async (force = false) => {
     if (!MISSING_ITEMS_FEATURE_ENABLED) {
       setMissingItemRecords([]);
@@ -326,13 +365,6 @@ export default function DashboardPage() {
     if (MISSING_ITEMS_FEATURE_ENABLED) void loadMissingItems();
     void loadDamagedItems();
   }, [loadMissingItems, loadDamagedItems]);
-
-  useEffect(() => {
-    if (!loading) {
-      if (MISSING_ITEMS_FEATURE_ENABLED) void loadMissingItems();
-      void loadDamagedItems();
-    }
-  }, [loading, loadMissingItems, loadDamagedItems]);
 
   useEffect(() => {
     fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings?refresh=1', { credentials: 'include' })
@@ -413,6 +445,18 @@ export default function DashboardPage() {
     [assets, searchQuery, filterAssets]
   );
 
+  const scopedDashboardAssetsLookup = useMemo(
+    () => buildAssetLookupIndex(scopedDashboardAssets),
+    [scopedDashboardAssets]
+  );
+  const employeesById = useMemo(() => {
+    const byId = new Map<string, EmployeeScope>();
+    for (const employee of employees) {
+      byId.set(normalizeEmployeeId(employee.employeeId), employee);
+    }
+    return byId;
+  }, [employees]);
+
   const locationPlantFilteredAssets = useMemo(() => {
     let list = filteredAssets;
     if (selectedLocation !== 'All') {
@@ -460,8 +504,6 @@ export default function DashboardPage() {
     return locationPlantFilteredAssets.filter((a) => !a.status || a.status === 'Available').length;
   }, [locationPlantFilteredAssets]);
 
-  const showAssetsView = true;
-
   const dashboardMaintenanceOrExpiryCount = useMemo(() => {
     if (isSoftwareCategory) {
       return locationPlantFilteredAssets.filter((a) => isSoftwareLicenseExpired(a)).length;
@@ -477,80 +519,170 @@ export default function DashboardPage() {
   );
 
   const missingStats = useMemo(() => {
-    const filtered = missingItemRecords.filter((m) => {
+    let activeCount = 0;
+    let recoveredCount = 0;
+    let totalCount = 0;
+    let standaloneActiveCount = 0;
+    let packageActiveCount = 0;
+
+    for (const m of missingItemRecords) {
       const parentAssetId = m['Parent Asset ID'];
-      const isStandalone = !parentAssetId || !String(parentAssetId).trim() || String(parentAssetId).trim().toUpperCase() === 'STANDALONE';
+      const isStandalone = isStandaloneMissingParent(parentAssetId);
+      let include = false;
 
       if (isStandalone) {
         const matchesCategory = selectedCategory === 'All' || missingItemMatchesCategory(m, selectedCategory);
-        if (!matchesCategory) return false;
+        if (!matchesCategory) continue;
 
         const empId = m['Employee ID'];
         if (empId) {
-          const emp = employees.find((e) => String(e.employeeId) === String(empId));
+          const emp = employeesById.get(normalizeEmployeeId(String(empId)));
           if (emp) {
             const matchesLocation = selectedLocation === 'All' || sameFilterValue(emp.location, selectedLocation);
-            if (!matchesLocation) return false;
+            if (!matchesLocation) continue;
 
-            const matchesPlant = valueMatchesPlant(emp.plantCode, selectedPlant, plantOptions);
-            if (!matchesPlant) return false;
+            const matchesPlant = valueMatchesPlant(employeePlantValue(emp), selectedPlant, plantOptions);
+            if (!matchesPlant) continue;
           } else {
-            if (selectedLocation !== 'All' || selectedPlant !== 'All') return false;
+            if (selectedLocation !== 'All' || selectedPlant !== 'All') continue;
           }
         } else {
-          if (selectedLocation !== 'All' || selectedPlant !== 'All') return false;
+          if (selectedLocation !== 'All' || selectedPlant !== 'All') continue;
         }
 
-        return true;
+        include = true;
+      } else {
+        const asset = findAssetInLookup(scopedDashboardAssetsLookup, parentAssetId);
+        if (!asset) continue;
+
+        const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
+        if (!matchesCategory) continue;
+
+        const matchesLocation = assetMatchesLocation(asset, selectedLocation);
+        if (!matchesLocation) continue;
+
+        const matchesPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
+        if (!matchesPlant) continue;
+
+        include = true;
       }
 
-      const asset = findAssetForRecord(scopedDashboardAssets, parentAssetId);
-      if (!asset) return false;
+      if (!include) continue;
+      totalCount += 1;
+      if (m.Status === 'Missing') activeCount += 1;
+      if (m.Status === 'Recovered') recoveredCount += 1;
+      if (m.Status === 'Missing' && isStandalone) standaloneActiveCount += 1;
+      if (m.Status === 'Missing' && !isStandalone) packageActiveCount += 1;
+    }
 
-      const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
-      if (!matchesCategory) return false;
-
-      const matchesLocation = assetMatchesLocation(asset, selectedLocation);
-      if (!matchesLocation) return false;
-
-      const matchesPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
-      if (!matchesPlant) return false;
-
-      return true;
-    });
-
-    const active = filtered.filter((m) => m.Status === 'Missing');
-    const recovered = filtered.filter((m) => m.Status === 'Recovered');
     return {
-      activeCount: active.length,
-      recoveredCount: recovered.length,
-      totalCount: filtered.length,
+      activeCount,
+      recoveredCount,
+      totalCount,
+      standaloneActiveCount,
+      packageActiveCount,
     };
-  }, [missingItemRecords, scopedDashboardAssets, employees, plantOptions, selectedCategory, selectedLocation, selectedPlant]);
+  }, [
+    missingItemRecords,
+    scopedDashboardAssetsLookup,
+    employeesById,
+    plantOptions,
+    selectedCategory,
+    selectedLocation,
+    selectedPlant,
+  ]);
 
   const damagedStats = useMemo(() => {
-    const filtered = damagedItemRecords.filter((d) => {
-      const asset = findAssetForRecord(scopedDashboardAssets, d['Asset ID']);
-      if (!asset) return false;
+    let activeCount = 0;
+    let totalCount = 0;
+
+    for (const d of damagedItemRecords) {
+      const asset = findAssetInLookup(scopedDashboardAssetsLookup, d['Asset ID']);
+      if (!asset) continue;
 
       const matchesCategory = selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
-      if (!matchesCategory) return false;
+      if (!matchesCategory) continue;
 
       const matchesLocation = assetMatchesLocation(asset, selectedLocation);
-      if (!matchesLocation) return false;
+      if (!matchesLocation) continue;
 
       const matchesPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
-      if (!matchesPlant) return false;
+      if (!matchesPlant) continue;
 
-      return true;
-    });
+      totalCount += 1;
+      if (d.Status !== 'Repaired') activeCount += 1;
+    }
 
-    const active = filtered.filter((d) => d.Status !== 'Repaired');
     return {
-      activeCount: active.length,
-      totalCount: filtered.length,
+      activeCount,
+      totalCount,
     };
-  }, [damagedItemRecords, scopedDashboardAssets, plantOptions, selectedCategory, selectedLocation, selectedPlant]);
+  }, [
+    damagedItemRecords,
+    scopedDashboardAssetsLookup,
+    plantOptions,
+    selectedCategory,
+    selectedLocation,
+    selectedPlant,
+  ]);
+
+  const categorySummaryStats = useMemo(() => {
+    const stats = new Map<string, CategorySummaryStats>();
+    const getStats = (cat: string) => {
+      let next = stats.get(cat);
+      if (!next) {
+        next = emptyCategorySummaryStats();
+        stats.set(cat, next);
+      }
+      return next;
+    };
+
+    for (const asset of scopedDashboardAssets) {
+      if (!assetMatchesLocation(asset, selectedLocation)) continue;
+      if (!assetMatchesPlant(asset, selectedPlant, plantOptions)) continue;
+
+      const assigned = isAssetAssignedToEmployee(asset);
+      const available = !asset.status || asset.status === 'Available';
+      const expired = isSoftwareLicenseExpired(asset);
+      const maintenance =
+        asset.status === 'Under Maintenance' ||
+        asset.status === 'Under Repair' ||
+        asset.maintenanceRequired === 'Yes';
+      const lost = asset.status === 'Lost';
+
+      for (const category of getDashboardAssetCategories(asset)) {
+        const entry = getStats(category);
+        entry.total += 1;
+        if (available) entry.available += 1;
+        if (assigned) entry.assigned += 1;
+        if (category === SOFTWARE_LICENSE_CATEGORY ? expired : maintenance) entry.repair += 1;
+        if (lost) entry.lost += 1;
+      }
+    }
+
+    for (const damaged of damagedItemRecords) {
+      if (damaged.Status === 'Repaired') continue;
+      const asset = findAssetInLookup(scopedDashboardAssetsLookup, damaged['Asset ID']);
+      if (!asset) continue;
+      if (!assetMatchesLocation(asset, selectedLocation)) continue;
+      if (!assetMatchesPlant(asset, selectedPlant, plantOptions)) continue;
+
+      for (const category of getDashboardAssetCategories(asset)) {
+        if (category !== SOFTWARE_LICENSE_CATEGORY) {
+          getStats(category).repair += 1;
+        }
+      }
+    }
+
+    return stats;
+  }, [
+    scopedDashboardAssets,
+    scopedDashboardAssetsLookup,
+    damagedItemRecords,
+    selectedLocation,
+    selectedPlant,
+    plantOptions,
+  ]);
 
 
   const exportToExcel = () => {
@@ -852,8 +984,7 @@ export default function DashboardPage() {
             )}
           </div>
         )}
-        {showAssetsView && (
-          <div className={`grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'}`}>
+        <div className={`grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'}`}>
               <div 
                 onClick={() => {
                   setSelectedStatus('All');
@@ -957,7 +1088,7 @@ export default function DashboardPage() {
                   </h3>
                   <button 
                     onClick={(e) => { e.stopPropagation(); navigate('/damaged-scrap'); }} 
-                    className="text-[9px] text-red-650/80 mt-1 font-bold hover:text-red-800 transition-colors"
+                    className="text-[9px] text-red-600/80 mt-1 font-bold hover:text-red-800 transition-colors"
                   >
                     View component tracking →
                   </button>
@@ -988,7 +1119,6 @@ export default function DashboardPage() {
               </div>
               )}
             </div>
-        )}
       </div>
 
       <div className="flex-1 overflow-auto px-6 lg:px-8 pb-6 lg:pb-8 pt-4">
@@ -1026,8 +1156,8 @@ export default function DashboardPage() {
                             <div className="h-4 bg-slate-200 rounded w-1/2" />
                           </div>
                           <div className="grid grid-cols-2 gap-2 pt-2">
-                            <div className="h-6 bg-slate-150 rounded" />
-                            <div className="h-6 bg-slate-150 rounded" />
+                            <div className="h-6 bg-slate-200 rounded" />
+                            <div className="h-6 bg-slate-200 rounded" />
                           </div>
                         </div>
                       ))}
@@ -1047,50 +1177,17 @@ export default function DashboardPage() {
                           border: 'border-slate-200'
                         };
 
-                        let total = 0;
-                        let available = 0;
-                        let assigned = 0;
-                        let repair = 0;
-                        let lost = 0;
-
-                        if (cat === 'Missing Items') {
-                          total = missingStats.activeCount;
-                          available = missingStats.recoveredCount;
-                          assigned = missingStats.totalCount;
-                          repair = missingItemRecords.filter(
-                            (m) => m.Status === 'Missing' && !String(m['Parent Asset ID'] || '').trim()
-                          ).length;
-                          lost = missingItemRecords.filter(
-                            (m) => m.Status === 'Missing' && !!String(m['Parent Asset ID'] || '').trim()
-                          ).length;
-                        } else {
-                          const catAssets = scopedDashboardAssets.filter(a => {
-                            const matchCat = assetMatchesSidebarCategory(a, cat);
-                            const matchLoc = assetMatchesLocation(a, selectedLocation);
-                            const matchPlant = assetMatchesPlant(a, selectedPlant, plantOptions);
-                            return matchCat && matchLoc && matchPlant;
-                          });
-
-                          total = catAssets.length;
-                          available = catAssets.filter((a) => !a.status || a.status === 'Available').length;
-                          assigned = catAssets.filter(isAssetAssignedToEmployee).length;
-                          const damaged = damagedItemRecords.filter((d) => {
-                            if (d.Status === 'Repaired') return false;
-                            const asset = findAssetForRecord(scopedDashboardAssets, d['Asset ID']);
-                            if (!asset) return false;
-                            const matchCat = assetMatchesSidebarCategory(asset, cat);
-                            const matchLoc = assetMatchesLocation(asset, selectedLocation);
-                            const matchPlant = assetMatchesPlant(asset, selectedPlant, plantOptions);
-                            return matchCat && matchLoc && matchPlant;
-                          }).length;
-                          if (cat === SOFTWARE_LICENSE_CATEGORY) {
-                            repair = catAssets.filter((a) => isSoftwareLicenseExpired(a)).length;
-                          } else {
-                            const maintenance = catAssets.filter(a => a.status === 'Under Maintenance' || a.status === 'Under Repair' || a.maintenanceRequired === 'Yes').length;
-                            repair = damaged + maintenance;
-                          }
-                          lost = catAssets.filter(a => a.status === 'Lost').length;
-                        }
+                        const stats =
+                          cat === 'Missing Items'
+                            ? {
+                                total: missingStats.activeCount,
+                                available: missingStats.recoveredCount,
+                                assigned: missingStats.totalCount,
+                                repair: missingStats.standaloneActiveCount,
+                                lost: missingStats.packageActiveCount,
+                              }
+                            : categorySummaryStats.get(cat) || emptyCategorySummaryStats();
+                        const { total, available, assigned, repair, lost } = stats;
 
                         const handleClick = () => {
                           if (cat === 'Missing Items') {
@@ -1162,175 +1259,20 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {showAssetsView ? (
-          <>
-            {loading && assets.length === 0 ? (
-              <AssetTableSkeleton />
-            ) : (
-              <AssetTable
-                assets={displayAssets}
-                onEdit={(a) => navigate(`/assets/${assetRouteId(a)}/edit`)}
-                onDelete={(id) => setDeleteConfirmId(id)}
-                onViewQR={setViewingQR}
-                onViewAsset={(a) => navigate(`/assets/${assetRouteId(a)}`)}
-                role={user?.role}
-                viewMode={viewMode}
-                selectedAssetIds={selectedAssetIds}
-                onSelectionChange={setSelectedAssetIds}
-              />
-            )}
-          </>
+        {loading && assets.length === 0 ? (
+          <AssetTableSkeleton />
         ) : (
-          <>
-
-
-            {/* Missing Items History — shown when Missing filter is active */}
-            {selectedStatus === 'Missing' && (() => {
-              const filteredMissingHistory = missingItemRecords.filter((m) => {
-                if (selectedCategory === 'All') return true;
-                const parentAssetId = m['Parent Asset ID'];
-                const isStandalone = !parentAssetId || !String(parentAssetId).trim() || String(parentAssetId).trim().toUpperCase() === 'STANDALONE';
-                if (isStandalone) return missingItemMatchesCategory(m, selectedCategory);
-                const asset = findAssetForRecord(assets, parentAssetId);
-                return asset ? assetMatchesSidebarCategory(asset, selectedCategory) : false;
-              });
-              return filteredMissingHistory.length > 0 ? (
-                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm mb-6">
-                  <div className="flex items-center gap-2 px-6 py-4 bg-amber-50 border-b border-amber-100">
-                    <AlertCircle size={16} className="text-amber-600" />
-                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-700">Missing Items History</h3>
-                    <span className="ml-auto text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-lg">{filteredMissingHistory.length} records</span>
-                  </div>
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Item Name</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Parent Asset</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Assigned Person</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Missing Date</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Status</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Remarks</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Recovered Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredMissingHistory.map((m) => (
-                        <tr
-                          key={m['Record ID']}
-                          className="hover:bg-slate-50 cursor-pointer transition-colors"
-                          onClick={() => {
-                            const parentAssetId = m['Parent Asset ID'];
-                            if (parentAssetId && String(parentAssetId).trim().toUpperCase() !== 'STANDALONE') {
-                              const asset = findAssetForRecord(assets, parentAssetId);
-                              if (asset) navigate(`/assets/${assetRouteId(asset)}`);
-                            }
-                          }}
-                        >
-                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">{m['Missing Item Name']}</td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-bold text-blue-700">{m['Parent Asset Name'] || '—'}</p>
-                            <p className="text-xs text-slate-400 font-mono">{m['Parent Asset ID'] || ''}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm text-slate-700 font-semibold">{m['Assigned Person'] || '—'}</p>
-                            <p className="text-xs text-slate-400">{m['Employee ID'] || ''}</p>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{formatStoredDateTime(m['Missing Date'])}</td>
-                          <td className="px-6 py-4">
-                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                              m.Status === 'Missing' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                              m.Status === 'Recovered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                              'bg-slate-100 text-slate-600 border border-slate-200'
-                            }`}>{m.Status}</span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-500">{m['Remarks'] || '—'}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{formatStoredDateTime(m['Recovered Date'])}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm mb-6">
-                  <AlertCircle className="mx-auto mb-3 opacity-30 text-amber-500" size={48} />
-                  <p className="font-bold text-slate-700">No missing items history found for this category</p>
-                </div>
-              );
-            })()}
-
-            {/* Damaged Items History — shown when Damaged filter is active */}
-            {selectedStatus === 'Damaged' && (() => {
-              const filteredDamagedHistory = damagedItemRecords.filter((d) => {
-                const asset = findAssetForRecord(assets, d['Asset ID']);
-                if (!asset) return selectedCategory === 'All';
-                return selectedCategory === 'All' || assetMatchesSidebarCategory(asset, selectedCategory);
-              });
-              return filteredDamagedHistory.length > 0 ? (
-                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm mb-6">
-                  <div className="flex items-center gap-2 px-6 py-4 bg-rose-50 border-b border-rose-100">
-                    <Trash2 size={16} className="text-rose-600" />
-                    <h3 className="text-xs font-black uppercase tracking-wider text-rose-700">Damaged / Scrap History</h3>
-                    <span className="ml-auto text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-lg">{filteredDamagedHistory.length} records</span>
-                  </div>
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Asset</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Damage Date</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Damage Reason</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Reported By</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Repair Required</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Status</th>
-                        <th className="px-6 py-3 text-[10px] font-black uppercase text-slate-500">Remarks</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredDamagedHistory.map((d) => {
-                        const asset = findAssetForRecord(assets, d['Asset ID']);
-                        return (
-                          <tr
-                            key={d['Record ID']}
-                            className="hover:bg-slate-50 cursor-pointer transition-colors"
-                            onClick={() => {
-                              if (asset) navigate(`/assets/${assetRouteId(asset)}`);
-                            }}
-                          >
-                            <td className="px-6 py-4">
-                              <p className="font-bold text-blue-700 text-sm">{d['Asset Name']}</p>
-                              <p className="text-xs text-slate-400 font-mono">{d['Asset ID']}</p>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-slate-600">{formatStoredDateTime(d['Damage Date'])}</td>
-                            <td className="px-6 py-4 text-sm text-slate-700 max-w-[200px] truncate" title={d['Damage Reason']}>{d['Damage Reason'] || '—'}</td>
-                            <td className="px-6 py-4 text-sm text-slate-600">{d['Reported By'] || '—'}</td>
-                            <td className="px-6 py-4">
-                              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                                d['Repair Required'] === 'Yes' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600'
-                              }`}>{d['Repair Required']}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                                d.Status === 'Repaired' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                d.Status === 'Scrapped' ? 'bg-slate-100 text-slate-600 border border-slate-200' :
-                                d.Status === 'In Repair' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}>{d.Status}</span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-slate-500">{d['Remarks'] || '—'}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm mb-6">
-                  <Trash2 className="mx-auto mb-3 opacity-30 text-rose-500" size={48} />
-                  <p className="font-bold text-slate-700">No damage/scrap history found for this category</p>
-                </div>
-              );
-            })()}
-
-          </>
+          <AssetTable
+            assets={displayAssets}
+            onEdit={(a) => navigate(`/assets/${assetRouteId(a)}/edit`)}
+            onDelete={(id) => setDeleteConfirmId(id)}
+            onViewQR={setViewingQR}
+            onViewAsset={(a) => navigate(`/assets/${assetRouteId(a)}`)}
+            role={user?.role}
+            viewMode={viewMode}
+            selectedAssetIds={selectedAssetIds}
+            onSelectionChange={setSelectedAssetIds}
+          />
         )}
       </div>
 
