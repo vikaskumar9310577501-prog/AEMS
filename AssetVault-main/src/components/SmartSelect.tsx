@@ -53,12 +53,17 @@ export default function SmartSelect({
 
   const optionsKey = useMemo(() => finalOptions.join("\0"), [finalOptions]);
 
+  const prevValueRef = useRef(value);
+
   useEffect(() => {
-    if (!value) {
+    if (prevValueRef.current && !value) {
       setOtherMode(false);
       setOtherText("");
-      return;
     }
+    prevValueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
     if (otherMode) return;
     const ok = value && finalOptions.includes(value);
     if (ok) {
@@ -67,7 +72,7 @@ export default function SmartSelect({
       setOtherMode(true);
       setOtherText(value);
     }
-  }, [value, optionsKey, finalOptions, hasAddCustom]);
+  }, [value, optionsKey, finalOptions, hasAddCustom, otherMode]);
 
   // Click outside to close dropdown
   useEffect(() => {
