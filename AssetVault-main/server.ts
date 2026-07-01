@@ -984,14 +984,13 @@ async function ensureSheetHeadersReady(): Promise<string[]> {
 }
 
 async function getAssetsForOps(): Promise<MappedAsset[]> {
-  const cached = getCachedAssets();
-  if (cached) return cached;
   if (!GAS_WEBAPP_URL) return [];
   try {
     const { assets } = await getAssetsWithCache(GAS_WEBAPP_URL);
     return assets;
   } catch {
-    return [];
+    const cached = getCachedAssets();
+    return cached || [];
   }
 }
 

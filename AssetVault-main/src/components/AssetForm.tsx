@@ -1666,8 +1666,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 onChange={handleChange}
                 placeholder={isSoftwareCategory ? "Enter license key" : "ID-99201-SYS"}
                 className={cn(
-                  "w-full input-geometric border-blue-400 font-bold bg-white",
-                  fieldErrors.serialNumber && "border-red-500 bg-red-50"
+                  "w-full input-geometric font-bold",
+                  fieldErrors.serialNumber
+                    ? "border-red-500 bg-red-50 text-red-950 focus:border-red-500 focus:ring-red-500"
+                    : "border-blue-400 bg-white text-slate-900 focus:border-blue-500 focus:ring-blue-500"
                 )}
               />
               {checkingField === "serialNumber" && (
@@ -1692,8 +1694,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                       onChange={handleChange}
                       placeholder={isSoftwareCategory ? "Enter software code" : "AST-101"}
                       className={cn(
-                        "w-full input-geometric border-blue-400 font-bold bg-white",
-                        isAssetCodeEdited && fieldErrors.assetCode && "border-red-500 bg-red-50"
+                        "w-full input-geometric font-bold",
+                        (isAssetCodeEdited && fieldErrors.assetCode)
+                          ? "border-red-500 bg-red-50 text-red-950 focus:border-red-500 focus:ring-red-500"
+                          : "border-blue-400 bg-white text-slate-900 focus:border-blue-500 focus:ring-blue-500"
                       )}
                     />
                     {checkingField === "assetCode" && (
