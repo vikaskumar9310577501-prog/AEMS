@@ -72,7 +72,7 @@ export default function BulkQRPrintModal({ assets, onClose }: BulkQRPrintModalPr
                       includeMargin={false}
                     />
                   </div>
-                  <span className="text-xs font-black text-slate-700 font-mono tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200/50 w-full text-center truncate">
+                  <span className="text-xs font-black text-slate-700 font-mono tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200/50 w-full text-center break-all leading-snug">
                     {item.displayId}
                   </span>
                 </div>

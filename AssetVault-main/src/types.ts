@@ -39,12 +39,22 @@ export interface Asset {
   // Peripheral Serials & Codes
   monitorSerial?: string;
   monitorAssetCode?: string;
+  monitorMake?: string;
+  monitorModel?: string;
   keyboardSerial?: string;
   keyboardAssetCode?: string;
+  keyboardMake?: string;
+  keyboardModel?: string;
+  keyboardConnectivity?: 'Wired' | 'Wireless' | '';
   mouseSerial?: string;
   mouseAssetCode?: string;
+  mouseMake?: string;
+  mouseModel?: string;
+  mouseConnectivity?: 'Wired' | 'Wireless' | '';
   upsSerial?: string;
   upsAssetCode?: string;
+  upsMake?: string;
+  upsModel?: string;
   ram: string;
   ssd: string;
   cpu: string;

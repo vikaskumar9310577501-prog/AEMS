@@ -38,8 +38,10 @@ var SETUP_CATEGORY_HEADERS_ = [
 
 var SETUP_IT_EXTRA_HEADERS_ = [
   "RAM", "SSD", "CPU", "Windows Version", "MAC Address", "IP Address", "Host Name", "Unique Code", "Binary Code",
-  "Monitor Serial", "Monitor Asset Code", "Keyboard Serial", "Keyboard Asset Code",
-  "Mouse Serial", "Mouse Asset Code", "UPS Serial", "UPS Asset Code"
+  "Monitor Serial", "Monitor Asset Code", "Monitor Brand", "Monitor Model Number",
+  "Keyboard Serial", "Keyboard Asset Code", "Keyboard Brand", "Keyboard Model Number", "Keyboard Connectivity",
+  "Mouse Serial", "Mouse Asset Code", "Mouse Brand", "Mouse Model Number", "Mouse Connectivity",
+  "UPS Serial", "UPS Asset Code", "UPS Brand", "UPS Model Number"
 ];
 
 function setupStyleHeaderRow_(sh, colCount, bg, fg) {

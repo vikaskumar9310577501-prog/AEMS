@@ -1,11 +1,10 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import QRCode from "qrcode";
 import type { MappedAsset } from "./assetHelpers.js";
 import { getScanUrl, isDesktopAsset, formatPeripheralLine } from "./assetHelpers.js";
 import { normalizeWarrantyDate } from "../src/lib/warrantyDate.js";
 import { APP_NAME } from "../src/lib/constants.js";
 import { formatStoredDateTime } from "../src/lib/formatDisplayDate.js";
-import { driveViewUrl, extractDriveFileId } from "./driveUrls.js";
+import { toAppFileViewUrl } from "./driveUrls.js";
 
 function assetDisplayName(asset: MappedAsset): string {
   const name = String(asset.assetName || "").trim();
@@ -75,11 +74,19 @@ function drawPdfHeader(
   }
 }
 
-function publicDriveLink(url: string | undefined): string {
-  const trimmed = String(url || "").trim();
-  if (!trimmed) return "";
-  const id = extractDriveFileId(trimmed);
-  return id ? driveViewUrl(id) : trimmed;
+function formatPeripheralPdfLine(
+  code?: string,
+  serial?: string,
+  make?: string,
+  model?: string,
+  connectivity?: string
+): string {
+  return [
+    formatPeripheralLine(code, serial),
+    make ? `Brand: ${make}` : "",
+    model ? `Model: ${model}` : "",
+    connectivity ? `Connectivity: ${connectivity}` : "",
+  ].filter(Boolean).join(" | ");
 }
 
 async function drawPeripheralDetailsPage(
@@ -88,25 +95,15 @@ async function drawPeripheralDetailsPage(
   baseUrl: string,
   type: string,
   serial: string,
-  code: string
+  code: string,
+  make = "",
+  model = "",
+  connectivity = ""
 ) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const scanUrl = `${baseUrl.replace(/\/$/, "")}/scan/${encodeURIComponent(code || serial)}`;
-
-  let qrImage;
-  try {
-    const qrPng = await QRCode.toBuffer(scanUrl, {
-      type: "png",
-      width: 140,
-      margin: 1,
-      errorCorrectionLevel: "M",
-    });
-    qrImage = await pdfDoc.embedPng(new Uint8Array(qrPng));
-  } catch {
-    qrImage = null;
-  }
 
   const page = pdfDoc.addPage([595, 842]);
   const headerTop = 842;
@@ -134,6 +131,8 @@ async function drawPeripheralDetailsPage(
     ["Employee Department", asset.department || "—"],
   ];
 
+  lines.splice(3, 0, ["Brand", make || "-"], ["Model Number", model || "-"], ["Connectivity", connectivity || "-"]);
+
   for (const [label, value] of lines) {
     const safe = pdfSafeText(value);
     page.drawText(`${pdfSafeText(label)}`, { x: 40, y, size: 9, font: fontBold, color: rgb(0.35, 0.35, 0.4) });
@@ -142,11 +141,8 @@ async function drawPeripheralDetailsPage(
     if (y < 140) break;
   }
 
-  if (qrImage) {
-    page.drawImage(qrImage, { x: 40, y: 40, width: 90, height: 90 });
-  }
   page.drawText(pdfSafeText(scanUrl, 180), {
-    x: qrImage ? 140 : 40,
+    x: 40,
     y: 70,
     size: 8,
     font,
@@ -157,23 +153,11 @@ async function drawPeripheralDetailsPage(
 async function drawDetailsPage(
   pdfDoc: PDFDocument,
   asset: MappedAsset,
+  baseUrl: string,
   scanUrl: string
 ) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-  let qrImage;
-  try {
-    const qrPng = await QRCode.toBuffer(scanUrl, {
-      type: "png",
-      width: 120,
-      margin: 1,
-      errorCorrectionLevel: "M",
-    });
-    qrImage = await pdfDoc.embedPng(new Uint8Array(qrPng));
-  } catch {
-    qrImage = null;
-  }
 
   const page = pdfDoc.addPage([595, 842]);
   drawPdfHeader(page, font, fontBold, asset);
@@ -252,10 +236,38 @@ async function drawDetailsPage(
 
   if (isDesktopAsset(asset)) {
     y = drawSection("Peripherals", y - 6);
-    y = drawRow("Monitor", formatPeripheralLine(asset.monitorAssetCode, asset.monitorSerial), y);
-    y = drawRow("Keyboard", formatPeripheralLine(asset.keyboardAssetCode, asset.keyboardSerial), y);
-    y = drawRow("Mouse", formatPeripheralLine(asset.mouseAssetCode, asset.mouseSerial), y);
-    y = drawRow("UPS", formatPeripheralLine(asset.upsAssetCode, asset.upsSerial), y);
+    y = drawRow(
+      "Monitor",
+      formatPeripheralPdfLine(asset.monitorAssetCode, asset.monitorSerial, asset.monitorMake, asset.monitorModel),
+      y
+    );
+    y = drawRow(
+      "Keyboard",
+      formatPeripheralPdfLine(
+        asset.keyboardAssetCode,
+        asset.keyboardSerial,
+        asset.keyboardMake,
+        asset.keyboardModel,
+        asset.keyboardConnectivity
+      ),
+      y
+    );
+    y = drawRow(
+      "Mouse",
+      formatPeripheralPdfLine(
+        asset.mouseAssetCode,
+        asset.mouseSerial,
+        asset.mouseMake,
+        asset.mouseModel,
+        asset.mouseConnectivity
+      ),
+      y
+    );
+    y = drawRow(
+      "UPS",
+      formatPeripheralPdfLine(asset.upsAssetCode, asset.upsSerial, asset.upsMake, asset.upsModel),
+      y
+    );
   }
 
   const warrantyStart = formatPdfDate(normalizeWarrantyDate(asset.warrantyStartDate));
@@ -271,19 +283,17 @@ async function drawDetailsPage(
   }
 
   // Drive links — never embed files; show view URLs only
-  y = drawSection("Google Drive Links", Math.max(y - 6, 200));
-  const photoLink = publicDriveLink(asset.imageUrl);
-  const docLink = publicDriveLink(asset.documentUrl);
+  y = drawSection("Attachment Links", Math.max(y - 6, 150));
+  const docLink = toAppFileViewUrl(asset.documentUrl || "", baseUrl);
+  const rawPhotoLink = toAppFileViewUrl(asset.imageUrl || "", baseUrl);
+  const photoLink = rawPhotoLink && rawPhotoLink !== docLink ? rawPhotoLink : "";
   y = drawRow("Asset Photo Link", photoLink || "—", y);
   y = drawRow("Asset Document Link", docLink || "—", y);
 
-  // Footer QR
+  // Footer live-record link
   page.drawRectangle({ x: 36, y: 36, width: 523, height: 110, color: rgb(0.97, 0.98, 1), borderColor: rgb(0.85, 0.88, 0.92), borderWidth: 1 });
-  page.drawText("Scan QR for live asset record", { x: 140, y: 118, size: 9, font: fontBold, color: rgb(0.3, 0.3, 0.35) });
-  page.drawText(pdfSafeText(scanUrl, 180), { x: 140, y: 100, size: 8, font, color: rgb(0.1, 0.3, 0.65) });
-  if (qrImage) {
-    page.drawImage(qrImage, { x: 48, y: 48, width: 80, height: 80 });
-  }
+  page.drawText("Live asset record", { x: 48, y: 118, size: 9, font: fontBold, color: rgb(0.3, 0.3, 0.35) });
+  page.drawText(pdfSafeText(scanUrl, 180), { x: 48, y: 100, size: 8, font, color: rgb(0.1, 0.3, 0.65) });
 }
 
 export async function generateAssetPdf(
@@ -296,6 +306,9 @@ export async function generateAssetPdf(
   let peripheralType: "Monitor" | "Keyboard" | "Mouse" | "UPS" | null = null;
   let peripheralSerial = "";
   let peripheralCode = "";
+  let peripheralMake = "";
+  let peripheralModel = "";
+  let peripheralConnectivity = "";
 
   if (matchKey && isDesktopAsset(asset)) {
     if (
@@ -305,6 +318,8 @@ export async function generateAssetPdf(
       peripheralType = "Monitor";
       peripheralSerial = asset.monitorSerial;
       peripheralCode = asset.monitorAssetCode;
+      peripheralMake = asset.monitorMake;
+      peripheralModel = asset.monitorModel;
     } else if (
       (asset.keyboardSerial && asset.keyboardSerial.toLowerCase().trim() === matchKey) ||
       (asset.keyboardAssetCode && asset.keyboardAssetCode.toLowerCase().trim() === matchKey)
@@ -312,6 +327,9 @@ export async function generateAssetPdf(
       peripheralType = "Keyboard";
       peripheralSerial = asset.keyboardSerial;
       peripheralCode = asset.keyboardAssetCode;
+      peripheralMake = asset.keyboardMake;
+      peripheralModel = asset.keyboardModel;
+      peripheralConnectivity = asset.keyboardConnectivity;
     } else if (
       (asset.mouseSerial && asset.mouseSerial.toLowerCase().trim() === matchKey) ||
       (asset.mouseAssetCode && asset.mouseAssetCode.toLowerCase().trim() === matchKey)
@@ -319,6 +337,9 @@ export async function generateAssetPdf(
       peripheralType = "Mouse";
       peripheralSerial = asset.mouseSerial;
       peripheralCode = asset.mouseAssetCode;
+      peripheralMake = asset.mouseMake;
+      peripheralModel = asset.mouseModel;
+      peripheralConnectivity = asset.mouseConnectivity;
     } else if (
       (asset.upsSerial && asset.upsSerial.toLowerCase().trim() === matchKey) ||
       (asset.upsAssetCode && asset.upsAssetCode.toLowerCase().trim() === matchKey)
@@ -326,16 +347,28 @@ export async function generateAssetPdf(
       peripheralType = "UPS";
       peripheralSerial = asset.upsSerial;
       peripheralCode = asset.upsAssetCode;
+      peripheralMake = asset.upsMake;
+      peripheralModel = asset.upsModel;
     }
   }
 
   const pdfDoc = await PDFDocument.create();
 
   if (peripheralType) {
-    await drawPeripheralDetailsPage(pdfDoc, asset, baseUrl, peripheralType, peripheralSerial, peripheralCode);
+    await drawPeripheralDetailsPage(
+      pdfDoc,
+      asset,
+      baseUrl,
+      peripheralType,
+      peripheralSerial,
+      peripheralCode,
+      peripheralMake,
+      peripheralModel,
+      peripheralConnectivity
+    );
   } else {
     const scanUrl = getScanUrl(baseUrl, asset);
-    await drawDetailsPage(pdfDoc, asset, scanUrl);
+    await drawDetailsPage(pdfDoc, asset, baseUrl, scanUrl);
   }
 
   const bytes = await pdfDoc.save();

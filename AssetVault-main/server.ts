@@ -785,12 +785,22 @@ app.get("/api/assets", async (req, res) => {
       "Host Name": a.hostName,
       "Monitor SN": a.monitorSerial,
       "Monitor Code": a.monitorAssetCode,
+      "Monitor Brand": a.monitorMake,
+      "Monitor Model Number": a.monitorModel,
       "Keyboard SN": a.keyboardSerial,
       "Keyboard Code": a.keyboardAssetCode,
+      "Keyboard Brand": a.keyboardMake,
+      "Keyboard Model Number": a.keyboardModel,
+      "Keyboard Connectivity": a.keyboardConnectivity,
       "Mouse SN": a.mouseSerial,
       "Mouse Code": a.mouseAssetCode,
+      "Mouse Brand": a.mouseMake,
+      "Mouse Model Number": a.mouseModel,
+      "Mouse Connectivity": a.mouseConnectivity,
       "UPS SN": a.upsSerial,
       "UPS Code": a.upsAssetCode,
+      "UPS Brand": a.upsMake,
+      "UPS Model Number": a.upsModel,
       "Contact Person Name": a.contactName,
       "Contact Person Email": a.contactEmail,
       "Contact Person Mobile Number": a.contactMobile,
@@ -1271,12 +1281,22 @@ const TYPE_SPECIFIC_PRESERVE_ASSET_EDIT_FIELDS = [
   "hostName",
   "monitorSerial",
   "monitorAssetCode",
+  "monitorMake",
+  "monitorModel",
   "keyboardSerial",
   "keyboardAssetCode",
+  "keyboardMake",
+  "keyboardModel",
+  "keyboardConnectivity",
   "mouseSerial",
   "mouseAssetCode",
+  "mouseMake",
+  "mouseModel",
+  "mouseConnectivity",
   "upsSerial",
   "upsAssetCode",
+  "upsMake",
+  "upsModel",
   "additionalItems",
   "assetType",
   "assetTypeId",
@@ -1389,12 +1409,22 @@ function sanitizeAssetFields(assetData: any) {
   if (!isDesktop) {
     assetData.monitorSerial = "";
     assetData.monitorAssetCode = "";
+    assetData.monitorMake = "";
+    assetData.monitorModel = "";
     assetData.keyboardSerial = "";
     assetData.keyboardAssetCode = "";
+    assetData.keyboardMake = "";
+    assetData.keyboardModel = "";
+    assetData.keyboardConnectivity = "";
     assetData.mouseSerial = "";
     assetData.mouseAssetCode = "";
+    assetData.mouseMake = "";
+    assetData.mouseModel = "";
+    assetData.mouseConnectivity = "";
     assetData.upsSerial = "";
     assetData.upsAssetCode = "";
+    assetData.upsMake = "";
+    assetData.upsModel = "";
   }
 
   // Sanitize Remarks/Additional Items - only keep laptop/desktop accessory remarks for Laptop/Desktop/Input Device/Output Device
@@ -1531,12 +1561,22 @@ function buildAssetRow(headers: string[], assetData: any, existingRow?: any[]) {
   setVal(["Binary Code"], binaryCode);
   setVal(["Monitor Serial", "Monitor SN"], assetData.monitorSerial || "");
   setVal(["Monitor Asset Code", "Monitor Code"], assetData.monitorAssetCode || "");
+  setVal(["Monitor Brand", "Monitor Make"], assetData.monitorMake || "");
+  setVal(["Monitor Model Number", "Monitor Model"], assetData.monitorModel || "");
   setVal(["Keyboard Serial", "Keyboard SN"], assetData.keyboardSerial || "");
   setVal(["Keyboard Asset Code", "Keyboard Code"], assetData.keyboardAssetCode || "");
+  setVal(["Keyboard Brand", "Keyboard Make"], assetData.keyboardMake || "");
+  setVal(["Keyboard Model Number", "Keyboard Model"], assetData.keyboardModel || "");
+  setVal(["Keyboard Connectivity", "Keyboard Type"], assetData.keyboardConnectivity || "");
   setVal(["Mouse Serial", "Mouse SN"], assetData.mouseSerial || "");
   setVal(["Mouse Asset Code", "Mouse Code"], assetData.mouseAssetCode || "");
+  setVal(["Mouse Brand", "Mouse Make"], assetData.mouseMake || "");
+  setVal(["Mouse Model Number", "Mouse Model"], assetData.mouseModel || "");
+  setVal(["Mouse Connectivity", "Mouse Type"], assetData.mouseConnectivity || "");
   setVal(["UPS Serial", "UPS SN"], assetData.upsSerial || "");
   setVal(["UPS Asset Code", "UPS Code"], assetData.upsAssetCode || "");
+  setVal(["UPS Brand", "UPS Make"], assetData.upsMake || "");
+  setVal(["UPS Model Number", "UPS Model"], assetData.upsModel || "");
 
   // Ensure row length matches headers array (canonical order)
   while (row.length < headers.length) row.push("");
@@ -1581,12 +1621,22 @@ function buildRedesignedAssetRow(assetData: any, assetId: string, qrCodeText: st
     "Windows Version": assetData.windowsVersion || "",
     "Monitor Serial": assetData.monitorSerial || "",
     "Monitor Asset Code": assetData.monitorAssetCode || "",
+    "Monitor Brand": assetData.monitorMake || "",
+    "Monitor Model Number": assetData.monitorModel || "",
     "Keyboard Serial": assetData.keyboardSerial || "",
     "Keyboard Asset Code": assetData.keyboardAssetCode || "",
+    "Keyboard Brand": assetData.keyboardMake || "",
+    "Keyboard Model Number": assetData.keyboardModel || "",
+    "Keyboard Connectivity": assetData.keyboardConnectivity || "",
     "Mouse Serial": assetData.mouseSerial || "",
     "Mouse Asset Code": assetData.mouseAssetCode || "",
+    "Mouse Brand": assetData.mouseMake || "",
+    "Mouse Model Number": assetData.mouseModel || "",
+    "Mouse Connectivity": assetData.mouseConnectivity || "",
     "UPS Serial": assetData.upsSerial || "",
     "UPS Asset Code": assetData.upsAssetCode || "",
+    "UPS Brand": assetData.upsMake || "",
+    "UPS Model Number": assetData.upsModel || "",
     "Location": assetData.location || "",
     "Plant Code": assetData.plantCode || "",
     "Plant Name": assetData.plantName || assetData.plantCode || "",

@@ -10,7 +10,7 @@ import { ReactNode, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { buildScanUrl } from "../lib/scanId";
 import DeviceThumb from "./DeviceThumb";
-import { getDocumentViewUrl } from "../lib/fileUrls";
+import { extractDriveFileId, getDeviceImageUrl, getDocumentViewUrl } from "../lib/fileUrls";
 import { looksLikeEmail, looksLikeUrl, looksLikeDate, formatSelectedTypeLabel } from "../lib/assetDisplay";
 import { formatStoredDateTime, isDateFieldLabel } from "../lib/formatDisplayDate";
 import { SOFTWARE_LICENSE_CATEGORY } from "../lib/softwareLicense";
@@ -167,6 +167,33 @@ export default function AssetDetails({
     asset.subCategory === "CCTV / Security Device";
   const cctvLocationName =
     asset.dynamicDetails?.location_name?.trim() || asset.hostName?.trim() || "";
+  const photoFileId = extractDriveFileId(asset.imageUrl || "");
+  const documentFileId = extractDriveFileId(asset.documentUrl || "");
+  const hasDistinctPhoto =
+    !!asset.imageUrl?.trim() &&
+    (photoFileId && documentFileId
+      ? photoFileId !== documentFileId
+      : asset.imageUrl.trim() !== asset.documentUrl?.trim());
+  const hasPeripheralDetails = !!(
+    asset.monitorSerial ||
+    asset.monitorAssetCode ||
+    asset.monitorMake ||
+    asset.monitorModel ||
+    asset.keyboardSerial ||
+    asset.keyboardAssetCode ||
+    asset.keyboardMake ||
+    asset.keyboardModel ||
+    asset.keyboardConnectivity ||
+    asset.mouseSerial ||
+    asset.mouseAssetCode ||
+    asset.mouseMake ||
+    asset.mouseModel ||
+    asset.mouseConnectivity ||
+    asset.upsSerial ||
+    asset.upsAssetCode ||
+    asset.upsMake ||
+    asset.upsModel
+  );
 
   const openScanPage = useCallback(() => {
     window.open(scanUrl, "_blank", "noopener,noreferrer");
@@ -436,19 +463,26 @@ export default function AssetDetails({
 
       {(asset.mainCategory || "IT Assets") === "IT Assets" &&
         asset.assetType === "Desktop" &&
-        (asset.monitorSerial ||
-          asset.monitorAssetCode ||
-          asset.keyboardSerial ||
-          asset.keyboardAssetCode ||
-          asset.mouseSerial ||
-          asset.mouseAssetCode) && (
+        hasPeripheralDetails && (
           <Section title="Peripherals" icon={Monitor}>
-            <Field label="Monitor Serial" value={asset.monitorSerial} />
             <Field label="Monitor Asset Code" value={asset.monitorAssetCode} />
-            <Field label="Keyboard Serial" value={asset.keyboardSerial} />
+            <Field label="Monitor Serial" value={asset.monitorSerial} />
+            <Field label="Monitor Brand" value={asset.monitorMake} />
+            <Field label="Monitor Model Number" value={asset.monitorModel} />
             <Field label="Keyboard Asset Code" value={asset.keyboardAssetCode} />
-            <Field label="Mouse Serial" value={asset.mouseSerial} />
+            <Field label="Keyboard Serial" value={asset.keyboardSerial} />
+            <Field label="Keyboard Brand" value={asset.keyboardMake} />
+            <Field label="Keyboard Model Number" value={asset.keyboardModel} />
+            <Field label="Keyboard Connectivity" value={asset.keyboardConnectivity} />
             <Field label="Mouse Asset Code" value={asset.mouseAssetCode} />
+            <Field label="Mouse Serial" value={asset.mouseSerial} />
+            <Field label="Mouse Brand" value={asset.mouseMake} />
+            <Field label="Mouse Model Number" value={asset.mouseModel} />
+            <Field label="Mouse Connectivity" value={asset.mouseConnectivity} />
+            <Field label="UPS Asset Code" value={asset.upsAssetCode} />
+            <Field label="UPS Serial" value={asset.upsSerial} />
+            <Field label="UPS Brand" value={asset.upsMake} />
+            <Field label="UPS Model Number" value={asset.upsModel} />
           </Section>
         )}
 
@@ -464,19 +498,33 @@ export default function AssetDetails({
       </Section>
 
       {role !== "User" && (
-        <Section title="Attached Document" icon={LinkIcon}>
+        <Section title="Attachments" icon={LinkIcon}>
           <div className="sm:col-span-2">
-            {asset.documentUrl ? (
-              <a
-                href={getDocumentViewUrl(asset.documentUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:text-blue-700 font-bold underline flex items-center gap-2"
-              >
-                <LinkIcon size={14} /> Open Document (PDF)
-              </a>
+            {hasDistinctPhoto || asset.documentUrl ? (
+              <div className="flex flex-col gap-2">
+                {hasDistinctPhoto && (
+                  <a
+                    href={getDeviceImageUrl(asset.imageUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-bold underline flex items-center gap-2"
+                  >
+                    <LinkIcon size={14} /> Open Photo
+                  </a>
+                )}
+                {asset.documentUrl && (
+                  <a
+                    href={getDocumentViewUrl(asset.documentUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-bold underline flex items-center gap-2"
+                  >
+                    <LinkIcon size={14} /> Open Document (PDF)
+                  </a>
+                )}
+              </div>
             ) : (
-              <p className="text-sm text-slate-400 font-medium italic">No document attached.</p>
+              <p className="text-sm text-slate-400 font-medium italic">No attachments found.</p>
             )}
           </div>
         </Section>

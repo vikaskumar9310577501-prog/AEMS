@@ -105,12 +105,22 @@ var IT_EXTRA_HEADERS = [
   "Binary Code",
   "Monitor Serial",
   "Monitor Asset Code",
+  "Monitor Brand",
+  "Monitor Model Number",
   "Keyboard Serial",
   "Keyboard Asset Code",
+  "Keyboard Brand",
+  "Keyboard Model Number",
+  "Keyboard Connectivity",
   "Mouse Serial",
   "Mouse Asset Code",
+  "Mouse Brand",
+  "Mouse Model Number",
+  "Mouse Connectivity",
   "UPS Serial",
-  "UPS Asset Code"
+  "UPS Asset Code",
+  "UPS Brand",
+  "UPS Model Number"
 ];
 
 var CATEGORY_SHEET_MAP_ = {
@@ -271,12 +281,22 @@ function setupSheets() {
         setValByName("Binary Code", item["Binary Code"] || "");
         setValByName("Monitor Serial", item["Monitor Serial"] || "");
         setValByName("Monitor Asset Code", item["Monitor Asset Code"] || "");
+        setValByName("Monitor Brand", item["Monitor Brand"] || item["Monitor Make"] || "");
+        setValByName("Monitor Model Number", item["Monitor Model Number"] || item["Monitor Model"] || "");
         setValByName("Keyboard Serial", item["Keyboard Serial"] || "");
         setValByName("Keyboard Asset Code", item["Keyboard Asset Code"] || "");
+        setValByName("Keyboard Brand", item["Keyboard Brand"] || item["Keyboard Make"] || "");
+        setValByName("Keyboard Model Number", item["Keyboard Model Number"] || item["Keyboard Model"] || "");
+        setValByName("Keyboard Connectivity", item["Keyboard Connectivity"] || item["Keyboard Type"] || "");
         setValByName("Mouse Serial", item["Mouse Serial"] || "");
         setValByName("Mouse Asset Code", item["Mouse Asset Code"] || "");
+        setValByName("Mouse Brand", item["Mouse Brand"] || item["Mouse Make"] || "");
+        setValByName("Mouse Model Number", item["Mouse Model Number"] || item["Mouse Model"] || "");
+        setValByName("Mouse Connectivity", item["Mouse Connectivity"] || item["Mouse Type"] || "");
         setValByName("UPS Serial", item["UPS Serial"] || "");
         setValByName("UPS Asset Code", item["UPS Asset Code"] || "");
+        setValByName("UPS Brand", item["UPS Brand"] || item["UPS Make"] || "");
+        setValByName("UPS Model Number", item["UPS Model Number"] || item["UPS Model"] || "");
         
         mappedRows.push(newRow);
       }

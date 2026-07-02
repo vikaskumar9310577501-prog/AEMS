@@ -382,10 +382,7 @@ function healUrlBlock(a: Healable): void {
   if (isScanUrl(additional)) a.additionalItems = '';
   if (scanUrl) a.qrCodeText = scanUrl;
 
-  if (!img && uniqueDrives.length > 0) {
-    a.imageUrl = uniqueDrives[0];
-    img = uniqueDrives[0];
-  } else if (img) {
+  if (img) {
     a.imageUrl = img;
   }
 

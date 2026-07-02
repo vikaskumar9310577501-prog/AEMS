@@ -56,12 +56,22 @@ export const IT_EXTRA_HEADERS = [
   "Binary Code",
   "Monitor Serial",
   "Monitor Asset Code",
+  "Monitor Brand",
+  "Monitor Model Number",
   "Keyboard Serial",
   "Keyboard Asset Code",
+  "Keyboard Brand",
+  "Keyboard Model Number",
+  "Keyboard Connectivity",
   "Mouse Serial",
   "Mouse Asset Code",
+  "Mouse Brand",
+  "Mouse Model Number",
+  "Mouse Connectivity",
   "UPS Serial",
   "UPS Asset Code",
+  "UPS Brand",
+  "UPS Model Number",
 ] as const;
 
 export function getDefaultAssetHeaders(): string[] {

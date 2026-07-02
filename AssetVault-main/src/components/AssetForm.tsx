@@ -136,7 +136,6 @@ function focusStepField(step: number, refs: {
   step2Focus: HTMLDivElement | null;
   step3Location: HTMLDivElement | null;
 }) {
-  if (step === 2) focusFirstField(refs.step2Focus);
   if (step === 3) focusFirstField(refs.step3Location);
 }
 
@@ -175,6 +174,38 @@ interface AppSettings {
 
 function sameSettingValue(left: unknown, right: unknown): boolean {
   return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+}
+
+function hasValue(...values: unknown[]): boolean {
+  return values.some((value) => String(value ?? '').trim() !== '');
+}
+
+function hasMonitorDetails(asset?: Partial<AssetFormData> | null): boolean {
+  return hasValue(asset?.monitorSerial, asset?.monitorAssetCode, asset?.monitorMake, asset?.monitorModel);
+}
+
+function hasKeyboardDetails(asset?: Partial<AssetFormData> | null): boolean {
+  return hasValue(
+    asset?.keyboardSerial,
+    asset?.keyboardAssetCode,
+    asset?.keyboardMake,
+    asset?.keyboardModel,
+    asset?.keyboardConnectivity
+  );
+}
+
+function hasMouseDetails(asset?: Partial<AssetFormData> | null): boolean {
+  return hasValue(
+    asset?.mouseSerial,
+    asset?.mouseAssetCode,
+    asset?.mouseMake,
+    asset?.mouseModel,
+    asset?.mouseConnectivity
+  );
+}
+
+function hasUpsDetails(asset?: Partial<AssetFormData> | null): boolean {
+  return hasValue(asset?.upsSerial, asset?.upsAssetCode, asset?.upsMake, asset?.upsModel);
 }
 
 export default function AssetForm({ initialData, onSubmit, onCancel, loading, layout = "modal", prefillMainCategory, prefillAssetType, hideAssignee = false, allowedCategories: propAllowedCategories }: AssetFormProps) {
@@ -311,10 +342,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     setFormStep(2);
     setFieldErrors({});
     setMacError(null);
-    setIncludeMonitor(!!(initialData.monitorSerial || initialData.monitorAssetCode));
-    setIncludeKeyboard(!!(initialData.keyboardSerial || initialData.keyboardAssetCode));
-    setIncludeMouse(!!(initialData.mouseSerial || initialData.mouseAssetCode));
-    setIncludeUps(!!(initialData.upsSerial || initialData.upsAssetCode));
+    setIncludeMonitor(hasMonitorDetails(initialData));
+    setIncludeKeyboard(hasKeyboardDetails(initialData));
+    setIncludeMouse(hasMouseDetails(initialData));
+    setIncludeUps(hasUpsDetails(initialData));
     setShowAmc(!!initialData.amcVendor);
     setCatalog((c) =>
       catalogWithAssetValues(c, initialData.assetType, initialData.make, initialData.model)
@@ -382,10 +413,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     });
   };
 
-  const [includeMonitor, setIncludeMonitor] = useState(() => !!(initialData?.monitorSerial || initialData?.monitorAssetCode));
-  const [includeKeyboard, setIncludeKeyboard] = useState(() => !!(initialData?.keyboardSerial || initialData?.keyboardAssetCode));
-  const [includeMouse, setIncludeMouse] = useState(() => !!(initialData?.mouseSerial || initialData?.mouseAssetCode));
-  const [includeUps, setIncludeUps] = useState(() => !!(initialData?.upsSerial || initialData?.upsAssetCode));
+  const [includeMonitor, setIncludeMonitor] = useState(() => hasMonitorDetails(initialData));
+  const [includeKeyboard, setIncludeKeyboard] = useState(() => hasKeyboardDetails(initialData));
+  const [includeMouse, setIncludeMouse] = useState(() => hasMouseDetails(initialData));
+  const [includeUps, setIncludeUps] = useState(() => hasUpsDetails(initialData));
   const [showAmc, setShowAmc] = useState(() => !!initialData?.amcVendor);
 
   const [macError, setMacError] = useState<string | null>(null);
@@ -506,6 +537,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const isSoftwareCategory = formData.mainCategory === SOFTWARE_LICENSE_CATEGORY;
   const isItCategory = (formData.mainCategory || "IT Assets") === "IT Assets";
+  const isPeripheralGridOpen =
+    PERIPHERAL_GRID_TYPES.includes(formData.assetType) ||
+    formData.subCategory === "Input Device" ||
+    formData.subCategory === "Output Device";
   const canUploadPreview = isItCategory
     ? !!formData.assetType?.trim()
     : !!formData.subCategory?.trim();
@@ -1160,12 +1195,22 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       status: !isSoftwareCategory && formData.maintenanceRequired === 'Yes' ? 'Under Maintenance' : (formData.status || 'Available'),
       monitorAssetCode: includeMonitor ? formData.monitorAssetCode : "",
       monitorSerial: includeMonitor ? formData.monitorSerial : "",
+      monitorMake: includeMonitor ? formData.monitorMake : "",
+      monitorModel: includeMonitor ? formData.monitorModel : "",
       keyboardAssetCode: includeKeyboard ? formData.keyboardAssetCode : "",
       keyboardSerial: includeKeyboard ? formData.keyboardSerial : "",
+      keyboardMake: includeKeyboard ? formData.keyboardMake : "",
+      keyboardModel: includeKeyboard ? formData.keyboardModel : "",
+      keyboardConnectivity: includeKeyboard ? formData.keyboardConnectivity : "",
       mouseAssetCode: includeMouse ? formData.mouseAssetCode : "",
       mouseSerial: includeMouse ? formData.mouseSerial : "",
+      mouseMake: includeMouse ? formData.mouseMake : "",
+      mouseModel: includeMouse ? formData.mouseModel : "",
+      mouseConnectivity: includeMouse ? formData.mouseConnectivity : "",
       upsAssetCode: includeUps ? formData.upsAssetCode : "",
       upsSerial: includeUps ? formData.upsSerial : "",
+      upsMake: includeUps ? formData.upsMake : "",
+      upsModel: includeUps ? formData.upsModel : "",
       updatedBy: currentUser,
       updatedDate: now,
       ...(initialData?.id ? {} : { createdBy: currentUser, createdDate: now }),
@@ -1429,7 +1474,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 {IT_PRIMARY_TYPES.map((type) => {
                   const isPeripheralGroup = type === "Input/Output Device";
                   const isSelected = isPeripheralGroup
-                    ? PERIPHERAL_GRID_TYPES.includes(formData.assetType)
+                    ? isPeripheralGridOpen
                     : formData.assetType === type;
                   return (
                     <button
@@ -1451,7 +1496,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   );
                 })}
               </div>
-              {PERIPHERAL_GRID_TYPES.includes(formData.assetType) && (
+              {isPeripheralGridOpen && (
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Device Type</div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -2327,7 +2372,13 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   onChange={(e) => {
                     setIncludeMonitor(e.target.checked);
                     if (!e.target.checked) {
-                      setFormData(prev => ({ ...prev, monitorAssetCode: "", monitorSerial: "" }));
+                      setFormData(prev => ({
+                        ...prev,
+                        monitorAssetCode: "",
+                        monitorSerial: "",
+                        monitorMake: "",
+                        monitorModel: "",
+                      }));
                     }
                   }}
                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
@@ -2347,6 +2398,20 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     value={formData.monitorSerial}
                     onChange={handleChange}
                     placeholder="Serial Number"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <input
+                    name="monitorMake"
+                    value={formData.monitorMake}
+                    onChange={handleChange}
+                    placeholder="Brand"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <input
+                    name="monitorModel"
+                    value={formData.monitorModel}
+                    onChange={handleChange}
+                    placeholder="Model Number"
                     className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
                   />
                 </div>
@@ -2373,7 +2438,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   onChange={(e) => {
                     setIncludeKeyboard(e.target.checked);
                     if (!e.target.checked) {
-                      setFormData(prev => ({ ...prev, keyboardAssetCode: "", keyboardSerial: "" }));
+                      setFormData(prev => ({
+                        ...prev,
+                        keyboardAssetCode: "",
+                        keyboardSerial: "",
+                        keyboardMake: "",
+                        keyboardModel: "",
+                        keyboardConnectivity: "",
+                      }));
                     }
                   }}
                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
@@ -2395,6 +2467,30 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     placeholder="Serial Number"
                     className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
                   />
+                  <input
+                    name="keyboardMake"
+                    value={formData.keyboardMake}
+                    onChange={handleChange}
+                    placeholder="Brand"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <input
+                    name="keyboardModel"
+                    value={formData.keyboardModel}
+                    onChange={handleChange}
+                    placeholder="Model Number"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <select
+                    name="keyboardConnectivity"
+                    value={formData.keyboardConnectivity}
+                    onChange={handleChange}
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  >
+                    <option value="">Connectivity</option>
+                    <option value="Wired">Wired</option>
+                    <option value="Wireless">Wireless</option>
+                  </select>
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic text-center py-4">Keyboard excluded</p>
@@ -2419,7 +2515,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   onChange={(e) => {
                     setIncludeMouse(e.target.checked);
                     if (!e.target.checked) {
-                      setFormData(prev => ({ ...prev, mouseAssetCode: "", mouseSerial: "" }));
+                      setFormData(prev => ({
+                        ...prev,
+                        mouseAssetCode: "",
+                        mouseSerial: "",
+                        mouseMake: "",
+                        mouseModel: "",
+                        mouseConnectivity: "",
+                      }));
                     }
                   }}
                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
@@ -2441,6 +2544,30 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     placeholder="Serial Number"
                     className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
                   />
+                  <input
+                    name="mouseMake"
+                    value={formData.mouseMake}
+                    onChange={handleChange}
+                    placeholder="Brand"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <input
+                    name="mouseModel"
+                    value={formData.mouseModel}
+                    onChange={handleChange}
+                    placeholder="Model Number"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <select
+                    name="mouseConnectivity"
+                    value={formData.mouseConnectivity}
+                    onChange={handleChange}
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  >
+                    <option value="">Connectivity</option>
+                    <option value="Wired">Wired</option>
+                    <option value="Wireless">Wireless</option>
+                  </select>
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic text-center py-4">Mouse excluded</p>
@@ -2465,7 +2592,13 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   onChange={(e) => {
                     setIncludeUps(e.target.checked);
                     if (!e.target.checked) {
-                      setFormData(prev => ({ ...prev, upsAssetCode: "", upsSerial: "" }));
+                      setFormData(prev => ({
+                        ...prev,
+                        upsAssetCode: "",
+                        upsSerial: "",
+                        upsMake: "",
+                        upsModel: "",
+                      }));
                     }
                   }}
                   className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
@@ -2485,6 +2618,20 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     value={formData.upsSerial}
                     onChange={handleChange}
                     placeholder="Serial Number"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <input
+                    name="upsMake"
+                    value={formData.upsMake}
+                    onChange={handleChange}
+                    placeholder="Brand"
+                    className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
+                  />
+                  <input
+                    name="upsModel"
+                    value={formData.upsModel}
+                    onChange={handleChange}
+                    placeholder="Model Number"
                     className="w-full input-geometric bg-slate-50 text-xs py-2 px-3 focus:bg-white"
                   />
                 </div>

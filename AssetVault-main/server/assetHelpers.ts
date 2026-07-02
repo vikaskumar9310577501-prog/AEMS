@@ -26,12 +26,22 @@ export interface MappedAsset {
   macAddress: string;
   monitorSerial: string;
   monitorAssetCode: string;
+  monitorMake: string;
+  monitorModel: string;
   keyboardSerial: string;
   keyboardAssetCode: string;
+  keyboardMake: string;
+  keyboardModel: string;
+  keyboardConnectivity: string;
   mouseSerial: string;
   mouseAssetCode: string;
+  mouseMake: string;
+  mouseModel: string;
+  mouseConnectivity: string;
   upsSerial: string;
   upsAssetCode: string;
+  upsMake: string;
+  upsModel: string;
   contactName: string;
   contactEmail: string;
   contactMobile: string;
@@ -175,12 +185,22 @@ export function mapSheetRow(item: Record<string, unknown>): MappedAsset {
   const assetName = getVal(item, ["Asset Name"]);
   const monitorSerial = getVal(item, ["Monitor Serial", "Monitor SN"]);
   const monitorAssetCode = getVal(item, ["Monitor Asset Code", "Monitor Code"]);
+  const monitorMake = getVal(item, ["Monitor Brand", "Monitor Make"]);
+  const monitorModel = getVal(item, ["Monitor Model Number", "Monitor Model"]);
   const keyboardSerial = getVal(item, ["Keyboard Serial", "Keyboard SN"]);
   const keyboardAssetCode = getVal(item, ["Keyboard Asset Code", "Keyboard Code"]);
+  const keyboardMake = getVal(item, ["Keyboard Brand", "Keyboard Make"]);
+  const keyboardModel = getVal(item, ["Keyboard Model Number", "Keyboard Model"]);
+  const keyboardConnectivity = getVal(item, ["Keyboard Connectivity", "Keyboard Type"]);
   const mouseSerial = getVal(item, ["Mouse Serial", "Mouse SN"]);
   const mouseAssetCode = getVal(item, ["Mouse Asset Code", "Mouse Code"]);
+  const mouseMake = getVal(item, ["Mouse Brand", "Mouse Make"]);
+  const mouseModel = getVal(item, ["Mouse Model Number", "Mouse Model"]);
+  const mouseConnectivity = getVal(item, ["Mouse Connectivity", "Mouse Type"]);
   const upsSerial = getVal(item, ["UPS Serial", "UPS SN"]);
   const upsAssetCode = getVal(item, ["UPS Asset Code", "UPS Code"]);
+  const upsMake = getVal(item, ["UPS Brand", "UPS Make"]);
+  const upsModel = getVal(item, ["UPS Model Number", "UPS Model"]);
   const assetTypeId = getVal(item, ["assetTypeId", "Asset Type ID"]);
 
   const resolvedAssetType =
@@ -194,12 +214,22 @@ export function mapSheetRow(item: Record<string, unknown>): MappedAsset {
       assetName,
       monitorSerial,
       monitorAssetCode,
+      monitorMake,
+      monitorModel,
       keyboardSerial,
       keyboardAssetCode,
+      keyboardMake,
+      keyboardModel,
+      keyboardConnectivity,
       mouseSerial,
       mouseAssetCode,
+      mouseMake,
+      mouseModel,
+      mouseConnectivity,
       upsSerial,
       upsAssetCode,
+      upsMake,
+      upsModel,
     }) ||
     (healedAssetType && !isGroupedSubCategory(healedAssetType) && !matchMainCategoryLabel(healedAssetType)
       ? healedAssetType
@@ -233,12 +263,22 @@ export function mapSheetRow(item: Record<string, unknown>): MappedAsset {
     macAddress: getVal(item, ["MAC Address", "MAC"]),
     monitorSerial,
     monitorAssetCode,
+    monitorMake,
+    monitorModel,
     keyboardSerial,
     keyboardAssetCode,
+    keyboardMake,
+    keyboardModel,
+    keyboardConnectivity,
     mouseSerial,
     mouseAssetCode,
+    mouseMake,
+    mouseModel,
+    mouseConnectivity,
     upsSerial,
     upsAssetCode,
+    upsMake,
+    upsModel,
     contactName: getVal(item, [
       "Assigned To",
       "Contact Person Name",

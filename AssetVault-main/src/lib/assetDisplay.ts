@@ -139,22 +139,42 @@ export function isGroupedSubCategory(value: string): boolean {
 function hasDesktopPeripherals(asset: {
   monitorSerial?: string;
   monitorAssetCode?: string;
+  monitorMake?: string;
+  monitorModel?: string;
   keyboardSerial?: string;
   keyboardAssetCode?: string;
+  keyboardMake?: string;
+  keyboardModel?: string;
+  keyboardConnectivity?: string;
   mouseSerial?: string;
   mouseAssetCode?: string;
+  mouseMake?: string;
+  mouseModel?: string;
+  mouseConnectivity?: string;
   upsSerial?: string;
   upsAssetCode?: string;
+  upsMake?: string;
+  upsModel?: string;
 }): boolean {
   return [
     asset.monitorSerial,
     asset.monitorAssetCode,
+    asset.monitorMake,
+    asset.monitorModel,
     asset.keyboardSerial,
     asset.keyboardAssetCode,
+    asset.keyboardMake,
+    asset.keyboardModel,
+    asset.keyboardConnectivity,
     asset.mouseSerial,
     asset.mouseAssetCode,
+    asset.mouseMake,
+    asset.mouseModel,
+    asset.mouseConnectivity,
     asset.upsSerial,
     asset.upsAssetCode,
+    asset.upsMake,
+    asset.upsModel,
   ].some((v) => String(v || "").trim() !== "");
 }
 
@@ -163,12 +183,22 @@ function inferLaptopOrDesktop(asset: {
   model?: string;
   monitorSerial?: string;
   monitorAssetCode?: string;
+  monitorMake?: string;
+  monitorModel?: string;
   keyboardSerial?: string;
   keyboardAssetCode?: string;
+  keyboardMake?: string;
+  keyboardModel?: string;
+  keyboardConnectivity?: string;
   mouseSerial?: string;
   mouseAssetCode?: string;
+  mouseMake?: string;
+  mouseModel?: string;
+  mouseConnectivity?: string;
   upsSerial?: string;
   upsAssetCode?: string;
+  upsMake?: string;
+  upsModel?: string;
 }): "Laptop" | "Desktop" | "" {
   const typeLower = (asset.assetType || "").trim().toLowerCase();
   if (typeLower === "laptop") return "Laptop";
@@ -227,12 +257,22 @@ export function resolveSpecificAssetType(asset: {
   make?: string;
   monitorSerial?: string;
   monitorAssetCode?: string;
+  monitorMake?: string;
+  monitorModel?: string;
   keyboardSerial?: string;
   keyboardAssetCode?: string;
+  keyboardMake?: string;
+  keyboardModel?: string;
+  keyboardConnectivity?: string;
   mouseSerial?: string;
   mouseAssetCode?: string;
+  mouseMake?: string;
+  mouseModel?: string;
+  mouseConnectivity?: string;
   upsSerial?: string;
   upsAssetCode?: string;
+  upsMake?: string;
+  upsModel?: string;
 }): string {
   const main = (asset.mainCategory || "").trim();
   const type = (asset.assetType || "").trim();
@@ -284,12 +324,22 @@ export function formatSelectedTypeLabel(asset: {
   make?: string;
   monitorSerial?: string;
   monitorAssetCode?: string;
+  monitorMake?: string;
+  monitorModel?: string;
   keyboardSerial?: string;
   keyboardAssetCode?: string;
+  keyboardMake?: string;
+  keyboardModel?: string;
+  keyboardConnectivity?: string;
   mouseSerial?: string;
   mouseAssetCode?: string;
+  mouseMake?: string;
+  mouseModel?: string;
+  mouseConnectivity?: string;
   upsSerial?: string;
   upsAssetCode?: string;
+  upsMake?: string;
+  upsModel?: string;
 }): string {
   return resolveSpecificAssetType(asset) || "—";
 }
