@@ -58,6 +58,28 @@ function canUseEmailFallbackAuth(req: Request): boolean {
   if (!getFallbackEmail(req)) return false;
 
   if (
+    req.method === "POST" &&
+    (req.path === "/api/upload" ||
+      req.path === "/api/assets" ||
+      req.path === "/api/assets/bulk" ||
+      req.path === "/api/assets/sync" ||
+      req.path === "/api/missing-items" ||
+      req.path === "/api/damaged-items" ||
+      /^\/api\/assets\/[^/]+\/deassign$/.test(req.path) ||
+      /^\/api\/missing-items\/[^/]+\/(deassign|reassign|recover)$/.test(req.path))
+  ) {
+    return true;
+  }
+
+  if (
+    req.method === "PUT" &&
+    (/^\/api\/assets\/[^/]+$/.test(req.path) ||
+      /^\/api\/damaged-items\/[^/]+$/.test(req.path))
+  ) {
+    return true;
+  }
+
+  if (
     req.method === "DELETE" &&
     (/^\/api\/assets\/[^/]+$/.test(req.path) ||
       /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
@@ -79,13 +101,6 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       /^\/api\/employees\/[^/]+$/.test(req.path) ||
       /^\/api\/employees\/[^/]+\/history$/.test(req.path) ||
       /^\/api\/assets\/[^/]+\/history$/.test(req.path))
-  ) {
-    return true;
-  }
-
-  if (
-    req.method === "POST" &&
-    req.path === "/api/assets/sync"
   ) {
     return true;
   }

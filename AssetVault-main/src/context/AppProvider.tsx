@@ -516,9 +516,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
           persistAssets(patchAssetsList(assetsRef.current, saved, editingAsset));
         }
-        // Always force-refresh from server after save so the saving user
-        // sees the final count (including any concurrency-resolved ID changes)
-        void fetchAssets({ silent: true, force: true }).catch(() => {});
+        // The save response already carries the final server row; a soft refresh keeps
+        // sync metadata warm without blocking the form or forcing a full sheet pull.
+        void fetchAssets({ silent: true }).catch(() => {});
         toast.success(editingAsset ? 'Asset updated!' : 'Asset registered!');
       } catch (err: unknown) {
         persistAssets(previousSnapshot);
@@ -560,11 +560,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (saved) {
         persistAssets(patchAssetsList(assetsRef.current, saved, asset));
-        void fetchAssets({ silent: true, force: true }).catch(() => {});
+        void fetchAssets({ silent: true }).catch(() => {});
         return saved;
       }
 
-      await fetchAssets({ silent: true, force: true });
+      await fetchAssets({ silent: true });
       const current = assetsRef.current.find((a) => normAssetId(a.id) === normAssetId(assetId));
       return current || asset;
     },

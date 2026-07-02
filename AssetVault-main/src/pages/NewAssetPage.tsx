@@ -15,11 +15,11 @@ export default function NewAssetPage() {
   const prefillMainCategory = sidebarPrefill.mainCategory ?? navState.mainCategory;
   const prefillAssetType = navState.assetType ?? sidebarPrefill.assetType;
   const { handleSubmit, user } = useApp();
+  const [loading, setLoading] = useState(false);
 
   if (user?.role === 'HR') {
     return <Navigate to="/employees" replace />;
   }
-  const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data: AssetFormData) => {
     try {

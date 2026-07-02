@@ -240,6 +240,14 @@ export async function getAssetsWithCache(
     }
   }
 
+  if (!force) {
+    const cached = getCachedAssets();
+    if (cached) {
+      scheduleAssetsSyncIfStale(gasUrl);
+      return { assets: cached, fromCache: true, syncing: !!refreshPromise };
+    }
+  }
+
   const assets = await refreshAssetsNow(gasUrl);
   return { assets: healAssetsList(assets), fromCache: false, syncing: false };
 }

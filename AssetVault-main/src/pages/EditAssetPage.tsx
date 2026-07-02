@@ -12,16 +12,16 @@ export default function EditAssetPage() {
   const { assetId } = useParams<{ assetId: string }>();
   const navigate = useNavigate();
   const { assets, loading: assetsLoading, handleSubmit, user } = useApp();
-
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
-  }
   const [loading, setLoading] = useState(false);
 
   const asset = useMemo(() => {
     const raw = assetId ? findAssetByRouteId(assets, assetId) : undefined;
     return raw ? healMisalignedAssetFields(raw) : undefined;
   }, [assets, assetId]);
+
+  if (user?.role === 'HR') {
+    return <Navigate to="/employees" replace />;
+  }
 
   const onSubmit = async (data: AssetFormData) => {
     if (!asset) return;
