@@ -310,6 +310,15 @@ function hasUpsDetails(asset?: Partial<AssetFormData> | null): boolean {
   return hasValue(asset?.upsSerial, asset?.upsAssetCode, asset?.upsMake, asset?.upsModel);
 }
 
+function hasAttachedPeripheralDetails(asset?: Partial<AssetFormData> | null): boolean {
+  return (
+    hasMonitorDetails(asset) ||
+    hasKeyboardDetails(asset) ||
+    hasMouseDetails(asset) ||
+    hasUpsDetails(asset)
+  );
+}
+
 export default function AssetForm({ initialData, onSubmit, onCancel, loading, layout = "modal", prefillMainCategory, prefillAssetType, hideAssignee = false, allowedCategories: propAllowedCategories }: AssetFormProps) {
   const isPageLayout = layout === "page";
   const { user: loggedInUser } = useApp();
@@ -580,6 +589,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const handleLoadDraft = (draft: { id: string; timestamp: string; label: string; data: AssetFormData }) => {
     setFormData(draft.data);
+    setIncludeMonitor(hasMonitorDetails(draft.data));
+    setIncludeKeyboard(hasKeyboardDetails(draft.data));
+    setIncludeMouse(hasMouseDetails(draft.data));
+    setIncludeUps(hasUpsDetails(draft.data));
     setLoadedDraftId(draft.id);
     setFormStep(1);
     toast.success(`Loaded draft: ${draft.label}`);
@@ -690,6 +703,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   });
 
   const selectAssetType = (newType: AssetType) => {
+    const subCategory = subCategoryForItAssetType(newType);
     const make = formData.make || "";
     const models = make ? getModelsForBrandAndType(catalog, newType, make) : [];
     const model = models.includes(formData.model) ? formData.model : "";
@@ -697,12 +711,13 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     const isPrimary = ["Laptop", "Desktop"].includes(newType);
     const typeDef = resolveTypeDefinition(typeConfig, {
       mainCategory: formData.mainCategory,
-      subCategory: formData.subCategory,
+      subCategory,
       assetType: newType,
     });
     setFormData((prev) => ({
       ...prev,
       assetType: newType,
+      subCategory,
       assetTypeId: typeDef?.id || prev.assetTypeId,
       make,
       model,
@@ -711,6 +726,38 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         ? { ram: "", ssd: "", cpu: "", windowsVersion: "", macAddress: "" }
         : {}),
     }));
+    setDynamicFieldErrors({});
+  };
+
+  const openPeripheralPicker = () => {
+    setFormData((prev) => {
+      const selectedType = (
+        PERIPHERAL_GRID_TYPES.includes(prev.assetType) ? prev.assetType : "Keyboard"
+      ) as AssetType;
+      const subCategory = subCategoryForItAssetType(selectedType);
+      const make = prev.make || "";
+      const models = make ? getModelsForBrandAndType(catalog, selectedType, make) : [];
+      const model = models.includes(prev.model) ? prev.model : "";
+      const wasPrimary = ["Laptop", "Desktop"].includes(prev.assetType);
+      const typeDef = resolveTypeDefinition(typeConfig, {
+        mainCategory: prev.mainCategory,
+        subCategory,
+        assetType: selectedType,
+      });
+
+      return {
+        ...prev,
+        assetType: selectedType,
+        assetTypeId: typeDef?.id || prev.assetTypeId,
+        subCategory,
+        make,
+        model,
+        ...(isEditMode ? {} : { assetName: "" }),
+        ...(wasPrimary && !isEditMode
+          ? { ram: "", ssd: "", cpu: "", windowsVersion: "", macAddress: "" }
+          : {}),
+      };
+    });
     setDynamicFieldErrors({});
   };
 
@@ -986,7 +1033,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   }, [formData.serialNumber, formData.assetCode, formData.macAddress, initialData?.id, entryProfile.manualAssetCode]);
 
   useEffect(() => {
-    if (initialData?.id || isAssetCodeEdited || formData.assetCode?.trim()) return;
+    if (entryProfile.manualAssetCode || initialData?.id || isAssetCodeEdited || formData.assetCode?.trim()) return;
     const cat = formData.mainCategory || "IT Assets";
     fetch(
       `${import.meta.env.VITE_API_BASE_URL || ""}/api/assets/next-code?category=${encodeURIComponent(cat)}`
@@ -1010,7 +1057,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         }
       })
       .catch(() => {});
-  }, [formData.mainCategory, formData.subCategory, formData.assetType, formData.assetCode, isAssetCodeEdited, initialData?.id]);
+  }, [formData.mainCategory, formData.subCategory, formData.assetType, formData.assetCode, isAssetCodeEdited, initialData?.id, entryProfile.manualAssetCode]);
 
   const allowedLocations = React.useMemo(() => {
     return buildScopedLocationOptions(
@@ -1291,6 +1338,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
     const now = new Date().toISOString();
     const currentUser = loggedInUser?.name || loggedInUser?.username || loggedInUser?.email || "System";
+    const submitMonitor = includeMonitor || hasMonitorDetails(formData);
+    const submitKeyboard = includeKeyboard || hasKeyboardDetails(formData);
+    const submitMouse = includeMouse || hasMouseDetails(formData);
+    const submitUps = includeUps || hasUpsDetails(formData);
 
     const dataToSubmit = normalizeItFormDataForSave(
       {
@@ -1298,24 +1349,24 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         dynamicDetails: detailsForSave,
         assetTypeId: activeTypeDef?.id || formData.assetTypeId,
         status: !isSoftwareCategory && formData.maintenanceRequired === 'Yes' ? 'Under Maintenance' : (formData.status || 'Available'),
-        monitorAssetCode: includeMonitor ? formData.monitorAssetCode : "",
-        monitorSerial: includeMonitor ? formData.monitorSerial : "",
-        monitorMake: includeMonitor ? formData.monitorMake : "",
-        monitorModel: includeMonitor ? formData.monitorModel : "",
-        keyboardAssetCode: includeKeyboard ? formData.keyboardAssetCode : "",
-        keyboardSerial: includeKeyboard ? formData.keyboardSerial : "",
-        keyboardMake: includeKeyboard ? formData.keyboardMake : "",
-        keyboardModel: includeKeyboard ? formData.keyboardModel : "",
-        keyboardConnectivity: includeKeyboard ? formData.keyboardConnectivity : "",
-        mouseAssetCode: includeMouse ? formData.mouseAssetCode : "",
-        mouseSerial: includeMouse ? formData.mouseSerial : "",
-        mouseMake: includeMouse ? formData.mouseMake : "",
-        mouseModel: includeMouse ? formData.mouseModel : "",
-        mouseConnectivity: includeMouse ? formData.mouseConnectivity : "",
-        upsAssetCode: includeUps ? formData.upsAssetCode : "",
-        upsSerial: includeUps ? formData.upsSerial : "",
-        upsMake: includeUps ? formData.upsMake : "",
-        upsModel: includeUps ? formData.upsModel : "",
+        monitorAssetCode: submitMonitor ? formData.monitorAssetCode : "",
+        monitorSerial: submitMonitor ? formData.monitorSerial : "",
+        monitorMake: submitMonitor ? formData.monitorMake : "",
+        monitorModel: submitMonitor ? formData.monitorModel : "",
+        keyboardAssetCode: submitKeyboard ? formData.keyboardAssetCode : "",
+        keyboardSerial: submitKeyboard ? formData.keyboardSerial : "",
+        keyboardMake: submitKeyboard ? formData.keyboardMake : "",
+        keyboardModel: submitKeyboard ? formData.keyboardModel : "",
+        keyboardConnectivity: submitKeyboard ? formData.keyboardConnectivity : "",
+        mouseAssetCode: submitMouse ? formData.mouseAssetCode : "",
+        mouseSerial: submitMouse ? formData.mouseSerial : "",
+        mouseMake: submitMouse ? formData.mouseMake : "",
+        mouseModel: submitMouse ? formData.mouseModel : "",
+        mouseConnectivity: submitMouse ? formData.mouseConnectivity : "",
+        upsAssetCode: submitUps ? formData.upsAssetCode : "",
+        upsSerial: submitUps ? formData.upsSerial : "",
+        upsMake: submitUps ? formData.upsMake : "",
+        upsModel: submitUps ? formData.upsModel : "",
         updatedBy: currentUser,
         updatedDate: now,
         ...(initialData?.id ? {} : { createdBy: currentUser, createdDate: now }),
@@ -1588,10 +1639,11 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                       type="button"
                       key={type}
                       onClick={() => {
-                        const newType = isPeripheralGroup ? "Monitor" : (type as AssetType);
-                        selectAssetType(newType);
-                        const { subCategory } = applyItAssetTypeSelection(newType);
-                        setFormData((prev) => ({ ...prev, subCategory }));
+                        if (isPeripheralGroup) {
+                          openPeripheralPicker();
+                        } else {
+                          selectAssetType(type as AssetType);
+                        }
                       }}
                       className={cn(
                         "py-3 px-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
@@ -1613,8 +1665,6 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                         key={pType}
                         onClick={() => {
                           selectAssetType(pType as AssetType);
-                          const { subCategory } = applyItAssetTypeSelection(pType as AssetType);
-                          setFormData((prev) => ({ ...prev, subCategory }));
                         }}
                         className={cn(
                           "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all",
@@ -2482,7 +2532,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           )}
         </div>
 
-      {formData.assetType === 'Desktop' && (
+      {(formData.assetType === 'Desktop' || formData.assetTypeId === 'desktop' || hasAttachedPeripheralDetails(formData)) && (
         <section className="space-y-5 bg-slate-50 p-5 rounded-2xl border border-slate-200">
           <h3 className="label-caps flex items-center gap-2">
              <Monitor size={12} className="text-blue-500" />

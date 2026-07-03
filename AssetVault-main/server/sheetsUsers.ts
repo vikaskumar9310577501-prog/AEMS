@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import crypto from "crypto";
 import type { AppUser } from "./dataStore.js";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
@@ -43,6 +44,103 @@ function userToRow(user: AppUser): string[] {
     formatList(user.plants),
     formatList(user.categories),
   ];
+}
+
+function normalizeHeader(value: unknown): string {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function parseList(value: unknown): string[] {
+  return String(value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function otpHash(value: string): string {
+  return crypto.createHash("sha256").update(String(value)).digest("base64url");
+}
+
+export async function verifyOtpFromGoogleSheet(
+  spreadsheetId: string,
+  usersSheetGid: string,
+  email: string,
+  otp: string
+): Promise<{ ok: boolean; error?: string; user?: AppUser }> {
+  const sheets = await getSheetsClient();
+  if (!sheets) return { ok: false, error: "Google credentials not configured" };
+
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const code = String(otp || "").trim();
+  if (!normalizedEmail || !code) return { ok: false, error: "Email and OTP are required" };
+
+  const title = await getUsersSheetTitle(sheets, spreadsheetId, usersSheetGid);
+  const range = `'${title}'!A:Z`;
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const rows = res.data.values || [];
+  if (rows.length < 2) return { ok: false, error: "Users sheet not configured" };
+
+  const headers = rows[0].map(normalizeHeader);
+  const emailIdx = headers.findIndex((h) => h.includes("email") || h.includes("mail"));
+  const roleIdx = headers.findIndex((h) => h.includes("role"));
+  const locIdx = headers.findIndex((h) => h.includes("location"));
+  const plantIdx = headers.findIndex((h) => h.includes("plant"));
+  const catIdx = headers.findIndex((h) => h.includes("category") || h.includes("access"));
+  const otpIdx = headers.indexOf("otp");
+  const expiryIdx = headers.indexOf("expiry");
+  const attemptsIdx = headers.indexOf("attempts");
+  if (emailIdx === -1 || otpIdx === -1) {
+    return { ok: false, error: "Users sheet OTP columns are missing" };
+  }
+
+  const rowIndex = rows.findIndex((row, index) =>
+    index > 0 && String(row[emailIdx] || "").trim().toLowerCase() === normalizedEmail
+  );
+  if (rowIndex === -1) return { ok: false, error: "Invalid email ID. Contact your IT admin." };
+
+  const row = rows[rowIndex] || [];
+  const saved = String(row[otpIdx] || "").trim();
+  const expiry = expiryIdx !== -1 ? parseInt(String(row[expiryIdx] || ""), 10) || 0 : 0;
+  const attempts = attemptsIdx !== -1 ? parseInt(String(row[attemptsIdx] || ""), 10) || 0 : 0;
+  if (!saved) return { ok: false, error: "OTP not requested. Please request a new code." };
+  if (expiry && Date.now() > expiry) return { ok: false, error: "OTP has expired. Please request a new one." };
+  if (attempts >= 5) return { ok: false, error: "Too many failed attempts. Request a new OTP." };
+
+  const valid = saved === code || saved === otpHash(code);
+  const sheetRow = rowIndex + 1;
+  if (!valid) {
+    if (attemptsIdx !== -1) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `'${title}'!${String.fromCharCode(65 + attemptsIdx)}${sheetRow}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [[attempts + 1]] },
+      });
+    }
+    return { ok: false, error: "Invalid OTP. Please try again." };
+  }
+
+  const clearRow = [...row];
+  clearRow[otpIdx] = "";
+  if (expiryIdx !== -1) clearRow[expiryIdx] = "";
+  if (attemptsIdx !== -1) clearRow[attemptsIdx] = 0;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${title}'!A${sheetRow}:Z${sheetRow}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [clearRow] },
+  });
+
+  return {
+    ok: true,
+    user: {
+      email: normalizedEmail,
+      role: String(roleIdx !== -1 ? row[roleIdx] || "User" : "User"),
+      locations: parseList(locIdx !== -1 ? row[locIdx] : ""),
+      plants: parseList(plantIdx !== -1 ? row[plantIdx] : ""),
+      categories: parseList(catIdx !== -1 ? row[catIdx] : ""),
+    },
+  };
 }
 
 export async function listUsersFromGoogleSheet(

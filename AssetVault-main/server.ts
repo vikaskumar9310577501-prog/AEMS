@@ -20,7 +20,7 @@ import {
 import { upsertLocalUser, deleteLocalUser, normalizeUser, canDeleteUserRecord, isItAdminRole, fetchUsersFromGas } from "./server/usersService.js";
 import { generateAssetPdf } from "./server/pdfGenerator.js";
 import { persistUserToSheet } from "./server/userSheetSync.js";
-import { listUsersFromGoogleSheet } from "./server/sheetsUsers.js";
+import { listUsersFromGoogleSheet, verifyOtpFromGoogleSheet } from "./server/sheetsUsers.js";
 import { requestOtp, verifyOtp, findRegisteredUser } from "./server/otpService.js";
 import {
   getAssetsWithCache,
@@ -309,6 +309,11 @@ async function proxyToGas(payload: Record<string, unknown>, timeoutMs = 30000) {
       console.error("GAS returned non-JSON:", text.substring(0, 200));
       throw new Error("Invalid response from Google Apps Script");
     }
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Database request timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -338,6 +343,31 @@ function gasAuthError(result: unknown): string | null {
 /** OTP email is sent by Google Apps Script (GmailApp) from verify.software2040@pgel.in */
 function otpUsesSheetMail(): boolean {
   return !!GAS_WEBAPP_URL && getEnv("OTP_USE_SMTP") !== "true";
+}
+
+function hasSmtpOtpFallback(): boolean {
+  return !!getEnv("SMTP_EMAIL") && !!getEnv("SMTP_PASSWORD");
+}
+
+async function ensureLocalOtpUser(email: string) {
+  let user = findRegisteredUser(email);
+  if (!user && (GAS_WEBAPP_URL || SPREADSHEET_ID)) {
+    try {
+      await syncUsersNow(userSyncDeps());
+      user = findRegisteredUser(email);
+    } catch (error) {
+      console.warn("OTP user sync fallback failed:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  return user;
+}
+
+async function requestOtpViaSmtpFallback(email: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await ensureLocalOtpUser(email);
+  if (!user) {
+    return { ok: false, error: "Your mail is not authorized. Please contact IT Admin only." };
+  }
+  return requestOtp(email);
 }
 
 app.get("/api/health/config", async (_req, res) => {
@@ -376,7 +406,7 @@ app.post("/api/auth/request-otp", async (req, res) => {
 
     if (otpUsesSheetMail()) {
       try {
-        const gasResult = await proxyToGas({ action: "request_otp", email }, 45000);
+        const gasResult = await proxyToGas({ action: "request_otp", email }, 90000);
         const gasErr = gasAuthError(gasResult);
         if (!gasErr) {
           const msg = (gasResult as { message?: string }).message || "OTP sent to your email";
@@ -404,28 +434,27 @@ app.post("/api/auth/request-otp", async (req, res) => {
       } catch (gasFail: unknown) {
         const detail = gasFail instanceof Error ? gasFail.message : String(gasFail);
         console.error("GAS OTP request failed:", detail);
+        if (hasSmtpOtpFallback()) {
+          const fallback = await requestOtpViaSmtpFallback(email);
+          if (fallback.ok) {
+            return res.json({ success: true, message: "OTP sent to your email" });
+          }
+          console.error("SMTP OTP fallback failed:", fallback.error);
+        }
         return res.status(503).json({
           error: `Could not send OTP via Database mail: ${detail}`,
         });
       }
     }
 
-    if (!GAS_WEBAPP_URL) {
+    if (!GAS_WEBAPP_URL && !hasSmtpOtpFallback()) {
       return res.status(503).json({
         error:
           "OTP is sent from your Google Sheet (Apps Script). Set GAS_WEBAPP_URL in .env — same as before with verify.software2040@pgel.in.",
       });
     }
 
-    let user = findRegisteredUser(email);
-    if (!user) {
-      try {
-        await syncUsersNow(userSyncDeps());
-        user = findRegisteredUser(email);
-      } catch {
-        /* cache only */
-      }
-    }
+    const user = await ensureLocalOtpUser(email);
     if (!user) {
       return res.status(403).json({
         error: "Your mail is not authorized. Please contact IT Admin only.",
@@ -449,7 +478,7 @@ app.post("/api/auth/verify-otp", async (req, res) => {
 
     if (otpUsesSheetMail()) {
       try {
-        const gasResult = await proxyToGas({ action: "verify_otp", email, otp }, 30000);
+        const gasResult = await proxyToGas({ action: "verify_otp", email, otp }, 90000);
         const gasErr = gasAuthError(gasResult);
         if (!gasErr && (gasResult as { user?: unknown }).user) {
           const normalized = normalizeUser(
@@ -463,13 +492,40 @@ app.post("/api/auth/verify-otp", async (req, res) => {
       } catch (gasFail: unknown) {
         const detail = gasFail instanceof Error ? gasFail.message : String(gasFail);
         console.error("GAS verify OTP failed:", detail);
+        if (SPREADSHEET_ID) {
+          try {
+            const direct = await verifyOtpFromGoogleSheet(SPREADSHEET_ID, USERS_SHEET_GID_VALID, email, otp);
+            if (direct.ok && direct.user) {
+              const normalized = normalizeUser(direct.user as unknown as Record<string, unknown>);
+              upsertLocalUser(normalized);
+              const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+              return res.json({ success: true, user: normalized, token });
+            }
+            if (direct.error && !/credentials not configured/i.test(direct.error)) {
+              return res.status(400).json({ error: direct.error });
+            }
+          } catch (directFail: unknown) {
+            console.error("Direct sheet OTP verify failed:", directFail instanceof Error ? directFail.message : String(directFail));
+          }
+        }
+        if (hasSmtpOtpFallback()) {
+          const check = verifyOtp(email, otp);
+          if (check.ok) {
+            const user = await ensureLocalOtpUser(email);
+            if (!user) return res.status(403).json({ error: "User account not found after verification" });
+            const normalized = normalizeUser(user as unknown as Record<string, unknown>);
+            upsertLocalUser(normalized);
+            const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+            return res.json({ success: true, user: normalized, token });
+          }
+        }
         return res.status(503).json({
           error: `Could not verify OTP via Database: ${detail}`,
         });
       }
     }
 
-    if (!GAS_WEBAPP_URL) {
+    if (!GAS_WEBAPP_URL && !hasSmtpOtpFallback()) {
       return res.status(503).json({
         error: "Set GAS_WEBAPP_URL in .env to verify OTP via your Google Sheet.",
       });
@@ -1157,6 +1213,9 @@ async function validateAssetPayload(
   if (!isSoftware && !String(assetData.serialNumber || "").trim()) {
     throw new Error("Serial number is required");
   }
+  if (mainCat === "IT Assets" && !String(assetData.assetCode || "").trim()) {
+    throw new Error("Asset code is required for IT assets");
+  }
   if (!String(assetData.location || "").trim()) {
     throw new Error("Location is required");
   }
@@ -1386,12 +1445,34 @@ function sanitizeAssetFields(assetData: any) {
   const assetType = String(assetData.assetType || "").trim();
   const typeId = String(assetData.assetTypeId || "").trim();
   const isIT = mainCat === "IT Assets";
+  const isDesktop =
+    typeId === "desktop" ||
+    (isIT && assetType === "Desktop");
   const isLaptopOrDesktop =
     typeId === "laptop" ||
-    typeId === "desktop" ||
+    isDesktop ||
     (isIT && ["Laptop", "Desktop"].includes(assetType));
-  const isDesktop = isIT && assetType === "Desktop";
-  const isPeripheral = isIT && PERIPHERAL_TYPES.includes(assetType);
+  const hasAttachedPeripheralDetails = [
+    assetData.monitorSerial,
+    assetData.monitorAssetCode,
+    assetData.monitorMake,
+    assetData.monitorModel,
+    assetData.keyboardSerial,
+    assetData.keyboardAssetCode,
+    assetData.keyboardMake,
+    assetData.keyboardModel,
+    assetData.keyboardConnectivity,
+    assetData.mouseSerial,
+    assetData.mouseAssetCode,
+    assetData.mouseMake,
+    assetData.mouseModel,
+    assetData.mouseConnectivity,
+    assetData.upsSerial,
+    assetData.upsAssetCode,
+    assetData.upsMake,
+    assetData.upsModel,
+  ].some((value) => String(value || "").trim() !== "");
+  const keepAttachedPeripheralDetails = isIT && (isDesktop || hasAttachedPeripheralDetails);
 
   if (!isLaptopOrDesktop) {
     assetData.ram = "";
@@ -1406,7 +1487,7 @@ function sanitizeAssetFields(assetData: any) {
   }
 
 
-  if (!isDesktop) {
+  if (!keepAttachedPeripheralDetails) {
     assetData.monitorSerial = "";
     assetData.monitorAssetCode = "";
     assetData.monitorMake = "";
@@ -1610,7 +1691,7 @@ function buildRedesignedAssetRow(assetData: any, assetId: string, qrCodeText: st
     "Model": assetData.model || "",
     "Serial Number": serial,
     "Vehicle Number": vehicleNo,
-    "Asset Code": assetData.assetCode || assetId,
+    "Asset Code": assetData.assetCode || "",
     "Account Asset Code": assetData.accountAssetCode || "",
     "MAC Address": assetData.macAddress || "",
     "IP Address": assetData.ipAddress || "",

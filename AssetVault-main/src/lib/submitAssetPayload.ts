@@ -14,13 +14,36 @@ function isCctvSecurityAsset(formData: Pick<AssetFormData, 'assetTypeId' | 'asse
 /** Sanitize form payload before save (same rules as server-side expectations). */
 export function buildCleanedSubmitPayload(formData: AssetFormData): AssetFormData {
   const isIT = (formData.mainCategory || 'IT Assets') === 'IT Assets';
+  const isDesktop =
+    formData.assetTypeId === 'desktop' ||
+    (isIT && formData.assetType === 'Desktop');
   const isLaptopOrDesktop =
     formData.assetTypeId === 'laptop' ||
-    formData.assetTypeId === 'desktop' ||
+    isDesktop ||
     (isIT && ['Laptop', 'Desktop'].includes(formData.assetType));
-  const isDesktop = isIT && formData.assetType === 'Desktop';
   const isPeripheral = isIT && PERIPHERAL_TYPES.includes(formData.assetType);
   const isCctvSecurity = isCctvSecurityAsset(formData);
+  const hasAttachedPeripheralDetails = [
+    formData.monitorAssetCode,
+    formData.monitorSerial,
+    formData.monitorMake,
+    formData.monitorModel,
+    formData.keyboardAssetCode,
+    formData.keyboardSerial,
+    formData.keyboardMake,
+    formData.keyboardModel,
+    formData.keyboardConnectivity,
+    formData.mouseAssetCode,
+    formData.mouseSerial,
+    formData.mouseMake,
+    formData.mouseModel,
+    formData.mouseConnectivity,
+    formData.upsAssetCode,
+    formData.upsSerial,
+    formData.upsMake,
+    formData.upsModel,
+  ].some((value) => String(value || '').trim() !== '');
+  const keepAttachedPeripheralDetails = isIT && (isDesktop || hasAttachedPeripheralDetails);
 
   let cleanRemarks = formData.additionalItems || '';
   const tLower = String(formData.assetType || '').toLowerCase();
@@ -69,24 +92,24 @@ export function buildCleanedSubmitPayload(formData: AssetFormData): AssetFormDat
     macAddress: isIT && (!isPeripheral || isCctvSecurity) ? formData.macAddress : '',
     ipAddress: isIT ? formData.ipAddress || ipFromDynamic || '' : '',
     hostName: isIT ? formData.hostName || hostFromDynamic || '' : '',
-    monitorAssetCode: isDesktop ? formData.monitorAssetCode : '',
-    monitorSerial: isDesktop ? formData.monitorSerial : '',
-    monitorMake: isDesktop ? formData.monitorMake : '',
-    monitorModel: isDesktop ? formData.monitorModel : '',
-    keyboardAssetCode: isDesktop ? formData.keyboardAssetCode : '',
-    keyboardSerial: isDesktop ? formData.keyboardSerial : '',
-    keyboardMake: isDesktop ? formData.keyboardMake : '',
-    keyboardModel: isDesktop ? formData.keyboardModel : '',
-    keyboardConnectivity: isDesktop ? formData.keyboardConnectivity : '',
-    mouseAssetCode: isDesktop ? formData.mouseAssetCode : '',
-    mouseSerial: isDesktop ? formData.mouseSerial : '',
-    mouseMake: isDesktop ? formData.mouseMake : '',
-    mouseModel: isDesktop ? formData.mouseModel : '',
-    mouseConnectivity: isDesktop ? formData.mouseConnectivity : '',
-    upsAssetCode: isDesktop ? formData.upsAssetCode : '',
-    upsSerial: isDesktop ? formData.upsSerial : '',
-    upsMake: isDesktop ? formData.upsMake : '',
-    upsModel: isDesktop ? formData.upsModel : '',
+    monitorAssetCode: keepAttachedPeripheralDetails ? formData.monitorAssetCode : '',
+    monitorSerial: keepAttachedPeripheralDetails ? formData.monitorSerial : '',
+    monitorMake: keepAttachedPeripheralDetails ? formData.monitorMake : '',
+    monitorModel: keepAttachedPeripheralDetails ? formData.monitorModel : '',
+    keyboardAssetCode: keepAttachedPeripheralDetails ? formData.keyboardAssetCode : '',
+    keyboardSerial: keepAttachedPeripheralDetails ? formData.keyboardSerial : '',
+    keyboardMake: keepAttachedPeripheralDetails ? formData.keyboardMake : '',
+    keyboardModel: keepAttachedPeripheralDetails ? formData.keyboardModel : '',
+    keyboardConnectivity: keepAttachedPeripheralDetails ? formData.keyboardConnectivity : '',
+    mouseAssetCode: keepAttachedPeripheralDetails ? formData.mouseAssetCode : '',
+    mouseSerial: keepAttachedPeripheralDetails ? formData.mouseSerial : '',
+    mouseMake: keepAttachedPeripheralDetails ? formData.mouseMake : '',
+    mouseModel: keepAttachedPeripheralDetails ? formData.mouseModel : '',
+    mouseConnectivity: keepAttachedPeripheralDetails ? formData.mouseConnectivity : '',
+    upsAssetCode: keepAttachedPeripheralDetails ? formData.upsAssetCode : '',
+    upsSerial: keepAttachedPeripheralDetails ? formData.upsSerial : '',
+    upsMake: keepAttachedPeripheralDetails ? formData.upsMake : '',
+    upsModel: keepAttachedPeripheralDetails ? formData.upsModel : '',
     additionalItems: cleanRemarks,
   };
 }

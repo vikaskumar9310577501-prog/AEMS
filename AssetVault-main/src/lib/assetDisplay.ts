@@ -100,12 +100,7 @@ export function formatAssetCodeLabel(asset: {
   uniqueCode?: string;
 }): string {
   const code = (asset.assetCode || "").trim();
-  if (code) return code;
-  const idStr = asset.id != null ? String(asset.id).trim() : "";
-  if (idStr) return idStr.padStart(3, "0");
-  const uc = (asset.uniqueCode || "").trim();
-  if (uc && !looksLikeDate(uc) && !looksLikeUrl(uc)) return uc;
-  return idStr.padStart(3, "0") || "—";
+  return code || "-";
 }
 
 /** Sub-categories that group multiple selectable types (not a single type label). */

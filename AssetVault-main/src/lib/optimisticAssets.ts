@@ -22,7 +22,7 @@ export function formDataToOptimisticAsset(
     id = maxId + 1;
   }
 
-  const code = (data.assetCode || editingAsset?.assetCode || String(id)).trim();
+  const code = (data.assetCode || editingAsset?.assetCode || '').trim();
 
   return {
     ...(editingAsset || {}),
@@ -37,7 +37,7 @@ export function formDataToOptimisticAsset(
     assetName: data.assetName || `${data.make || ''} ${data.model || ''}`.trim(),
     qrCodeText: editingAsset?.qrCodeText || '',
     qrCodeImage: editingAsset?.qrCodeImage || '',
-    uniqueCode: editingAsset?.uniqueCode || code,
+    uniqueCode: editingAsset?.uniqueCode || code || String(id),
     binaryCode: editingAsset?.binaryCode || '0',
   };
 }

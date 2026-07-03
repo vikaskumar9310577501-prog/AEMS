@@ -152,7 +152,7 @@ export function assetToFormData(asset?: Asset | null): AssetFormData {
     make: asset.make || "",
     model: asset.model || "",
     serialNumber: asset.serialNumber || "",
-    assetCode: asset.assetCode || asset.uniqueCode || "",
+    assetCode: asset.assetCode || "",
     accountAssetCode: asset.accountAssetCode || "",
     vendorName: asset.vendorName || "",
     warrantyStartDate: normalizeWarrantyDate(asset.warrantyStartDate),

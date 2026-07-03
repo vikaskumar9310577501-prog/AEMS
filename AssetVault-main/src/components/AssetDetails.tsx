@@ -11,7 +11,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { buildScanUrl } from "../lib/scanId";
 import DeviceThumb from "./DeviceThumb";
 import { extractDriveFileId, getDeviceImageUrl, getDocumentViewUrl } from "../lib/fileUrls";
-import { looksLikeEmail, looksLikeUrl, looksLikeDate, formatSelectedTypeLabel } from "../lib/assetDisplay";
+import { looksLikeEmail, looksLikeUrl, looksLikeDate, formatSelectedTypeLabel, formatSystemDisplayId } from "../lib/assetDisplay";
 import { formatStoredDateTime, isDateFieldLabel } from "../lib/formatDisplayDate";
 import { SOFTWARE_LICENSE_CATEGORY } from "../lib/softwareLicense";
 
@@ -194,6 +194,7 @@ export default function AssetDetails({
     asset.upsMake ||
     asset.upsModel
   );
+  const specificAssetType = formatSelectedTypeLabel(asset);
 
   const openScanPage = useCallback(() => {
     window.open(scanUrl, "_blank", "noopener,noreferrer");
@@ -257,11 +258,11 @@ export default function AssetDetails({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase font-mono">
-              #{String(asset.id || 0).padStart(3, "0")}
+              Sys ID: {formatSystemDisplayId(asset)}
             </span>
-            {(asset.uniqueCode || asset.assetCode) && (
+            {asset.assetCode?.trim() && (
               <span className="text-[10px] font-black text-slate-400 bg-slate-200 px-2 py-0.5 rounded uppercase font-mono">
-                {asset.uniqueCode || asset.assetCode}
+                {asset.assetCode}
               </span>
             )}
             {asset.status && (
@@ -274,7 +275,7 @@ export default function AssetDetails({
             {asset.assetName || `${asset.make} ${asset.model}`}
           </h2>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            {asset.mainCategory || "IT Assets"} · {formatSelectedTypeLabel(asset)}
+            {asset.mainCategory || "IT Assets"} - {specificAssetType}
           </p>
         </div>
       </div>
@@ -389,7 +390,7 @@ export default function AssetDetails({
         <Field label="Plant Name" value={asset.plantCode} />
         {!isCctvDevice && <Field label="Employee Department" value={asset.department} />}
         <Field label="Main Category" value={asset.mainCategory || "IT Assets"} color="text-indigo-600" />
-        <Field label="Asset Type" value={formatSelectedTypeLabel(asset)} color="text-blue-600" />
+        <Field label="Asset Type" value={specificAssetType} color="text-blue-600" />
         <Field
           label={
             asset.mainCategory === "Software / License Assets"
@@ -409,7 +410,7 @@ export default function AssetDetails({
 
       {(asset.mainCategory || "IT Assets") === "IT Assets" && (
           <Section title="Network & Tech Specifications" icon={Cpu}>
-            {["Laptop", "Desktop"].includes(asset.assetType) && (
+            {["Laptop", "Desktop"].includes(specificAssetType) && (
               <>
                 <Field label="CPU" value={asset.cpu} />
                 <Field label="RAM" value={asset.ram} />
@@ -426,7 +427,7 @@ export default function AssetDetails({
               <Field label="Host Name" value={asset.hostName} color="text-purple-600 font-mono" />
             )}
             {asset.macAddress?.trim() && (
-              <div className={["Laptop", "Desktop"].includes(asset.assetType) ? "" : "sm:col-span-2"}>
+              <div className={["Laptop", "Desktop"].includes(specificAssetType) ? "" : "sm:col-span-2"}>
                 <Field label="MAC Address" value={asset.macAddress} color="text-slate-500 font-mono" />
               </div>
             )}
@@ -452,7 +453,8 @@ export default function AssetDetails({
 
       {!isSoftwareCategory && asset.amcVendor && (
         <Section title="AMC Details" icon={ShieldCheck}>
-          <Field label="Asset ID" value={asset.assetCode || String(asset.id)} />
+          <Field label="Asset Code" value={asset.assetCode} />
+          <Field label="System ID" value={formatSystemDisplayId(asset)} />
           <Field label="Asset Name" value={asset.assetName || `${asset.make} ${asset.model}`} />
           <Field label="AMC Vendor" value={asset.amcVendor} />
           <Field label="AMC Cost" value={asset.amcCost ? `₹${asset.amcCost}` : "—"} />
@@ -462,7 +464,7 @@ export default function AssetDetails({
       )}
 
       {(asset.mainCategory || "IT Assets") === "IT Assets" &&
-        asset.assetType === "Desktop" &&
+        specificAssetType === "Desktop" &&
         hasPeripheralDetails && (
           <Section title="Peripherals" icon={Monitor}>
             <Field label="Monitor Asset Code" value={asset.monitorAssetCode} />

@@ -110,7 +110,7 @@ export function generateNextAssetId(assets: MappedAsset[]): string {
 /** IT Assets and Software / License use manual codes; other categories are auto-generated. */
 export function isManualAssetCodeCategory(mainCategory: string): boolean {
   const cat = (mainCategory || "IT Assets").trim();
-  return cat === "Software / License Assets";
+  return cat === "IT Assets" || cat === "Software / License Assets";
 }
 
 /** @deprecated Use isManualAssetCodeCategory — department no longer drives asset code logic */

@@ -335,7 +335,7 @@ export default function AssetTable({
       <div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {paginatedAssets.map((asset, index) => {
-            const code = (asset.assetCode || '').trim() || formatSystemDisplayId(asset);
+            const code = formatAssetCodeLabel(asset);
             const name = asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown Asset';
             const assignee = isCctvAsset(asset) ? '' : (asset.contactName || '');
             return (
@@ -437,7 +437,7 @@ export default function AssetTable({
       <div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {paginatedAssets.map((asset, index) => {
-            const code = (asset.assetCode || '').trim() || formatSystemDisplayId(asset);
+            const code = formatAssetCodeLabel(asset);
             const name = asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown Asset';
             const assignee = isCctvAsset(asset) ? '' : (asset.contactName || '');
             return (
@@ -597,7 +597,7 @@ export default function AssetTable({
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900 tracking-tight font-mono">
-                          {(asset.assetCode || '').trim() || formatSystemDisplayId(asset)}
+                          {formatAssetCodeLabel(asset)}
                         </span>
                         <div className={cn(
                           "w-1.5 h-1.5 rounded-full",
@@ -605,9 +605,7 @@ export default function AssetTable({
                         )} />
                       </div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        {(asset.assetCode || '').trim()
-                          ? `Sys ID: ${formatSystemDisplayId(asset)}`
-                          : `ID: ${formatAssetCodeLabel(asset)}`}
+                        Sys ID: {formatSystemDisplayId(asset)}
                       </span>
                     </div>
                   </td>

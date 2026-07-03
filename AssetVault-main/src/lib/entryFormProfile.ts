@@ -73,8 +73,7 @@ export function getEntryFormProfile(
     isCctvSecurityDevice: !!isCctvSecurity,
     serialLabel: isSoftware ? 'License Key' : isVehicle ? 'Chassis / Engine No.' : 'Serial Number',
     assetCodeLabel: isSoftware ? 'Software Code' : isVehicle ? 'Internal Asset Code' : 'Asset Code',
-    /** Always allow editing asset code, automatic ones will be pre-populated */
-    manualAssetCode: true,
+    manualAssetCode: isItAssets || isSoftware,
     requireSerialNumber: !isSoftware,
     makeLabel: isSoftware ? 'Publisher / Brand' : 'Brand / Make',
     modelLabel: isSoftware ? 'Product / Edition' : 'Model',

@@ -289,7 +289,8 @@ export default function InventoryPage() {
               <table className="w-full text-left">
                 <thead className="bg-slate-100 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset ID</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Code</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">System ID</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Name</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Category</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Custodian (Who had it)</th>
@@ -300,7 +301,8 @@ export default function InventoryPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredDamagedAssets.map((asset) => (
                     <tr key={asset.id || asset.uniqueCode} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-mono text-sm font-bold text-blue-700">{asset.uniqueCode || asset.assetCode}</td>
+                      <td className="px-6 py-4 font-mono text-sm font-bold text-blue-700">{asset.assetCode || '-'}</td>
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-slate-500">{asset.id || asset.uniqueCode || '-'}</td>
                       <td className="px-6 py-4">
                         <p className="font-black text-slate-900 text-sm">{asset.assetName || asset.model || asset.make}</p>
                         <p className="text-xs text-slate-500 font-mono mt-0.5">{asset.serialNumber}</p>
@@ -325,7 +327,7 @@ export default function InventoryPage() {
                       <td className="px-6 py-4 text-right">
                         <button
                           type="button"
-                          onClick={() => navigate(`/assets/${encodeURIComponent(asset.uniqueCode || asset.assetCode || asset.id || '')}`)}
+                          onClick={() => navigate(`/assets/${encodeURIComponent(asset.id || asset.assetCode || asset.uniqueCode || '')}`)}
                           className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors"
                         >
                           View

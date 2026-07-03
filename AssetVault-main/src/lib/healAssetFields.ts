@@ -321,6 +321,22 @@ function healLocationAssigneeBlock(a: Healable): void {
   }
 }
 
+function healLocationPlantSwap(a: Healable): void {
+  const location = trim(a.location);
+  const plantCode = trim(a.plantCode);
+
+  if (looksLikePlantCode(location) && looksLikeLocationName(plantCode)) {
+    a.location = plantCode;
+    a.plantCode = location;
+    return;
+  }
+
+  if (!location && looksLikeLocationName(plantCode)) {
+    a.location = plantCode;
+    a.plantCode = '';
+  }
+}
+
 function healVendorInvoiceBlock(a: Healable): void {
   const invoice = trim(a.invoiceNumber);
   const warrantyStart = trim(a.warrantyStartDate);
@@ -508,6 +524,7 @@ export function healMisalignedAssetFields<T>(asset: T): T {
   healSerialNumber(a);
   healLocationEmployeeShift(a);
   healLocationAssigneeBlock(a);
+  healLocationPlantSwap(a);
   healVendorInvoiceBlock(a);
   healContactMobile(a);
   healItSpecBlock(a);

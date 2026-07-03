@@ -341,6 +341,7 @@ export default function EmployeeProfilePage() {
                 <thead className="bg-slate-100 border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Code</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">System ID</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Details</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Category</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Location</th>
@@ -353,7 +354,10 @@ export default function EmployeeProfilePage() {
                   {assignedAssets.map((asset) => (
                     <tr key={asset.id || asset.uniqueCode} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 font-mono text-sm font-bold text-blue-700">
-                        {asset.uniqueCode || asset.assetCode || asset.id}
+                        {asset.assetCode || '-'}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-slate-500">
+                        {asset.id || asset.uniqueCode || '-'}
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-black text-slate-900 text-sm">{asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown'}</p>
