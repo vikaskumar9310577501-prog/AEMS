@@ -15,6 +15,7 @@ interface SmartSelectProps {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  transformValue?: (value: string) => string;
 }
 
 export default function SmartSelect({
@@ -28,6 +29,7 @@ export default function SmartSelect({
   required,
   disabled,
   className,
+  transformValue,
 }: SmartSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,11 +95,11 @@ export default function SmartSelect({
       return;
     }
     setOtherMode(false);
-    onChange(v);
+    onChange(transformValue ? transformValue(v) : v);
   };
 
   const commitOther = () => {
-    const trimmed = otherText.trim();
+    const trimmed = (transformValue ? transformValue(otherText) : otherText).trim();
     if (!trimmed) return;
     onAddCustom?.(trimmed);
     onChange(trimmed);
@@ -210,8 +212,9 @@ export default function SmartSelect({
             type="text"
             value={otherText}
             onChange={(e) => {
-              setOtherText(e.target.value);
-              onChange(e.target.value);
+              const next = transformValue ? transformValue(e.target.value) : e.target.value;
+              setOtherText(next);
+              onChange(next);
             }}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), commitOther())}
             onBlur={commitOther}

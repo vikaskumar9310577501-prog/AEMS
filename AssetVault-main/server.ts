@@ -17,7 +17,7 @@ import {
   mapSheetRow,
   type MappedAsset,
 } from "./server/assetHelpers.js";
-import { upsertLocalUser, normalizeUser, canDeleteUserRecord, isItAdminRole, fetchUsersFromGas } from "./server/usersService.js";
+import { upsertLocalUser, deleteLocalUser, normalizeUser, canDeleteUserRecord, isItAdminRole, fetchUsersFromGas } from "./server/usersService.js";
 import { generateAssetPdf } from "./server/pdfGenerator.js";
 import { persistUserToSheet } from "./server/userSheetSync.js";
 import { listUsersFromGoogleSheet } from "./server/sheetsUsers.js";
@@ -1718,6 +1718,7 @@ app.post("/api/users", async (req, res) => {
       return res.status(500).json({ error: sheetSave.error });
     }
 
+    upsertLocalUser(user);
     invalidateUsersCache();
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [user];
     res.json({ success: true, user, users: synced, savedTo: sheetSave.via });
@@ -1744,6 +1745,7 @@ app.put("/api/users/:email", async (req, res) => {
       return res.status(500).json({ error: sheetSave.error });
     }
 
+    upsertLocalUser(user);
     invalidateUsersCache();
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : data.users;
     res.json({ success: true, user, users: synced, savedTo: sheetSave.via });
@@ -1771,6 +1773,7 @@ app.delete("/api/users/:email", async (req, res) => {
       return res.status(500).json({ error: sheetSave.error });
     }
 
+    deleteLocalUser(email);
     invalidateUsersCache();
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [];
     res.json({ success: true, users: synced, savedTo: sheetSave.via });

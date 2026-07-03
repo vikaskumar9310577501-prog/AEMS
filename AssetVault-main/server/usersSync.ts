@@ -24,9 +24,6 @@ export function getCachedUsers(): AppUser[] {
 
 export function invalidateUsersCache() {
   deleteCache(CACHE_KEY);
-  const data = readAppData();
-  data.users = [];
-  writeAppData(data);
 }
 
 export function getUsersSyncMeta() {

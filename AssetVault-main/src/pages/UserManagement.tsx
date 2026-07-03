@@ -50,6 +50,18 @@ function sameSettingValue(left: unknown, right: unknown): boolean {
   return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
 }
 
+function cleanScopeValues(values: string[] | undefined): string[] {
+  return (values || []).map((value) => String(value || '').trim()).filter(Boolean);
+}
+
+function hasAllScope(values: string[] | undefined): boolean {
+  return cleanScopeValues(values).some((value) => sameSettingValue(value, 'All'));
+}
+
+function scopeIncludes(values: string[] | undefined, target: string): boolean {
+  return cleanScopeValues(values).some((value) => sameSettingValue(value, target));
+}
+
 export default function UserManagement() {
   const { user: loggedInUser } = useApp();
   if (!loggedInUser || !canAccessUserManagement(loggedInUser.role) || loggedInUser.role === 'HR') {
@@ -88,7 +100,7 @@ export default function UserManagement() {
   // Filter locations and plants this Admin is allowed to assign to others
   const allowedLocations = useMemo(() => {
     if (!loggedInUser) return [];
-    if (isITAdmin || loggedInUser.locations?.includes('All')) return settings.locations;
+    if (isITAdmin || hasAllScope(loggedInUser.locations)) return settings.locations;
     return settings.locations.filter((loc) =>
       loggedInUser.locations?.some((allowed) => sameSettingValue(allowed, loc))
     );
@@ -96,7 +108,7 @@ export default function UserManagement() {
 
   const allowedPlants = useMemo(() => {
     if (!loggedInUser) return [];
-    if (isITAdmin || loggedInUser.plants?.includes('All')) return settings.plants;
+    if (isITAdmin || hasAllScope(loggedInUser.plants)) return settings.plants;
     return settings.plants.filter((p) =>
       loggedInUser.plants?.some((allowed) => sameSettingValue(allowed, p.code) || sameSettingValue(allowed, p.name))
     );
@@ -111,31 +123,35 @@ export default function UserManagement() {
 
   const allowedCategories = useMemo(() => {
     if (!loggedInUser) return [];
-    if (isITAdmin || loggedInUser.categories?.includes('All')) return [...MANAGEABLE_CATEGORIES];
+    if (isITAdmin || hasAllScope(loggedInUser.categories)) return [...MANAGEABLE_CATEGORIES];
     const adminCats = loggedInUser.categories || [];
-    return MANAGEABLE_CATEGORIES.filter((cat) => adminCats.includes(cat));
+    return MANAGEABLE_CATEGORIES.filter((cat) => scopeIncludes(adminCats, cat));
   }, [loggedInUser, isITAdmin]);
 
   // Filter users list so Admins only see users who share location/plant access
   const displayedUsers = useMemo(() => {
     if (!loggedInUser) return [];
-    if (isITAdmin || loggedInUser.locations?.includes('All')) return users;
-    const adminLocs = loggedInUser.locations || [];
-    const adminPlants = loggedInUser.plants || [];
-    const adminCats = loggedInUser.categories || [];
+    if (isITAdmin || hasAllScope(loggedInUser.locations)) return users;
+    const adminLocs = cleanScopeValues(loggedInUser.locations).filter((loc) => !sameSettingValue(loc, 'All'));
+    const adminPlants = cleanScopeValues(loggedInUser.plants).filter((plant) => !sameSettingValue(plant, 'All'));
+    const adminCats = cleanScopeValues(loggedInUser.categories).filter((cat) => !sameSettingValue(cat, 'All'));
+    const adminHasAllPlants = hasAllScope(loggedInUser.plants);
+    const adminHasAllCats = hasAllScope(loggedInUser.categories);
     return users.filter((u) => {
       if (u.role === 'IT Admin') return true;
-      const uLocs = u.locations || [];
-      const uPlants = u.plants || [];
+      const uLocs = cleanScopeValues(u.locations);
+      const uPlants = cleanScopeValues(u.plants);
+      const uCats = cleanScopeValues(u.categories);
       const sharesLoc =
-        uLocs.includes('All') || uLocs.some((loc) => adminLocs.some((adminLoc) => sameSettingValue(adminLoc, loc)));
+        hasAllScope(uLocs) || uLocs.some((loc) => adminLocs.some((adminLoc) => sameSettingValue(adminLoc, loc)));
       const sharesPlant =
-        uPlants.includes('All') || uPlants.some((p) => adminPlants.some((adminPlant) => sameSettingValue(adminPlant, p)));
+        adminHasAllPlants ||
+        hasAllScope(uPlants) ||
+        uPlants.some((p) => adminPlants.some((adminPlant) => sameSettingValue(adminPlant, p)));
       const sharesCategory =
-        adminCats.includes('All') ||
-        adminCats.length === 0 ||
-        (u.categories || []).includes('All') ||
-        (u.categories || []).some((c) => adminCats.includes(c));
+        adminHasAllCats ||
+        hasAllScope(uCats) ||
+        uCats.some((c) => adminCats.some((adminCat) => sameSettingValue(adminCat, c)));
       return (sharesLoc || sharesPlant) && sharesCategory;
     });
   }, [users, loggedInUser, isITAdmin]);

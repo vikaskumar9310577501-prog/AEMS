@@ -1,12 +1,16 @@
-const IT_ADMIN_ROLES = new Set(['IT Admin', 'IT_ADMIN', 'it admin']);
-const ADMIN_ROLES = new Set(['Admin', 'admin', ...IT_ADMIN_ROLES]);
+const IT_ADMIN_ROLES = new Set(['it admin', 'it_admin']);
+const ADMIN_ROLES = new Set(['admin', ...IT_ADMIN_ROLES]);
+
+function normalizeRole(role: string | undefined | null): string {
+  return String(role || '').trim().toLowerCase();
+}
 
 export function isItAdminRole(role: string | undefined | null): boolean {
-  return !!role && IT_ADMIN_ROLES.has(role);
+  return IT_ADMIN_ROLES.has(normalizeRole(role));
 }
 
 export function isAdminRole(role: string | undefined | null): boolean {
-  return !!role && ADMIN_ROLES.has(role);
+  return ADMIN_ROLES.has(normalizeRole(role));
 }
 
 export function canAccessUserManagement(role: string | undefined | null): boolean {
@@ -33,7 +37,7 @@ export function canDeleteUser(
 }
 
 export function isHrRole(role: string | undefined | null): boolean {
-  return role === 'HR';
+  return normalizeRole(role) === 'hr';
 }
 
 export function assignableRoles(actorRole: string | undefined | null): string[] {

@@ -101,6 +101,10 @@ function hasAllScope(values: string[] | undefined): boolean {
   return (values || []).some((value) => sameScopeValue(value, 'All'));
 }
 
+function cleanScopeValues(values: string[] | undefined): string[] {
+  return (values || []).map((value) => String(value || '').trim()).filter(Boolean);
+}
+
 function scopeListIncludes(values: string[] | undefined, target: string): boolean {
   return (values || []).some((value) => sameScopeValue(value, target));
 }
@@ -409,17 +413,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchAssets]);
 
   const visibleCategories = useMemo(() => {
-    if (
-      !user ||
-      user.role === 'IT Admin' ||
-      !user.categories ||
-      user.categories.length === 0 ||
-      user.categories.includes('All')
-    ) {
+    if (!user || user.role === 'IT Admin' || hasAllScope(user.categories)) {
       return expandCategoriesForSidebar(visibleMainCategories());
     }
+    const scopedCategories = cleanScopeValues(user.categories).filter(
+      (cat) => !sameScopeValue(cat, 'All')
+    );
+    if (!scopedCategories.length) return [];
     return expandCategoriesForSidebar(
-      visibleMainCategories().filter((cat) => user.categories?.includes(cat))
+      visibleMainCategories().filter((cat) => scopeListIncludes(scopedCategories, cat))
     );
   }, [user]);
 
@@ -433,19 +435,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (user && !isItAdminRole(user.role)) {
-        if (user.locations?.length && !hasAllScope(user.locations)) {
+        const scopedLocations = cleanScopeValues(user.locations).filter((value) => !sameScopeValue(value, 'All'));
+        const scopedPlants = cleanScopeValues(user.plants).filter((value) => !sameScopeValue(value, 'All'));
+        const scopedCategories = cleanScopeValues(user.categories).filter((value) => !sameScopeValue(value, 'All'));
+        const hasLocationAll = hasAllScope(user.locations);
+        const hasPlantAll = hasAllScope(user.plants);
+        const hasCategoryAll = hasAllScope(user.categories);
+
+        if (!hasLocationAll && scopedLocations.length === 0 && !hasPlantAll && scopedPlants.length === 0) {
+          return [];
+        }
+        if (!hasCategoryAll && scopedCategories.length === 0) {
+          return [];
+        }
+
+        if (scopedLocations.length > 0 && !hasLocationAll) {
           filtered = filtered.filter((a) =>
-            user.locations.some((loc) => sameScopeValue(a.location, loc) || scopeValueIncludes(a.location, loc))
+            scopedLocations.some((loc) => sameScopeValue(a.location, loc) || scopeValueIncludes(a.location, loc))
           );
         }
-        if (user.plants?.length && !hasAllScope(user.plants)) {
+        if (scopedPlants.length > 0 && !hasPlantAll) {
           filtered = filtered.filter((a) =>
-            user.plants.some((p) => sameScopeValue(a.plantCode, p) || scopeValueIncludes(a.plantCode, p))
+            scopedPlants.some((p) => sameScopeValue(a.plantCode, p) || scopeValueIncludes(a.plantCode, p))
           );
         }
-        if (user.categories?.length && !hasAllScope(user.categories)) {
+        if (scopedCategories.length > 0 && !hasCategoryAll) {
           filtered = filtered.filter((a) =>
-            scopeListIncludes(user.categories, resolveAssetMainCategory(a))
+            scopeListIncludes(scopedCategories, resolveAssetMainCategory(a))
           );
         }
       }

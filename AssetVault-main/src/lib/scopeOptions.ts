@@ -110,8 +110,16 @@ export function buildScopedLocationOptions(
     ...plantLocations,
   ]);
 
-  if (!user || isItAdmin(user) || hasAllScope(user.locations) || allowedLocations.length === 0) {
+  if (!user || isItAdmin(user) || hasAllScope(user.locations)) {
     return allLocations;
+  }
+
+  if (allowedLocations.length === 0 && allowedPlants.length === 0) {
+    return [];
+  }
+
+  if (allowedLocations.length === 0) {
+    return uniqueValues([...plantLocations]);
   }
 
   return uniqueValues([
@@ -145,6 +153,7 @@ export function buildScopedPlantOptions(
   }
 
   if (allowedPlants.length === 0) {
+    if (allowedLocations.length === 0) return [];
     return allPlants.filter(locationScoped);
   }
 

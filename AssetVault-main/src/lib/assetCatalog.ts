@@ -345,6 +345,24 @@ export function getMissingItemNameList(catalog: AssetCatalog): string[] {
   return all.filter((n) => !deleted.includes(n)).sort((a, b) => a.localeCompare(b));
 }
 
+function catalogCompareKey(value: string): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function findCatalogKey<T>(record: Record<string, T>, value: string): string | undefined {
+  const wanted = catalogCompareKey(value);
+  return Object.keys(record).find((key) => catalogCompareKey(key) === wanted);
+}
+
+function listIncludesCatalogValue(values: string[], value: string): boolean {
+  const wanted = catalogCompareKey(value);
+  return values.some((item) => catalogCompareKey(item) === wanted);
+}
+
+function deletedCatalogKey(parts: string[]): string {
+  return parts.map(catalogCompareKey).join(":");
+}
+
 function typeBrandMap(catalog: AssetCatalog, assetType: string): Record<string, string[]> {
   const key = catalogKeyForAssetType(assetType);
   const defaults = DEFAULT_BRANDS_BY_TYPE[key] || {};
@@ -359,16 +377,21 @@ function typeBrandMap(catalog: AssetCatalog, assetType: string): Record<string, 
   }
 
   const deleted = catalog.deletedOptions || {};
-  const deletedBrands = deleted.brands || [];
-  const deletedModels = deleted.models || [];
+  const deletedBrands = new Set((deleted.brands || []).map(catalogCompareKey));
+  const deletedModels = new Set((deleted.models || []).map(catalogCompareKey));
 
   for (const brand of Object.keys(merged)) {
-    if (deletedBrands.includes(`${assetType}:${brand}`)) {
+    if (
+      deletedBrands.has(deletedCatalogKey([assetType, brand])) ||
+      deletedBrands.has(deletedCatalogKey([key, brand]))
+    ) {
       delete merged[brand];
       continue;
     }
     merged[brand] = merged[brand].filter(
-      (m) => !deletedModels.includes(`${assetType}:${brand}:${m}`)
+      (m) =>
+        !deletedModels.has(deletedCatalogKey([assetType, brand, m])) &&
+        !deletedModels.has(deletedCatalogKey([key, brand, m]))
     );
   }
 
@@ -388,7 +411,8 @@ export function getModelsForBrandAndType(
 ): string[] {
   if (!brand) return [];
   const map = typeBrandMap(catalog, assetType);
-  return [...(map[brand] || [])].sort();
+  const brandKey = findCatalogKey(map, brand);
+  return [...(brandKey ? map[brandKey] || [] : [])].sort();
 }
 
 export function getBrandList(catalog: AssetCatalog): string[] {
@@ -399,15 +423,18 @@ export function getBrandList(catalog: AssetCatalog): string[] {
 
 export function getModelsForBrand(catalog: AssetCatalog, brand: string): string[] {
   if (!brand) return [];
-  const models = catalog.brands[brand] || DEFAULT_BRANDS[brand] || [];
+  const merged = { ...DEFAULT_BRANDS, ...catalog.brands };
+  const brandKey = findCatalogKey(merged, brand);
+  const models = brandKey ? merged[brandKey] || [] : [];
   return [...models].sort();
 }
 
 export function addBrand(catalog: AssetCatalog, brand: string): AssetCatalog {
   const b = brand.trim();
   if (!b) return catalog;
-  if (!catalog.brands[b]) {
-    return { ...catalog, brands: { ...catalog.brands, [b]: [] } };
+  const brandKey = findCatalogKey({ ...DEFAULT_BRANDS, ...catalog.brands }, b) || b;
+  if (!catalog.brands[brandKey]) {
+    return { ...catalog, brands: { ...catalog.brands, [brandKey]: [] } };
   }
   return catalog;
 }
@@ -421,8 +448,9 @@ export function addModel(
   const m = model.trim();
   if (!b || !m) return catalog;
   const next = { ...catalog.brands };
-  const list = next[b] || [];
-  if (!list.includes(m)) next[b] = [...list, m];
+  const brandKey = findCatalogKey({ ...DEFAULT_BRANDS, ...next }, b) || b;
+  const list = next[brandKey] || [];
+  if (!listIncludesCatalogValue(list, m)) next[brandKey] = [...list, m];
   return { ...catalog, brands: next };
 }
 
@@ -436,13 +464,16 @@ export function addBrandForType(
   const key = catalogKeyForAssetType(assetType);
   const byType = { ...(catalog.brandsByType || {}) };
   const typeMap = { ...(byType[key] || {}) };
-  if (!typeMap[b]) typeMap[b] = [];
+  const defaults = DEFAULT_BRANDS_BY_TYPE[key] || {};
+  const brandKey = findCatalogKey({ ...defaults, ...typeMap }, b) || b;
+  if (!typeMap[brandKey]) typeMap[brandKey] = [];
   byType[key] = typeMap;
 
   // ALSO add to master catalog.brands list for Sheets syncing!
   const masterBrands = { ...(catalog.brands || {}) };
-  if (!masterBrands[b]) {
-    masterBrands[b] = [];
+  const masterKey = findCatalogKey({ ...DEFAULT_BRANDS, ...masterBrands }, b) || b;
+  if (!masterBrands[masterKey]) {
+    masterBrands[masterKey] = [];
   }
 
   return { ...catalog, brandsByType: byType, brands: masterBrands };
@@ -460,15 +491,18 @@ export function addModelForType(
   const key = catalogKeyForAssetType(assetType);
   const byType = { ...(catalog.brandsByType || {}) };
   const typeMap = { ...(byType[key] || {}) };
-  const list = typeMap[b] || [];
-  if (!list.includes(m)) typeMap[b] = [...list, m];
+  const defaults = DEFAULT_BRANDS_BY_TYPE[key] || {};
+  const brandKey = findCatalogKey({ ...defaults, ...typeMap }, b) || b;
+  const list = typeMap[brandKey] || [];
+  if (!listIncludesCatalogValue(list, m)) typeMap[brandKey] = [...list, m];
   byType[key] = typeMap;
 
   // ALSO add to master catalog.brands list for Sheets syncing!
   const masterBrands = { ...(catalog.brands || {}) };
-  const masterModels = masterBrands[b] || [];
-  if (!masterModels.includes(m)) {
-    masterBrands[b] = [...masterModels, m];
+  const masterKey = findCatalogKey({ ...DEFAULT_BRANDS, ...masterBrands }, b) || b;
+  const masterModels = masterBrands[masterKey] || [];
+  if (!listIncludesCatalogValue(masterModels, m)) {
+    masterBrands[masterKey] = [...masterModels, m];
   }
 
   return { ...catalog, brandsByType: byType, brands: masterBrands };

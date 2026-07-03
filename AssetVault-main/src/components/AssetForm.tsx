@@ -180,6 +180,108 @@ function hasValue(...values: unknown[]): boolean {
   return values.some((value) => String(value ?? '').trim() !== '');
 }
 
+const IT_UPPERCASE_FIELDS = new Set<keyof AssetFormData>([
+  'assetName',
+  'make',
+  'model',
+  'serialNumber',
+  'assetCode',
+  'accountAssetCode',
+  'department',
+  'employeeId',
+  'vendorName',
+  'ram',
+  'ssd',
+  'cpu',
+  'windowsVersion',
+  'hostName',
+  'invoiceNumber',
+  'contactName',
+  'contactMobile',
+  'additionalItems',
+  'extraItems',
+  'missingItems',
+  'amcVendor',
+  'monitorAssetCode',
+  'monitorSerial',
+  'monitorMake',
+  'monitorModel',
+  'keyboardAssetCode',
+  'keyboardSerial',
+  'keyboardMake',
+  'keyboardModel',
+  'mouseAssetCode',
+  'mouseSerial',
+  'mouseMake',
+  'mouseModel',
+  'upsAssetCode',
+  'upsSerial',
+  'upsMake',
+  'upsModel',
+]);
+
+function shouldUppercaseItField(name: string): name is keyof AssetFormData {
+  return IT_UPPERCASE_FIELDS.has(name as keyof AssetFormData);
+}
+
+function normalizeItTextValue(name: string, value: string, isItCategory: boolean): string {
+  if (!isItCategory || !shouldUppercaseItField(name)) return value;
+  return value.toUpperCase();
+}
+
+function normalizeDynamicItValue(
+  key: string,
+  value: string,
+  isItCategory: boolean,
+  fieldType?: string
+): string {
+  if (!isItCategory) return value;
+  if (fieldType && fieldType !== 'text' && fieldType !== 'textarea') return value;
+  const lower = key.toLowerCase();
+  if (lower.includes('email') || lower.includes('url') || lower.includes('link')) return value;
+  if (lower.includes('ip_address') || lower === 'ipaddress' || lower === 'ip') return value;
+  return value.toUpperCase();
+}
+
+function normalizeItPatch<T extends Record<string, unknown>>(patch: T, isItCategory: boolean): T {
+  if (!isItCategory) return patch;
+  const next = { ...patch };
+  for (const [key, value] of Object.entries(next)) {
+    if (typeof value === 'string') {
+      next[key as keyof T] = normalizeItTextValue(key, value, true) as T[keyof T];
+    }
+  }
+  return next;
+}
+
+function normalizeItFormDataForSave<T extends AssetFormData>(
+  data: T,
+  dynamicFields: Array<{ key: string; type?: string }> = []
+): T {
+  const isIt = (data.mainCategory || 'IT Assets') === 'IT Assets';
+  if (!isIt) return data;
+  const next = { ...data };
+  const record = next as Record<string, unknown>;
+  for (const field of IT_UPPERCASE_FIELDS) {
+    const value = record[field];
+    if (typeof value === 'string') {
+      record[field] = value.toUpperCase();
+    }
+  }
+  if (next.dynamicDetails) {
+    next.dynamicDetails = Object.fromEntries(
+      Object.entries(next.dynamicDetails).map(([key, value]) => {
+        const field = dynamicFields.find((item) => item.key === key);
+        return [
+          key,
+          normalizeDynamicItValue(key, String(value || ''), true, field?.type),
+        ];
+      })
+    );
+  }
+  return next;
+}
+
 function hasMonitorDetails(asset?: Partial<AssetFormData> | null): boolean {
   return hasValue(asset?.monitorSerial, asset?.monitorAssetCode, asset?.monitorMake, asset?.monitorModel);
 }
@@ -389,21 +491,21 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   }, [formData.assetType, formData.mainCategory, formData.subCategory, formData.assetTypeId, typeConfig, initialData?.id]);
 
   const onDynamicChange = (key: string, value: string) => {
+    const dynamicField = activeTypeDef?.fields.find((f) => f.key === key);
+    const nextValue = normalizeDynamicItValue(key, value, isItCategory, dynamicField?.type);
     setDynamicDetails((prev) => {
-      const next = { ...prev, [key]: value };
+      const next = { ...prev, [key]: nextValue };
       if (activeTypeDef) {
-        const field = activeTypeDef.fields.find((f) => f.key === key);
-        if (field?.legacyKey) {
-          setFormData((fd) => ({ ...fd, [field.legacyKey!]: value } as AssetFormData));
+        if (dynamicField?.legacyKey) {
+          setFormData((fd) => ({ ...fd, [dynamicField.legacyKey!]: nextValue } as AssetFormData));
         }
       }
       return next;
     });
     setDynamicFieldErrors((prev) => {
       const n = { ...prev };
-      const field = activeTypeDef?.fields.find((f) => f.key === key);
-      if (field && (field.type === 'email' || field.key.toLowerCase().includes('email'))) {
-        const emailErr = validateCorporateEmail(value);
+      if (dynamicField && (dynamicField.type === 'email' || dynamicField.key.toLowerCase().includes('email'))) {
+        const emailErr = validateCorporateEmail(nextValue);
         if (emailErr) n[key] = emailErr;
         else delete n[key];
         return n;
@@ -425,6 +527,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
+  const lockMainCategoryPicker = !!prefillMainCategory && prefillMainCategory !== "All" && !initialData?.id;
   const categoryPreviewInputRef = useRef<HTMLInputElement>(null);
   const uniqueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [formStep, setFormStep] = useState(initialData?.id ? 2 : 1);
@@ -1133,9 +1236,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    const nextValue = normalizeItTextValue(name, value, isItCategory);
     
     if (name === "assetCode") {
-      if (!value.trim()) {
+      if (!nextValue.trim()) {
         setIsAssetCodeEdited(false);
       } else {
         setIsAssetCodeEdited(true);
@@ -1159,7 +1263,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       return;
     }
 
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: nextValue }));
   };
 
   const handleAccessoryChange = (key: keyof DesktopAccessories) => {
@@ -1188,33 +1292,36 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     const now = new Date().toISOString();
     const currentUser = loggedInUser?.name || loggedInUser?.username || loggedInUser?.email || "System";
 
-    const dataToSubmit = {
-      ...merged,
-      dynamicDetails: detailsForSave,
-      assetTypeId: activeTypeDef?.id || formData.assetTypeId,
-      status: !isSoftwareCategory && formData.maintenanceRequired === 'Yes' ? 'Under Maintenance' : (formData.status || 'Available'),
-      monitorAssetCode: includeMonitor ? formData.monitorAssetCode : "",
-      monitorSerial: includeMonitor ? formData.monitorSerial : "",
-      monitorMake: includeMonitor ? formData.monitorMake : "",
-      monitorModel: includeMonitor ? formData.monitorModel : "",
-      keyboardAssetCode: includeKeyboard ? formData.keyboardAssetCode : "",
-      keyboardSerial: includeKeyboard ? formData.keyboardSerial : "",
-      keyboardMake: includeKeyboard ? formData.keyboardMake : "",
-      keyboardModel: includeKeyboard ? formData.keyboardModel : "",
-      keyboardConnectivity: includeKeyboard ? formData.keyboardConnectivity : "",
-      mouseAssetCode: includeMouse ? formData.mouseAssetCode : "",
-      mouseSerial: includeMouse ? formData.mouseSerial : "",
-      mouseMake: includeMouse ? formData.mouseMake : "",
-      mouseModel: includeMouse ? formData.mouseModel : "",
-      mouseConnectivity: includeMouse ? formData.mouseConnectivity : "",
-      upsAssetCode: includeUps ? formData.upsAssetCode : "",
-      upsSerial: includeUps ? formData.upsSerial : "",
-      upsMake: includeUps ? formData.upsMake : "",
-      upsModel: includeUps ? formData.upsModel : "",
-      updatedBy: currentUser,
-      updatedDate: now,
-      ...(initialData?.id ? {} : { createdBy: currentUser, createdDate: now }),
-    };
+    const dataToSubmit = normalizeItFormDataForSave(
+      {
+        ...merged,
+        dynamicDetails: detailsForSave,
+        assetTypeId: activeTypeDef?.id || formData.assetTypeId,
+        status: !isSoftwareCategory && formData.maintenanceRequired === 'Yes' ? 'Under Maintenance' : (formData.status || 'Available'),
+        monitorAssetCode: includeMonitor ? formData.monitorAssetCode : "",
+        monitorSerial: includeMonitor ? formData.monitorSerial : "",
+        monitorMake: includeMonitor ? formData.monitorMake : "",
+        monitorModel: includeMonitor ? formData.monitorModel : "",
+        keyboardAssetCode: includeKeyboard ? formData.keyboardAssetCode : "",
+        keyboardSerial: includeKeyboard ? formData.keyboardSerial : "",
+        keyboardMake: includeKeyboard ? formData.keyboardMake : "",
+        keyboardModel: includeKeyboard ? formData.keyboardModel : "",
+        keyboardConnectivity: includeKeyboard ? formData.keyboardConnectivity : "",
+        mouseAssetCode: includeMouse ? formData.mouseAssetCode : "",
+        mouseSerial: includeMouse ? formData.mouseSerial : "",
+        mouseMake: includeMouse ? formData.mouseMake : "",
+        mouseModel: includeMouse ? formData.mouseModel : "",
+        mouseConnectivity: includeMouse ? formData.mouseConnectivity : "",
+        upsAssetCode: includeUps ? formData.upsAssetCode : "",
+        upsSerial: includeUps ? formData.upsSerial : "",
+        upsMake: includeUps ? formData.upsMake : "",
+        upsModel: includeUps ? formData.upsModel : "",
+        updatedBy: currentUser,
+        updatedDate: now,
+        ...(initialData?.id ? {} : { createdBy: currentUser, createdDate: now }),
+      },
+      activeTypeDef?.fields || []
+    );
 
     console.log('[AMS] Form submission payload:', {
       cpu: dataToSubmit.cpu,
@@ -1403,7 +1510,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           {/* Main Category Dropdown / Label */}
           <div className="space-y-1.5">
             <label className="label-caps font-black text-xs text-slate-700 font-sans">Main Category *</label>
-            {allowedCategories.length > 1 ? (
+            {allowedCategories.length > 1 && !lockMainCategoryPicker ? (
               <select
                 required
                 name="mainCategory"
@@ -1619,6 +1726,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               label={entryProfile.makeLabel}
               required
               value={formData.make}
+              transformValue={(value) => normalizeItTextValue('make', value, isItCategory)}
               options={[
                 ...getBrandListForAssetType(catalog, formData.assetType),
                 ...(formData.make && !getBrandListForAssetType(catalog, formData.assetType).includes(formData.make)
@@ -1626,15 +1734,18 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   : []),
               ]}
               onChange={(make) => {
-                const models = getModelsForBrandAndType(catalog, formData.assetType, make);
+                const nextMake = normalizeItTextValue('make', make, isItCategory);
+                const models = getModelsForBrandAndType(catalog, formData.assetType, nextMake);
                 setFormData((prev) => ({
                   ...prev,
-                  make,
+                  make: nextMake,
                   model: models.includes(prev.model) ? prev.model : "",
                 }));
               }}
               onAddCustom={(make) =>
-                persistCatalog((c) => addBrandForType(c, formData.assetType, make))
+                persistCatalog((c) =>
+                  addBrandForType(c, formData.assetType, normalizeItTextValue('make', make, isItCategory))
+                )
               }
               onDeleteOption={(make) =>
                 persistCatalog((c) => removeBrandForType(c, formData.assetType, make))
@@ -1648,6 +1759,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               required
               disabled={!formData.make}
               value={formData.model}
+              transformValue={(value) => normalizeItTextValue('model', value, isItCategory)}
               options={
                 formData.make
                   ? optionsWithValue(
@@ -1657,15 +1769,16 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   : []
               }
               onChange={(model) => {
+                const nextModel = normalizeItTextValue('model', model, isItCategory);
                 setFormData((prev) => ({
                   ...prev,
-                  model,
-                  assetName: (prev.mainCategory || "IT Assets") === "IT Assets" ? (prev.make + " " + model) : prev.assetName
+                  model: nextModel,
+                  assetName: (prev.mainCategory || "IT Assets") === "IT Assets" ? (prev.make + " " + nextModel) : prev.assetName
                 }));
               }}
               onAddCustom={(model) => {
                 if (!formData.make) return;
-                const trimmed = model.trim();
+                const trimmed = normalizeItTextValue('model', model.trim(), isItCategory);
                 if (!trimmed) return;
                 setFormData((prev) => ({
                   ...prev,
@@ -1902,12 +2015,22 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               label="Vendor Name"
               required
               value={formData.vendorName}
+              transformValue={(value) => normalizeItTextValue('vendorName', value, isItCategory)}
               options={optionsWithValue(
                 getVendorsForCategory(catalog, formData.mainCategory || "IT Assets"),
                 formData.vendorName
               )}
-              onChange={(vendorName) => setFormData((prev) => ({ ...prev, vendorName }))}
-              onAddCustom={(v) => persistCatalog((c) => addVendor(c, formData.mainCategory || "IT Assets", v))}
+              onChange={(vendorName) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  vendorName: normalizeItTextValue('vendorName', vendorName, isItCategory),
+                }))
+              }
+              onAddCustom={(v) =>
+                persistCatalog((c) =>
+                  addVendor(c, formData.mainCategory || "IT Assets", normalizeItTextValue('vendorName', v, isItCategory))
+                )
+              }
               onDeleteOption={(v) => persistCatalog((c) => removeVendor(c, formData.mainCategory || "IT Assets", v))}
             />
 
@@ -2197,14 +2320,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               <SmartSelect
                 label="RAM"
                 value={formData.ram}
+                transformValue={(value) => normalizeItTextValue('ram', value, isItCategory)}
                 options={optionsWithValue(
                   [...RAM_OPTIONS, ...(catalog.ram || [])].filter(
                     (v) => !(catalog.deletedOptions?.ram || []).includes(v)
                   ),
                   formData.ram
                 )}
-                onChange={(ram) => setFormData((prev) => ({ ...prev, ram }))}
-                onAddCustom={(v) => persistCatalog((c) => addRam(c, v))}
+                onChange={(ram) => setFormData((prev) => ({ ...prev, ram: normalizeItTextValue('ram', ram, isItCategory) }))}
+                onAddCustom={(v) => persistCatalog((c) => addRam(c, normalizeItTextValue('ram', v, isItCategory)))}
                 onDeleteOption={(v) => persistCatalog((c) => removeRam(c, v))}
               />
             </div>
@@ -2212,14 +2336,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               <SmartSelect
                 label="Storage (SSD)"
                 value={formData.ssd}
+                transformValue={(value) => normalizeItTextValue('ssd', value, isItCategory)}
                 options={optionsWithValue(
                   [...SSD_OPTIONS, ...(catalog.ssd || [])].filter(
                     (v) => !(catalog.deletedOptions?.ssd || []).includes(v)
                   ),
                   formData.ssd
                 )}
-                onChange={(ssd) => setFormData((prev) => ({ ...prev, ssd }))}
-                onAddCustom={(v) => persistCatalog((c) => addSsd(c, v))}
+                onChange={(ssd) => setFormData((prev) => ({ ...prev, ssd: normalizeItTextValue('ssd', ssd, isItCategory) }))}
+                onAddCustom={(v) => persistCatalog((c) => addSsd(c, normalizeItTextValue('ssd', v, isItCategory)))}
                 onDeleteOption={(v) => persistCatalog((c) => removeSsd(c, v))}
               />
             </div>
@@ -2228,14 +2353,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 label="Processor Arch"
                 required
                 value={formData.cpu}
+                transformValue={(value) => normalizeItTextValue('cpu', value, isItCategory)}
                 options={optionsWithValue(
                   [...CPU_OPTIONS, ...(catalog.cpu || [])].filter(
                     (v) => !(catalog.deletedOptions?.cpu || []).includes(v)
                   ),
                   formData.cpu
                 )}
-                onChange={(cpu) => setFormData((prev) => ({ ...prev, cpu }))}
-                onAddCustom={(v) => persistCatalog((c) => addCpu(c, v))}
+                onChange={(cpu) => setFormData((prev) => ({ ...prev, cpu: normalizeItTextValue('cpu', cpu, isItCategory) }))}
+                onAddCustom={(v) => persistCatalog((c) => addCpu(c, normalizeItTextValue('cpu', v, isItCategory)))}
                 onDeleteOption={(v) => persistCatalog((c) => removeCpu(c, v))}
               />
             </div>
@@ -2243,14 +2369,24 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               <SmartSelect
                 label="OS Version"
                 value={formData.windowsVersion}
+                transformValue={(value) => normalizeItTextValue('windowsVersion', value, isItCategory)}
                 options={optionsWithValue(
                   [...WINDOWS_OPTIONS, ...(catalog.windowsVersion || [])].filter(
                     (v) => !(catalog.deletedOptions?.windowsVersion || []).includes(v)
                   ),
                   formData.windowsVersion
                 )}
-                onChange={(windowsVersion) => setFormData((prev) => ({ ...prev, windowsVersion }))}
-                onAddCustom={(v) => persistCatalog((c) => addWindowsVersion(c, v))}
+                onChange={(windowsVersion) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    windowsVersion: normalizeItTextValue('windowsVersion', windowsVersion, isItCategory),
+                  }))
+                }
+                onAddCustom={(v) =>
+                  persistCatalog((c) =>
+                    addWindowsVersion(c, normalizeItTextValue('windowsVersion', v, isItCategory))
+                  )
+                }
                 onDeleteOption={(v) => persistCatalog((c) => removeWindowsVersion(c, v))}
               />
             </div>
@@ -2661,7 +2797,12 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               location: formData.location,
               plantCode: formData.plantCode,
             }}
-            onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+            onChange={(patch) =>
+              setFormData((prev) => ({
+                ...prev,
+                ...normalizeItPatch(patch as Record<string, unknown>, isItCategory),
+              }))
+            }
             onEmployeeResolved={setLinkedEmployee}
           />
           <div className="w-full space-y-1.5 font-mono">
@@ -2669,7 +2810,12 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
             <textarea
               name="additionalItems"
               value={formData.additionalItems}
-              onChange={(e) => setFormData(prev => ({ ...prev, additionalItems: e.target.value }))}
+              onChange={(e) =>
+                setFormData(prev => ({
+                  ...prev,
+                  additionalItems: normalizeItTextValue('additionalItems', e.target.value, isItCategory),
+                }))
+              }
               placeholder="Case, Charger, Adapter, etc."
               rows={3}
               className="w-full input-geometric min-h-[100px] py-3"

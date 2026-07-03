@@ -11,10 +11,10 @@ export function normalizeUser(raw: Record<string, unknown>): AppUser {
   };
 }
 
-const IT_ADMIN_ROLES = new Set(["IT Admin", "IT_ADMIN", "IT ADMIN", "it admin"]);
+const IT_ADMIN_ROLES = new Set(["it admin", "it_admin"]);
 
 export function isItAdminRole(role: string | undefined | null): boolean {
-  return !!role && IT_ADMIN_ROLES.has(role);
+  return IT_ADMIN_ROLES.has(String(role || "").trim().toLowerCase());
 }
 
 export function canDeleteUserRecord(user: AppUser | undefined | null): boolean {
@@ -125,11 +125,75 @@ export function mergeUsers(...lists: AppUser[][]): AppUser[] {
   return Array.from(map.values()).sort((a, b) => a.email.localeCompare(b.email));
 }
 
+function cleanScopeList(values: string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const next: string[] = [];
+  for (const value of values || []) {
+    const clean = String(value || "").trim();
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    next.push(clean);
+  }
+  return next;
+}
+
+function hasAllScope(values: string[] | undefined): boolean {
+  return cleanScopeList(values).some((value) => value.toLowerCase() === "all");
+}
+
+function withoutAllScope(values: string[] | undefined): string[] {
+  return cleanScopeList(values).filter((value) => value.toLowerCase() !== "all");
+}
+
+function mergeScopeList(primary: string[] | undefined, fallback: string[] | undefined, role: string): string[] {
+  if (isItAdminRole(role)) return ["All"];
+
+  const primarySpecific = withoutAllScope(primary);
+  if (primarySpecific.length > 0) return primarySpecific;
+
+  const fallbackSpecific = withoutAllScope(fallback);
+  if (fallbackSpecific.length > 0) return fallbackSpecific;
+
+  if (hasAllScope(primary) || hasAllScope(fallback)) return [];
+  return [];
+}
+
+function mergeFetchedUserWithLocal(fetched: AppUser, local?: AppUser): AppUser {
+  const role = fetched.role || local?.role || "User";
+  return {
+    ...(local || fetched),
+    ...fetched,
+    role,
+    locations: mergeScopeList(fetched.locations, local?.locations, role),
+    plants: mergeScopeList(fetched.plants, local?.plants, role),
+    categories: mergeScopeList(fetched.categories, local?.categories, role),
+    allowDelete: fetched.allowDelete || local?.allowDelete || false,
+  };
+}
+
+function mergeFetchedUsersWithLocal(fetchedUsers: AppUser[], localUsers: AppUser[]): AppUser[] {
+  if (fetchedUsers.length === 0) return localUsers;
+  const localByEmail = new Map(localUsers.map((u) => [u.email.toLowerCase(), u]));
+  return fetchedUsers
+    .map((user) => mergeFetchedUserWithLocal(user, localByEmail.get(user.email.toLowerCase())))
+    .sort((a, b) => a.email.localeCompare(b.email));
+}
+
 export function upsertLocalUser(user: AppUser) {
   const data = readAppData();
   const idx = data.users.findIndex((u) => u.email === user.email);
   if (idx === -1) data.users.push(user);
   else data.users[idx] = user;
+  writeAppData(data);
+}
+
+export function deleteLocalUser(email: string) {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return;
+  const data = readAppData();
+  data.users = data.users.filter((u) => u.email !== normalized);
   writeAppData(data);
 }
 
@@ -165,17 +229,19 @@ export async function getAllUsers(
       console.warn("GAS users fetch failed:", err);
     }
 
+    const mergedUsers = mergeFetchedUsersWithLocal(sheetUsers, localUsers);
     const data = readAppData();
-    data.users = sheetUsers;
+    data.users = mergedUsers;
     writeAppData(data);
-    return sheetUsers;
+    return mergedUsers;
   }
 
   if (sheetUsers.length > 0) {
+    const mergedUsers = mergeFetchedUsersWithLocal(sheetUsers, localUsers);
     const data = readAppData();
-    data.users = sheetUsers;
+    data.users = mergedUsers;
     writeAppData(data);
-    return sheetUsers;
+    return mergedUsers;
   }
 
   return localUsers;
