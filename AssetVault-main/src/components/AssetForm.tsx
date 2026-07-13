@@ -405,13 +405,27 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     return field ? field.enabled : true;
   };
 
-  const getSubCategories = (mainCategory: string) => {
+  const getSubCategories = React.useCallback((mainCategory: string) => {
     const staticSubs = CATEGORY_SUBCATEGORIES[mainCategory] || [];
     const customSubs = catalog.subCategories?.[mainCategory] || [];
-    const all = Array.from(new Set([...staticSubs, ...customSubs]));
+    const typeSubs = typeConfig.types
+      .filter((type) => type.mainCategory === mainCategory && type.subCategory)
+      .map((type) => String(type.subCategory));
+    const all = Array.from(new Set([...staticSubs, ...customSubs, ...typeSubs]));
     const deleted = catalog.deletedOptions?.subCategories || [];
     return all.filter((s) => !deleted.includes(`${mainCategory}:${s}`));
-  };
+  }, [catalog.deletedOptions?.subCategories, catalog.subCategories, typeConfig.types]);
+
+  const getDefaultSubCategory = React.useCallback(
+    (mainCategory: string) => {
+      const subs = getSubCategories(mainCategory);
+      if (mainCategory === "IT Assets") {
+        return subs.includes("Laptop / Desktop") ? "Laptop / Desktop" : (subs[0] || "");
+      }
+      return subs[0] || "";
+    },
+    [getSubCategories]
+  );
 
   const [formData, setFormData] = useState<AssetFormData>(() => assetToFormData(initialData));
 
@@ -702,22 +716,22 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     assetName: formData.assetName,
   });
 
-  const selectAssetType = (newType: AssetType) => {
-    const subCategory = subCategoryForItAssetType(newType);
+  const selectAssetType = (newType: AssetType, nextSubCategory = subCategoryForItAssetType(newType)) => {
     const make = formData.make || "";
     const models = make ? getModelsForBrandAndType(catalog, newType, make) : [];
     const model = models.includes(formData.model) ? formData.model : "";
     const wasPrimary = ["Laptop", "Desktop"].includes(formData.assetType);
     const isPrimary = ["Laptop", "Desktop"].includes(newType);
     const typeDef = resolveTypeDefinition(typeConfig, {
-      mainCategory: formData.mainCategory,
-      subCategory,
+      mainCategory: formData.mainCategory || "IT Assets",
+      subCategory: nextSubCategory,
       assetType: newType,
     });
     setFormData((prev) => ({
       ...prev,
+      mainCategory: prev.mainCategory || "IT Assets",
       assetType: newType,
-      subCategory,
+      subCategory: nextSubCategory,
       assetTypeId: typeDef?.id || prev.assetTypeId,
       make,
       model,
@@ -740,13 +754,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       const model = models.includes(prev.model) ? prev.model : "";
       const wasPrimary = ["Laptop", "Desktop"].includes(prev.assetType);
       const typeDef = resolveTypeDefinition(typeConfig, {
-        mainCategory: prev.mainCategory,
+        mainCategory: prev.mainCategory || "IT Assets",
         subCategory,
         assetType: selectedType,
       });
 
       return {
         ...prev,
+        mainCategory: prev.mainCategory || "IT Assets",
         assetType: selectedType,
         assetTypeId: typeDef?.id || prev.assetTypeId,
         subCategory,
@@ -1104,23 +1119,21 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     if (!initialData?.id && allowedCategories.length > 0) {
       const defaultCat = allowedCategories[0];
       if (!allowedCategories.includes(formData.mainCategory || "IT Assets")) {
-        const subs = CATEGORY_SUBCATEGORIES[defaultCat] || [];
-        const firstSub = defaultCat === "IT Assets" ? (subs[0] || "") : "";
+        const firstSub = getDefaultSubCategory(defaultCat);
         setFormData((prev) => applyCategorySelection(prev, defaultCat, firstSub, typeConfig));
       }
     }
-  }, [allowedCategories, initialData?.id]);
+  }, [allowedCategories, formData.mainCategory, getDefaultSubCategory, initialData?.id, typeConfig]);
 
   /** When opened from dashboard with a category filter, skip re-selecting category */
   useEffect(() => {
     if (initialData?.id || !prefillMainCategory || prefillMainCategory === "All" || prefillAssetType || prefillMainCategory === SIDEBAR_CCTV_CATEGORY) return;
     if (!allowedCategories.includes(prefillMainCategory)) return;
-    const subs = CATEGORY_SUBCATEGORIES[prefillMainCategory] || [];
-    const firstSub = prefillMainCategory === "IT Assets" ? (subs[0] || "") : "";
+    const firstSub = getDefaultSubCategory(prefillMainCategory);
     if (formData.mainCategory !== prefillMainCategory || formData.subCategory !== firstSub) {
       setFormData((prev) => applyCategorySelection(prev, prefillMainCategory, firstSub, typeConfig));
     }
-  }, [prefillMainCategory, prefillAssetType, allowedCategories, initialData?.id, typeConfig, formData.mainCategory, formData.subCategory]);
+  }, [prefillMainCategory, prefillAssetType, allowedCategories, initialData?.id, typeConfig, formData.mainCategory, formData.subCategory, getDefaultSubCategory]);
 
   /** When opened from Camera/NVR sidebar — IT Assets + type selector, jump to step 2 */
   useEffect(() => {
@@ -1157,18 +1170,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const selectCctvAssetType = (type: (typeof CCTV_IT_TYPES)[number]) => {
     const { subCategory } = applyItAssetTypeSelection(type);
-    const typeDef = resolveTypeDefinition(typeConfig, {
-      mainCategory: "IT Assets",
-      subCategory,
-      assetType: type,
-    });
-    selectAssetType(type);
-    setFormData((prev) => ({
-      ...prev,
-      assetType: type,
-      subCategory,
-      assetTypeId: typeDef?.id || "cctv_security",
-    }));
+    selectAssetType(type, subCategory);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1397,8 +1399,8 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       }
 
       const isIT = (dataToSubmit.mainCategory || "IT Assets") === "IT Assets";
-      const isPeripheral = PERIPHERAL_TYPES.includes(dataToSubmit.assetType);
-      if (isIT && !isPeripheral && !validateMac(dataToSubmit.macAddress)) {
+      const requiresMacAddress = isIT && ["Laptop", "Desktop"].includes(dataToSubmit.assetType);
+      if (requiresMacAddress && !validateMac(dataToSubmit.macAddress)) {
         setMacError("Invalid Format. Use XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (Hex only)");
         const el = document.getElementById("mac-address-input");
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1410,7 +1412,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       const codeOk = (entryProfile.manualAssetCode && isAssetCodeEdited)
         ? await checkUnique("assetCode", dataToSubmit.assetCode)
         : true;
-      const macOk = (!isIT || isPeripheral || !dataToSubmit.macAddress) ? true : await checkUnique("macAddress", dataToSubmit.macAddress);
+      const macOk = requiresMacAddress && dataToSubmit.macAddress
+        ? await checkUnique("macAddress", dataToSubmit.macAddress)
+        : true;
 
       if (!serialOk || !codeOk || !macOk) {
         toast.error("Duplicate Serial Number, Asset Code, or MAC Address — save blocked.");
@@ -1568,8 +1572,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 value={formData.mainCategory || "IT Assets"}
                 onChange={(e) => {
                   const mainCat = e.target.value;
-                  const subs = CATEGORY_SUBCATEGORIES[mainCat] || [];
-                  const firstSub = mainCat === "IT Assets" ? (subs[0] || "") : "";
+                  const firstSub = getDefaultSubCategory(mainCat);
                   setFormData((prev) =>
                     applyCategorySelection(prev, mainCat, firstSub, typeConfig, {
                       preserveFields: isEditMode,

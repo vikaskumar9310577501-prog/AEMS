@@ -3098,6 +3098,7 @@ var CATEGORY_PREFIX_ = {
   "Software License Assets": "SW",
   "Software / License Assets": "SW",
   "Admin Facility Assets": "ADM",
+  "Admin / Facility Assets": "ADM",
   "Maintenance Assets": "MNT"
 };
 
@@ -3197,7 +3198,7 @@ function getNextCodeLock_(category, dbMode) {
     
     for (var k = 0; k < reservations.length; k++) {
       var res = reservations[k];
-      if (res.category === mainCat) {
+      if ((CATEGORY_PREFIX_[res.category] || "AST") === prefix) {
         maxSeq = Math.max(maxSeq, res.seq);
       }
       maxId = Math.max(maxId, res.idVal);

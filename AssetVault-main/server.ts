@@ -1213,9 +1213,6 @@ async function validateAssetPayload(
   if (!isSoftware && !String(assetData.serialNumber || "").trim()) {
     throw new Error("Serial number is required");
   }
-  if (mainCat === "IT Assets" && !String(assetData.assetCode || "").trim()) {
-    throw new Error("Asset code is required for IT assets");
-  }
   if (!String(assetData.location || "").trim()) {
     throw new Error("Location is required");
   }

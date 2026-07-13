@@ -14,6 +14,7 @@ const CATEGORY_PREFIX: Record<string, string> = {
   "Software License Assets": "SW",
   "Software / License Assets": "SW",
   "Admin Facility Assets": "ADM",
+  "Admin / Facility Assets": "ADM",
   "Maintenance Assets": "MNT",
 };
 
@@ -52,8 +53,12 @@ function writeIssuedCodes(list: IssuedCode[]) {
   }
 }
 
-function normCode(value: string): string {
+export function normAssetCode(value: string): string {
   return value.trim().toLowerCase();
+}
+
+export function getAssetCodePrefix(mainCategory: string): string {
+  return CATEGORY_PREFIX[(mainCategory || "").trim()] || "AST";
 }
 
 // In-memory registry of codes currently in the process of saving
@@ -61,18 +66,18 @@ const activeSavingCodes = new Set<string>();
 
 export function registerSavingCode(code: string) {
   if (code && code.trim()) {
-    activeSavingCodes.add(normCode(code));
+    activeSavingCodes.add(normAssetCode(code));
   }
 }
 
 export function releaseSavingCode(code: string) {
   if (code && code.trim()) {
-    activeSavingCodes.delete(normCode(code));
+    activeSavingCodes.delete(normAssetCode(code));
   }
 }
 
 export function isSavingCode(code: string): boolean {
-  return activeSavingCodes.has(normCode(code));
+  return activeSavingCodes.has(normAssetCode(code));
 }
 
 // -------------------------------------------------------
@@ -107,10 +112,10 @@ export function generateNextAssetId(assets: MappedAsset[]): string {
   return String(candidate).padStart(3, "0");
 }
 
-/** IT Assets and Software / License use manual codes; other categories are auto-generated. */
+/** Software / License uses manual codes; other categories are auto-generated. */
 export function isManualAssetCodeCategory(mainCategory: string): boolean {
   const cat = (mainCategory || "IT Assets").trim();
-  return cat === "IT Assets" || cat === "Software / License Assets";
+  return cat === "Software / License Assets";
 }
 
 /** @deprecated Use isManualAssetCodeCategory — department no longer drives asset code logic */
@@ -119,25 +124,33 @@ export function isManualAssetCodeDepartment(_department: string): boolean {
 }
 
 export function generateAssetCode(assets: MappedAsset[], mainCategory: string): string {
-  const prefix = CATEGORY_PREFIX[mainCategory] || "AST";
+  const prefix = getAssetCodePrefix(mainCategory);
   const year = new Date().getFullYear();
   const pattern = new RegExp(`^${prefix}-${year}-(\\d+)$`, "i");
   let maxSeq = 0;
+  const usedCodes = new Set<string>();
 
-  // 1. Scan actual database assets
-  for (const asset of assets) {
-    const code = String(asset.assetCode || "").trim();
+  const rememberCode = (value: string) => {
+    const code = String(value || "").trim();
+    if (!code) return;
+    usedCodes.add(normAssetCode(code));
     const match = code.match(pattern);
     if (match) {
       maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
     }
+  };
+
+  // 1. Scan actual database assets
+  for (const asset of assets) {
+    rememberCode(String(asset.assetCode || ""));
+    rememberCode(String(asset.uniqueCode || ""));
   }
 
   // 2. Scan recently issued codes that haven't expired
   const now = Date.now();
   const issued = readIssuedCodes().filter(item => item.expiresAt > now);
   for (const item of issued) {
-    if (item.category === mainCategory) {
+    if (getAssetCodePrefix(item.category) === prefix) {
       maxSeq = Math.max(maxSeq, item.seq);
     }
   }
@@ -152,8 +165,7 @@ export function generateAssetCode(assets: MappedAsset[], mainCategory: string): 
     attempts += 1;
   } while (
     attempts < 10000 &&
-    (assets.some((a) => normCode(String(a.assetCode || "")) === normCode(candidate)) ||
-     isSavingCode(candidate))
+    (usedCodes.has(normAssetCode(candidate)) || isSavingCode(candidate))
   );
 
   // 4. Save this new sequence to issued codes (expires in 5 minutes)
@@ -168,7 +180,7 @@ export function generateAssetCode(assets: MappedAsset[], mainCategory: string): 
 }
 
 export function releaseIssuedCode(mainCategory: string, assetCode: string) {
-  const prefix = CATEGORY_PREFIX[mainCategory] || "AST";
+  const prefix = getAssetCodePrefix(mainCategory);
   const year = new Date().getFullYear();
   const pattern = new RegExp(`^${prefix}-${year}-(\\d+)$`, "i");
   const match = String(assetCode || "").trim().match(pattern);
@@ -176,7 +188,7 @@ export function releaseIssuedCode(mainCategory: string, assetCode: string) {
     const seq = parseInt(match[1], 10);
     if (seq) {
       const issued = readIssuedCodes();
-      const next = issued.filter(item => !(item.category === mainCategory && item.seq === seq));
+      const next = issued.filter(item => !(getAssetCodePrefix(item.category) === prefix && item.seq === seq));
       if (next.length !== issued.length) {
         writeIssuedCodes(next);
       }

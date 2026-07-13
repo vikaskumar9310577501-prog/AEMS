@@ -1,6 +1,6 @@
 import type { AssetFormData } from '../types';
 import type { AssetTypeDefinition, TypeDefinitionsConfig } from '../types/categoryTypes';
-import { PERIPHERAL_TYPES } from './assetCatalogByType';
+import { CATEGORY_SUBCATEGORIES, PERIPHERAL_TYPES } from './assetCatalogByType';
 import { resolveTypeDefinition } from './typeDefinitions';
 
 export interface EntryFormProfile {
@@ -23,7 +23,7 @@ export interface EntryFormProfile {
   isCctvSecurityDevice: boolean;
   serialLabel: string;
   assetCodeLabel: string;
-  /** IT Assets: user enters code; other categories: auto-generated */
+  /** Software/edit forms use manual code entry; new assets in other categories are auto-generated. */
   manualAssetCode: boolean;
   requireSerialNumber: boolean;
   makeLabel: string;
@@ -73,7 +73,7 @@ export function getEntryFormProfile(
     isCctvSecurityDevice: !!isCctvSecurity,
     serialLabel: isSoftware ? 'License Key' : isVehicle ? 'Chassis / Engine No.' : 'Serial Number',
     assetCodeLabel: isSoftware ? 'Software Code' : isVehicle ? 'Internal Asset Code' : 'Asset Code',
-    manualAssetCode: isItAssets || isSoftware,
+    manualAssetCode: isSoftware || isEditMode,
     requireSerialNumber: !isSoftware,
     makeLabel: isSoftware ? 'Publisher / Brand' : 'Brand / Make',
     modelLabel: isSoftware ? 'Product / Edition' : 'Model',
@@ -149,13 +149,15 @@ export function applyCategorySelection(
     };
   }
 
-  const def = resolveTypeDefinition(typeConfig, { mainCategory, subCategory });
+  const typeSub = typeConfig.types.find((type) => type.mainCategory === mainCategory && type.subCategory)?.subCategory;
+  const effectiveSubCategory = subCategory || CATEGORY_SUBCATEGORIES[mainCategory]?.[0] || typeSub || '';
+  const def = resolveTypeDefinition(typeConfig, { mainCategory, subCategory: effectiveSubCategory });
   const isSoftware = mainCategory === 'Software / License Assets';
   return {
     ...cleared,
     mainCategory,
-    subCategory,
-    assetType: (subCategory || mainCategory) as AssetFormData['assetType'],
+    subCategory: effectiveSubCategory,
+    assetType: (effectiveSubCategory || mainCategory) as AssetFormData['assetType'],
     assetTypeId: def?.id || '',
     ...(isSoftware ? { condition: 'EXISTING ASSETS' as const } : {}),
   };

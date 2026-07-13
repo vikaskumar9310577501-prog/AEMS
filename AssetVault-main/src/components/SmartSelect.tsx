@@ -165,15 +165,13 @@ export default function SmartSelect({
               {finalOptions.map((opt) => (
                 <div
                   key={opt}
+                  onClick={() => {
+                    handleSelect(opt);
+                    setIsOpen(false);
+                  }}
                   className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer group"
                 >
-                  <span
-                    onClick={() => {
-                      handleSelect(opt);
-                      setIsOpen(false);
-                    }}
-                    className="flex-1 text-sm text-slate-700 font-bold"
-                  >
+                  <span className="flex-1 text-sm text-slate-700 font-bold">
                     {opt}
                   </span>
                   {onDeleteOption && (
