@@ -225,6 +225,29 @@ async function drawDetailsPage(
     y = drawRow("IP Address", asset.ipAddress, y);
     y = drawRow("Host Name", asset.hostName, y);
     y = drawRow("MAC Address", asset.macAddress, y);
+  } else if (asset.dynamicDetails && Object.keys(asset.dynamicDetails).length > 0) {
+    let hasDynamicContent = false;
+    for (const [key, value] of Object.entries(asset.dynamicDetails)) {
+      if (String(value || "").trim()) {
+        hasDynamicContent = true;
+        break;
+      }
+    }
+    if (hasDynamicContent) {
+      y = drawSection("Specifications", y - 6);
+      for (const [key, value] of Object.entries(asset.dynamicDetails)) {
+        const valStr = String(value || "").trim();
+        if (valStr && valStr !== "—") {
+          const label = key
+            .replace(/_/g, " ")
+            .replace(/([A-Z])/g, " $1")
+            .replace(/\b\w/g, (char) => char.toUpperCase())
+            .replace(/\s+/g, " ")
+            .trim();
+          y = drawRow(label, valStr, y);
+        }
+      }
+    }
   }
 
   if (isDesktopAsset(asset)) {

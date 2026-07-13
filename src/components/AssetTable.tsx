@@ -29,6 +29,8 @@ interface AssetTableProps {
   onViewAsset: (asset: Asset) => void;
   role?: string;
   viewMode?: AssetViewMode;
+  selectedAssetIds?: (string | number)[];
+  onSelectionChange?: (ids: (string | number)[]) => void;
 }
 
 type SortField = 'id' | 'assetName' | 'location' | 'contactName' | 'status' | 'mainCategory';
@@ -40,7 +42,18 @@ const isCctvAsset = (asset: Asset) =>
 
 const displayAssetStatus = (status?: string) => (status === "Missing" ? "Lost" : status || "Available");
 
-export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewAsset, role, viewMode = "table" }: AssetTableProps) {
+export default function AssetTable({
+  assets,
+  onEdit,
+  onDelete,
+  onViewQR,
+  onViewAsset,
+  role,
+  viewMode = "table",
+  selectedAssetIds = [],
+  onSelectionChange
+}: AssetTableProps) {
+  const showCheckboxes = role !== 'HR' && !!onSelectionChange && !!selectedAssetIds;
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -99,6 +112,28 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedAssets = sortedAssets.slice(startIndex, startIndex + pageSize);
+
+  const handleSelectOne = (id: string | number) => {
+    if (!onSelectionChange) return;
+    if (selectedAssetIds.includes(id)) {
+      onSelectionChange(selectedAssetIds.filter((item) => item !== id));
+    } else {
+      onSelectionChange([...selectedAssetIds, id]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (!onSelectionChange) return;
+    const allSelected = paginatedAssets.length > 0 && paginatedAssets.every((asset) => selectedAssetIds.includes(asset.id));
+    if (allSelected) {
+      const idsToRemove = paginatedAssets.map((asset) => asset.id);
+      onSelectionChange(selectedAssetIds.filter((id) => !idsToRemove.includes(id)));
+    } else {
+      const idsToAdd = paginatedAssets.map((asset) => asset.id);
+      const newSelection = Array.from(new Set([...selectedAssetIds, ...idsToAdd]));
+      onSelectionChange(newSelection);
+    }
+  };
 
   if (assets.length === 0) {
     return (
@@ -313,6 +348,16 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                 <div className="p-5 pt-6">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-start gap-3 min-w-0">
+                      {showCheckboxes && (
+                        <div className="flex items-center self-center pr-1.5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAssetIds.includes(asset.id)}
+                            onChange={() => handleSelectOne(asset.id)}
+                            className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                          />
+                        </div>
+                      )}
                       <DeviceThumb
                         assetType={asset.assetType}
                         mainCategory={asset.mainCategory}
@@ -404,6 +449,16 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                 <div className={cn("h-1 w-full", getStatusAccent(asset.status))} />
                 <div className="p-4 flex flex-col gap-3 flex-1">
                   <div className="flex items-center gap-3">
+                    {showCheckboxes && (
+                      <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedAssetIds.includes(asset.id)}
+                          onChange={() => handleSelectOne(asset.id)}
+                          className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                        />
+                      </div>
+                    )}
                     <DeviceThumb
                       assetType={asset.assetType}
                       mainCategory={asset.mainCategory}
@@ -466,6 +521,16 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
           <thead className="bg-slate-100 border-b border-slate-200">
             {isITLayout ? (
               <tr>
+                {showCheckboxes && (
+                  <th className="px-6 py-4 w-12 text-center select-none" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={paginatedAssets.length > 0 && paginatedAssets.every((asset) => selectedAssetIds.includes(asset.id))}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer align-middle"
+                    />
+                  </th>
+                )}
                 <SortHeader field="id" label="Asset Code" />
                 <SortHeader field="assetName" label="Hardware Asset" />
                 {!hideAssigneeColumn && <SortHeader field="contactName" label="Assigned Name" />}
@@ -482,6 +547,16 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
               </tr>
             ) : (
               <tr>
+                {showCheckboxes && (
+                  <th className="px-6 py-4 w-12 text-center select-none" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={paginatedAssets.length > 0 && paginatedAssets.every((asset) => selectedAssetIds.includes(asset.id))}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer align-middle"
+                    />
+                  </th>
+                )}
                 <SortHeader field="id" label="Asset Code" />
                 <SortHeader field="assetName" label="Asset Details" />
                 <SortHeader field="mainCategory" label="Category" />
@@ -508,7 +583,17 @@ export default function AssetTable({ assets, onEdit, onDelete, onViewQR, onViewA
                   className="hover:bg-slate-100 cursor-pointer transition-colors group"
                   onClick={handleRowClick}
                 >
-                  <td className="px-6 py-5">
+                  {showCheckboxes && (
+                    <td className="px-6 py-5 w-12 text-center select-none" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAssetIds.includes(asset.id)}
+                        onChange={() => handleSelectOne(asset.id)}
+                        className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer align-middle"
+                      />
+                    </td>
+                  )}
+                  <td className="px-6 py-5 font-medium">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900 tracking-tight font-mono">

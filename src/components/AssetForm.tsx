@@ -485,20 +485,22 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     assetName: formData.assetName,
   });
 
-  const selectAssetType = (newType: AssetType) => {
+  const selectAssetType = (newType: AssetType, nextSubCategory = subCategoryForItAssetType(newType)) => {
     const make = formData.make || "";
     const models = make ? getModelsForBrandAndType(catalog, newType, make) : [];
     const model = models.includes(formData.model) ? formData.model : "";
     const wasPrimary = ["Laptop", "Desktop"].includes(formData.assetType);
     const isPrimary = ["Laptop", "Desktop"].includes(newType);
     const typeDef = resolveTypeDefinition(typeConfig, {
-      mainCategory: formData.mainCategory,
-      subCategory: formData.subCategory,
+      mainCategory: formData.mainCategory || "IT Assets",
+      subCategory: nextSubCategory,
       assetType: newType,
     });
     setFormData((prev) => ({
       ...prev,
+      mainCategory: prev.mainCategory || "IT Assets",
       assetType: newType,
+      subCategory: nextSubCategory,
       assetTypeId: typeDef?.id || prev.assetTypeId,
       make,
       model,
@@ -892,18 +894,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const selectCctvAssetType = (type: (typeof CCTV_IT_TYPES)[number]) => {
     const { subCategory } = applyItAssetTypeSelection(type);
-    const typeDef = resolveTypeDefinition(typeConfig, {
-      mainCategory: "IT Assets",
-      subCategory,
-      assetType: type,
-    });
-    selectAssetType(type);
-    setFormData((prev) => ({
-      ...prev,
-      assetType: type,
-      subCategory,
-      assetTypeId: typeDef?.id || "cctv_security",
-    }));
+    selectAssetType(type, subCategory);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1020,10 +1011,17 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     const { name, value } = e.target;
     
     if (name === "macAddress") {
-      // Filter out non-hex and non-separator characters, convert to uppercase
-      const filtered = value.replace(/[^0-9A-Fa-f:.-]/g, "").toUpperCase();
-      setFormData(prev => ({ ...prev, [name]: filtered }));
-      if (filtered === "" || validateMac(filtered)) {
+      // Extract only hexadecimal characters and convert to uppercase
+      const clean = value.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
+      // Group hex digits in pairs of 2 separated by colons
+      const chunks = [];
+      for (let i = 0; i < clean.length && i < 12; i += 2) {
+        chunks.push(clean.substring(i, i + 2));
+      }
+      const formatted = chunks.join(":");
+      
+      setFormData(prev => ({ ...prev, [name]: formatted }));
+      if (formatted === "" || validateMac(formatted)) {
         setMacError(null);
       }
       return;
@@ -1099,8 +1097,8 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       }
 
       const isIT = (dataToSubmit.mainCategory || "IT Assets") === "IT Assets";
-      const isPeripheral = PERIPHERAL_TYPES.includes(dataToSubmit.assetType);
-      if (isIT && !isPeripheral && !validateMac(dataToSubmit.macAddress)) {
+      const requiresMacAddress = isIT && ["Laptop", "Desktop"].includes(dataToSubmit.assetType);
+      if (requiresMacAddress && !validateMac(dataToSubmit.macAddress)) {
         setMacError("Invalid Format. Use XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (Hex only)");
         const el = document.getElementById("mac-address-input");
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1112,7 +1110,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       const codeOk = entryProfile.manualAssetCode
         ? await checkUnique("assetCode", dataToSubmit.assetCode)
         : true;
-      const macOk = (!isIT || isPeripheral || !dataToSubmit.macAddress) ? true : await checkUnique("macAddress", dataToSubmit.macAddress);
+      const macOk = requiresMacAddress && dataToSubmit.macAddress
+        ? await checkUnique("macAddress", dataToSubmit.macAddress)
+        : true;
 
       if (!serialOk || !codeOk || !macOk) {
         toast.error("Duplicate Serial Number, Asset Code, or MAC Address — save blocked.");
@@ -1305,9 +1305,8 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                       key={type}
                       onClick={() => {
                         const newType = isPeripheralGroup ? "Monitor" : (type as AssetType);
-                        selectAssetType(newType);
                         const { subCategory } = applyItAssetTypeSelection(newType);
-                        setFormData((prev) => ({ ...prev, subCategory }));
+                        selectAssetType(newType, subCategory);
                       }}
                       className={cn(
                         "py-3 px-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all",
@@ -1328,9 +1327,8 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                         type="button"
                         key={pType}
                         onClick={() => {
-                          selectAssetType(pType as AssetType);
                           const { subCategory } = applyItAssetTypeSelection(pType as AssetType);
-                          setFormData((prev) => ({ ...prev, subCategory }));
+                          selectAssetType(pType as AssetType, subCategory);
                         }}
                         className={cn(
                           "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all",

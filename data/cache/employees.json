@@ -1,1 +1,93 @@
-[]
+[
+  {
+    "employeeId": "NGM00136",
+    "name": "VIVEK BHARTI",
+    "email": "edp.ngm2@pgel.in",
+    "phone": "8210496005",
+    "department": "IT",
+    "location": "BHIWADI",
+    "designation": "ENGINNER",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-20T05:08:56.391Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  },
+  {
+    "employeeId": "NGM00138",
+    "name": "KS",
+    "email": "ks.2@pgel.in",
+    "phone": "9876567987",
+    "department": "Finance",
+    "location": "BHIWADI",
+    "designation": "employe",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-20T10:45:15.959Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  },
+  {
+    "employeeId": "NGM00234",
+    "name": "Manoj",
+    "email": "vikas@pgel.in",
+    "phone": "8765698769",
+    "department": "Engineering",
+    "location": "BHIWADI",
+    "designation": "employe",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-23T09:50:27.524Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  },
+  {
+    "employeeId": "NGM00134",
+    "name": "himanshu",
+    "email": "edp.ngm2@pgel.in",
+    "phone": "6350039958",
+    "department": "IT",
+    "location": "BHIWADI",
+    "designation": "trainee",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-27T11:47:23.156Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  },
+  {
+    "employeeId": "PT500162",
+    "name": "KUSHAGAR GAUTAM",
+    "email": "hr.ngm2@pgel.in",
+    "phone": "9870696547",
+    "department": "HR",
+    "location": "BHIWADI",
+    "designation": "EXECUTIVE",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-29T09:02:47.885Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  },
+  {
+    "employeeId": "NGM00027",
+    "name": "VISHVAS SHARMA",
+    "email": "prod.ngm2@pgel.in",
+    "phone": "7053727784",
+    "department": "Production",
+    "location": "BHIWADI",
+    "designation": "ENG",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-29T09:22:44.796Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  },
+  {
+    "employeeId": "BM00473",
+    "name": "NITIN VERMA",
+    "email": "ppc.ngm2@pgel.in",
+    "phone": "8433301238",
+    "department": "MOLDING",
+    "location": "BHIWADI",
+    "designation": "EXECUTIVE",
+    "plant": "4020",
+    "status": "Active",
+    "createdAt": "2026-06-29T09:38:54.981Z",
+    "updatedAt": "2026-06-29T09:46:10.715Z"
+  }
+]

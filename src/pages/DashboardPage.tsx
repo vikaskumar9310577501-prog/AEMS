@@ -40,6 +40,7 @@ import {
 import * as XLSX from 'xlsx';
 import AssetTable, { AssetViewMode } from '../components/AssetTable';
 import QRCodeDisplay from '../components/QRCodeDisplay';
+import BulkQRPrintModal from '../components/BulkQRPrintModal';
 import DeleteAssetModal from '../components/DeleteAssetModal';
 import { AssetTableSkeleton } from '../components/LoadingSkeleton';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
@@ -219,6 +220,9 @@ export default function DashboardPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const viewMenuRef = useRef<HTMLDivElement>(null);
 
+  const [selectedAssetIds, setSelectedAssetIds] = useState<(string | number)[]>([]);
+  const [bulkPrintingAssets, setBulkPrintingAssets] = useState<Asset[] | null>(null);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('assetvault.viewMode', viewMode);
@@ -244,6 +248,10 @@ export default function DashboardPage() {
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [selectedPlant, setSelectedPlant] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
+
+  useEffect(() => {
+    setSelectedAssetIds([]);
+  }, [selectedCategory, selectedStatus, selectedLocation, selectedPlant, searchQuery]);
 
   const [missingItemRecords, setMissingItemRecords] = useState<MissingItemRecord[]>([]);
   const [damagedItemRecords, setDamagedItemRecords] = useState<DamagedItemRecord[]>([]);
@@ -1107,6 +1115,8 @@ export default function DashboardPage() {
                 onViewAsset={(a) => navigate(`/assets/${assetRouteId(a)}`)}
                 role={user?.role}
                 viewMode={viewMode}
+                selectedAssetIds={selectedAssetIds}
+                onSelectionChange={setSelectedAssetIds}
               />
             )}
           </>
@@ -1292,6 +1302,50 @@ export default function DashboardPage() {
         onConfirm={onDeleteConfirm}
         deleting={false}
       />
+
+      {/* Floating Action Bar for Bulk QR Printing */}
+      <AnimatePresence>
+        {selectedAssetIds.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0, x: '-50%' }}
+            animate={{ y: 0, opacity: 1, x: '-50%' }}
+            exit={{ y: 80, opacity: 0, x: '-50%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="fixed bottom-6 left-1/2 bg-slate-900/90 backdrop-blur-md text-white border border-slate-800 rounded-2xl py-3 px-6 shadow-2xl z-[100] flex items-center gap-6 no-print shrink-0"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-xs font-black uppercase tracking-wider font-mono">
+                {selectedAssetIds.length} Selected
+              </span>
+            </div>
+            <div className="h-4 w-[1px] bg-slate-800" />
+            <button
+              onClick={() => setSelectedAssetIds([])}
+              className="text-xs font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-wider"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => {
+                const selectedAssets = assets.filter((a) => selectedAssetIds.includes(a.id));
+                setBulkPrintingAssets(selectedAssets);
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-blue-600/20 uppercase tracking-wider"
+            >
+              Print QR
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk QR Print Modal */}
+      {bulkPrintingAssets && (
+        <BulkQRPrintModal
+          assets={bulkPrintingAssets}
+          onClose={() => setBulkPrintingAssets(null)}
+        />
+      )}
 
     </div>
   );

@@ -212,7 +212,7 @@ export default function EmployeeSelector({
                 name="employeeId"
                 value={values.employeeId}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  const val = e.target.value.toUpperCase();
                   if (matched && normId(val) !== normId(matched.employeeId)) {
                     setMatched(null);
                     setNotFound(false);
@@ -246,6 +246,7 @@ export default function EmployeeSelector({
                   }
                 }}
                 placeholder="e.g. PGTL001"
+                style={{ paddingLeft: '2.5rem' }}
                 className="w-full input-geometric pl-10 uppercase"
               />
             </div>
@@ -404,7 +405,7 @@ export default function EmployeeSelector({
               required
               name="contactName"
               value={values.contactName}
-              onChange={(e) => onChange({ contactName: e.target.value })}
+              onChange={(e) => onChange({ contactName: e.target.value.toUpperCase() })}
               readOnly={requireSavedProfile && !matched}
               className={cn(
                 'w-full input-geometric',

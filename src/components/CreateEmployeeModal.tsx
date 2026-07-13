@@ -191,7 +191,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
             <label className="label-caps block mb-1">Full name *</label>
             <input
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.toUpperCase() }))}
               className="w-full input-geometric"
             />
           </div>
@@ -224,6 +224,33 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
             value={form.department}
             options={optionsWithValue(departments, form.department)}
             onChange={(department) => setForm((f) => ({ ...f, department }))}
+            onAddCustom={(newDept) => {
+              const deptUpper = newDept.trim().toUpperCase();
+              if (deptUpper) {
+                const currentDepts = settings.catalog?.departments || [];
+                if (!currentDepts.includes(deptUpper)) {
+                  const nextDepts = [...currentDepts, deptUpper];
+                  setSettings(prev => ({
+                    ...prev,
+                    catalog: {
+                      ...prev.catalog,
+                      departments: nextDepts
+                    }
+                  }));
+                  fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      catalog: {
+                        ...(settings.catalog || {}),
+                        departments: nextDepts
+                      }
+                    }),
+                  }).catch((err) => console.error("Error saving new department:", err));
+                }
+                setForm((f) => ({ ...f, department: deptUpper }));
+              }
+            }}
             placeholder="Select department"
           />
 

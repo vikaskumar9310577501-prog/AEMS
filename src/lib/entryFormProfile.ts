@@ -23,7 +23,7 @@ export interface EntryFormProfile {
   isCctvSecurityDevice: boolean;
   serialLabel: string;
   assetCodeLabel: string;
-  /** IT Assets: user enters code; other categories: auto-generated */
+  /** Software/edit forms use manual code entry; new assets in other categories are auto-generated. */
   manualAssetCode: boolean;
   requireSerialNumber: boolean;
   makeLabel: string;

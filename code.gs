@@ -1660,6 +1660,9 @@ function mapSheetRowToMasterRow_(sheetHeaders, masterHeaders, sheetRow) {
       src = indexOfNormalized_(sheetHeaders, "Plant Code");
       if (src === -1) src = indexOfNormalized_(sheetHeaders, "Plant");
     }
+    if (src === -1 && norm === "maincategory") {
+      src = indexOfNormalized_(sheetHeaders, "Category");
+    }
     out[m] = src !== -1 && src < sheetRow.length && sheetRow[src] != null ? cellToString_(sheetRow[src]) : "";
   }
   return out;

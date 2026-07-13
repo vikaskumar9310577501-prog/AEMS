@@ -32,7 +32,12 @@ import {
   getAssetsSyncMeta,
   scheduleAssetsSyncIfStale,
 } from "./server/assetCache.js";
-import { generateAssetCode, isManualAssetCodeCategory } from "./server/assetCodeGenerator.js";
+import {
+  generateAssetCode,
+  getAssetCodePrefix,
+  isManualAssetCodeCategory,
+  normAssetCode,
+} from "./server/assetCodeGenerator.js";
 import { healMisalignedAssetFields } from "./src/lib/healAssetFields.js";
 import { mapMasterRowToSheetHeaders } from "./server/sheetRowMapper.js";
 import { getUsersWithCache, syncUsersNow, getCachedUsers, getUsersSyncMeta, invalidateUsersCache } from "./server/usersSync.js";
@@ -840,8 +845,11 @@ app.get("/api/assets/next-code", async (req, res) => {
     if (isManualAssetCodeCategory(category)) {
       return res.json({ manual: true, code: "" });
     }
-    const assets = await getAssetsForOps();
-    res.json({ manual: false, code: generateAssetCode(assets, category) });
+    const code = await withAssetCodeLock(async () => {
+      const assets = await getAssetsForOps();
+      return resolveNextAssetCode(assets, category);
+    });
+    res.json({ manual: false, code });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to generate code" });
   }
@@ -973,6 +981,91 @@ async function getFreshAssetsForMutation(): Promise<MappedAsset[]> {
     }
   }
   return getAssetsForOps();
+}
+
+const ASSET_CODE_RESERVATION_TTL_MS = 15 * 60 * 1000;
+const assetCodeReservations = new Map<string, { category: string; code: string; expiresAt: number }>();
+let assetCodeMutationQueue: Promise<void> = Promise.resolve();
+
+function cleanupAssetCodeReservations(now = Date.now()): void {
+  for (const [key, entry] of assetCodeReservations.entries()) {
+    if (entry.expiresAt <= now) {
+      assetCodeReservations.delete(key);
+    }
+  }
+}
+
+function withAssetCodeLock<T>(work: () => Promise<T>): Promise<T> {
+  const previous = assetCodeMutationQueue;
+  let release!: () => void;
+  assetCodeMutationQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  return previous
+    .catch(() => {})
+    .then(async () => {
+      try {
+        return await work();
+      } finally {
+        release();
+      }
+    });
+}
+
+function reserveAssetCode(category: string, code: string): void {
+  const trimmed = String(code || "").trim();
+  if (!trimmed) return;
+  cleanupAssetCodeReservations();
+  assetCodeReservations.set(normAssetCode(trimmed), {
+    category: String(category || "").trim(),
+    code: trimmed,
+    expiresAt: Date.now() + ASSET_CODE_RESERVATION_TTL_MS,
+  });
+}
+
+function releaseAssetCodeReservation(code: string): void {
+  const trimmed = String(code || "").trim();
+  if (!trimmed) return;
+  assetCodeReservations.delete(normAssetCode(trimmed));
+}
+
+function reservedAssetCodesFor(category: string): string[] {
+  const cat = String(category || "").trim();
+  const prefix = getAssetCodePrefix(cat);
+  cleanupAssetCodeReservations();
+  return Array.from(assetCodeReservations.values())
+    .filter((entry) => getAssetCodePrefix(entry.category) === prefix)
+    .map((entry) => entry.code);
+}
+
+function resolveNextAssetCode(
+  assets: MappedAsset[],
+  category: string,
+  submittedCode?: string,
+  options: { reserve?: boolean } = { reserve: true }
+): string {
+  const cat = String(category || "").trim();
+  const submitted = String(submittedCode || "").trim();
+  const candidate = generateAssetCode(assets, cat, reservedAssetCodesFor(cat));
+  if (submitted) {
+    const reservation = assetCodeReservations.get(normAssetCode(submitted));
+    if (
+      reservation &&
+      getAssetCodePrefix(reservation.category) === getAssetCodePrefix(cat) &&
+      normAssetCode(reservation.code) === normAssetCode(submitted)
+    ) {
+      releaseAssetCodeReservation(submitted);
+      return submitted;
+    }
+    if (normAssetCode(submitted) === normAssetCode(candidate)) {
+      return submitted;
+    }
+  }
+  if (options.reserve !== false) {
+    reserveAssetCode(cat, candidate);
+  }
+  return candidate;
 }
 
 function assertSavedEmployeeProfile(
@@ -2052,6 +2145,10 @@ app.put("/api/employees/:employeeId", async (req, res) => {
 
 app.delete("/api/employees/:employeeId", async (req, res) => {
   try {
+    const requestUser = resolveRequestUser(req);
+    if (!requestUser || requestUser.role !== "IT Admin") {
+      return res.status(403).json({ error: "Only IT Admin is authorized to delete employee profiles." });
+    }
     const eid = decodeURIComponent(req.params.employeeId);
     if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(false, readEmployees().length)) {
       await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
@@ -3120,6 +3217,7 @@ app.delete("/api/damaged-items/:recordId", async (req, res) => {
 
 app.post("/api/assets", async (req, res) => {
   try {
+    await withAssetCodeLock(async () => {
     const assetData = prepareAssetPayload(req.body as Record<string, unknown>);
     console.log("[AMS] POST /api/assets — received payload:", JSON.stringify({
       cpu: assetData.cpu,
@@ -3135,10 +3233,15 @@ app.post("/api/assets", async (req, res) => {
       imageUrl: assetData.imageUrl,
       documentUrl: assetData.documentUrl,
     }));
-    const assets = await getAssetsForOps();
+    const assets = await getFreshAssetsForMutation();
     const mainCat = String(assetData.mainCategory || "IT Assets").trim();
-    if (!isManualAssetCodeCategory(mainCat) && !String(assetData.assetCode || "").trim()) {
-      assetData.assetCode = generateAssetCode(assets, mainCat);
+    if (!isManualAssetCodeCategory(mainCat)) {
+      assetData.assetCode = resolveNextAssetCode(
+        assets,
+        mainCat,
+        String(assetData.assetCode || ""),
+        { reserve: false }
+      );
     }
 
     await assertAssetUnique(assetData);
@@ -3226,6 +3329,7 @@ app.post("/api/assets", async (req, res) => {
     }
 
     res.json({ success: true, asset: savedAsset });
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to add asset" });
   }

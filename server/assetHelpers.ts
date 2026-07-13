@@ -408,12 +408,25 @@ function normalizeScanKey(value: string): string[] {
   if (!raw) return [];
   const s = raw.toLowerCase();
   const stripped = s.replace(/^0+/, "") || s;
-  const digits = s.replace(/[^0-9]/g, "");
   const keys = new Set([s, stripped]);
-  if (digits) {
-    keys.add(digits);
-    keys.add(digits.replace(/^0+/, "") || digits);
+
+  // Strip all non-alphanumeric characters (ignores spaces/hyphens/slashes)
+  const alphanumeric = s.replace(/[^a-z0-9]/g, "");
+  if (alphanumeric) {
+    keys.add(alphanumeric);
+    keys.add(alphanumeric.replace(/^0+/, "") || alphanumeric);
   }
+
+  // Only add pure digit-only fallbacks if the original value does NOT contain letters
+  const hasLetters = /[a-z]/i.test(s);
+  if (!hasLetters) {
+    const digits = s.replace(/[^0-9]/g, "");
+    if (digits) {
+      keys.add(digits);
+      keys.add(digits.replace(/^0+/, "") || digits);
+    }
+  }
+
   return Array.from(keys);
 }
 

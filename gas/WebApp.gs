@@ -121,6 +121,10 @@ function mapSheetRowToMasterRow_(sheetHeaders, masterHeaders, sheetRow) {
   var out = new Array(masterHeaders.length);
   for (var m = 0; m < masterHeaders.length; m++) {
     var src = indexOfNormalized_(sheetHeaders, masterHeaders[m]);
+    var norm = String(masterHeaders[m] || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (src === -1 && norm === "maincategory") {
+      src = indexOfNormalized_(sheetHeaders, "Category");
+    }
     out[m] = src !== -1 && src < sheetRow.length && sheetRow[src] != null ? cellToString_(sheetRow[src]) : "";
   }
   return out;

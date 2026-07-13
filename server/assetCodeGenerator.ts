@@ -11,14 +11,19 @@ const CATEGORY_PREFIX: Record<string, string> = {
   "Software License Assets": "SW",
   "Software / License Assets": "SW",
   "Admin Facility Assets": "ADM",
+  "Admin / Facility Assets": "ADM",
   "Maintenance Assets": "MNT",
 };
 
-function normCode(value: string): string {
+export function normAssetCode(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** IT Assets and Software / License use manual codes; other categories are auto-generated. */
+export function getAssetCodePrefix(mainCategory: string): string {
+  return CATEGORY_PREFIX[(mainCategory || "").trim()] || "AST";
+}
+
+/** Software / License uses manual codes; other categories are auto-generated. */
 export function isManualAssetCodeCategory(mainCategory: string): boolean {
   const cat = (mainCategory || "IT Assets").trim();
   return cat === "Software / License Assets";
@@ -29,18 +34,34 @@ export function isManualAssetCodeDepartment(_department: string): boolean {
   return false;
 }
 
-export function generateAssetCode(assets: MappedAsset[], mainCategory: string): string {
-  const prefix = CATEGORY_PREFIX[mainCategory] || "AST";
+export function generateAssetCode(
+  assets: MappedAsset[],
+  mainCategory: string,
+  reservedCodes: Iterable<string> = []
+): string {
+  const prefix = getAssetCodePrefix(mainCategory);
   const year = new Date().getFullYear();
   const pattern = new RegExp(`^${prefix}-${year}-(\\d+)$`, "i");
   let maxSeq = 0;
+  const usedCodes = new Set<string>();
 
-  for (const asset of assets) {
-    const code = String(asset.assetCode || "").trim();
+  const rememberCode = (value: string) => {
+    const code = String(value || "").trim();
+    if (!code) return;
+    usedCodes.add(normAssetCode(code));
     const match = code.match(pattern);
     if (match) {
       maxSeq = Math.max(maxSeq, parseInt(match[1], 10) || 0);
     }
+  };
+
+  for (const asset of assets) {
+    rememberCode(String(asset.assetCode || ""));
+    rememberCode(String(asset.uniqueCode || ""));
+  }
+
+  for (const code of reservedCodes) {
+    rememberCode(code);
   }
 
   let candidate = "";
@@ -51,7 +72,7 @@ export function generateAssetCode(assets: MappedAsset[], mainCategory: string): 
     attempts += 1;
   } while (
     attempts < 10000 &&
-    assets.some((a) => normCode(String(a.assetCode || "")) === normCode(candidate))
+    usedCodes.has(normAssetCode(candidate))
   );
 
   return candidate;

@@ -34,7 +34,7 @@ export default function EmployeeProfilePage() {
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
   const isHr = user?.role === 'HR';
   const canView = isAdmin || isHr;
-  const canDelete = isAdmin;
+  const canDelete = user?.role === 'IT Admin';
 
   const handleDelete = async () => {
     if (!employee) return;
