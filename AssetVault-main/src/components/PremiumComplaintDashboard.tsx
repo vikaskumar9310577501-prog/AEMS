@@ -10,12 +10,14 @@ import type { MaintenanceComplaint } from '../types/maintenance';
 import { plantShortName, type PlantLike } from '../lib/plantDisplay';
 import {
   complaintPendingDays,
+  filterComplaintsByDashboard,
   formatDowntimeLabel,
   isComplaintOverOneWeek,
   isComplaintResolvedWithinWeek,
+  type ComplaintDashboardFilter,
 } from '../lib/maintenanceCodes';
 
-export type ComplaintLaneFilter = 'all' | 'open' | 'critical' | 'resolved';
+export type ComplaintLaneFilter = ComplaintDashboardFilter;
 
 function formatDateShort(iso?: string) {
   if (!iso) return '—';
@@ -28,13 +30,10 @@ function formatDateShort(iso?: string) {
 
 export function filterComplaintsByLane(
   complaints: MaintenanceComplaint[],
-  lane: ComplaintLaneFilter,
+  filter: ComplaintDashboardFilter,
   search: string
 ): MaintenanceComplaint[] {
-  let list = complaints;
-  if (lane === 'open') list = list.filter((c) => c.status === 'Open');
-  if (lane === 'critical') list = list.filter((c) => c.status === 'Open' && isComplaintOverOneWeek(c));
-  if (lane === 'resolved') list = list.filter((c) => c.status === 'Resolved');
+  let list = filterComplaintsByDashboard(complaints, filter);
   const q = search.trim().toLowerCase();
   if (q) {
     list = list.filter((c) =>
@@ -162,7 +161,7 @@ function ComplaintCard({
 export default function PremiumComplaintDashboard({
   complaints,
   plants,
-  lane,
+  filter,
   search,
   loading = false,
   onOpenDetail,
@@ -170,19 +169,23 @@ export default function PremiumComplaintDashboard({
 }: {
   complaints: MaintenanceComplaint[];
   plants?: PlantLike[];
-  lane: ComplaintLaneFilter;
+  filter: ComplaintDashboardFilter;
   search: string;
   loading?: boolean;
   onOpenDetail: (c: MaintenanceComplaint) => void;
   onPreviewPhoto?: (c: MaintenanceComplaint) => void;
 }) {
-  const filtered = filterComplaintsByLane(complaints, lane, search);
+  const filtered = filterComplaintsByLane(complaints, filter, search);
 
   const criticalOpen = filtered.filter((c) => c.status === 'Open' && isComplaintOverOneWeek(c));
   const activeOpen = filtered.filter((c) => c.status === 'Open' && !isComplaintOverOneWeek(c));
   const resolvedList = filtered.filter((c) => c.status === 'Resolved');
 
-  const showLanes = lane === 'all' || lane === 'open';
+  const showCritical =
+    (filter === 'total' || filter === 'pending' || filter === 'over_week') && criticalOpen.length > 0;
+  const showActive = (filter === 'total' || filter === 'pending') && activeOpen.length > 0;
+  const showResolved =
+    (filter === 'total' || filter === 'resolved' || filter === 'within_week') && resolvedList.length > 0;
 
   if (loading) {
     return <p className="text-center text-sm text-stone-500 py-12">Loading complaints…</p>;
@@ -206,7 +209,7 @@ export default function PremiumComplaintDashboard({
 
   return (
     <div className="space-y-5 pb-4">
-      {showLanes && criticalOpen.length > 0 ? (
+      {showCritical ? (
         <section>
           <div className="flex items-center gap-2 mb-2.5">
             <AlertTriangle size={16} className="text-rose-600" />
@@ -222,7 +225,7 @@ export default function PremiumComplaintDashboard({
         </section>
       ) : null}
 
-      {showLanes && activeOpen.length > 0 ? (
+      {showActive ? (
         <section>
           <div className="flex items-center gap-2 mb-2.5">
             <Clock size={16} className="text-amber-600" />
@@ -238,23 +241,23 @@ export default function PremiumComplaintDashboard({
         </section>
       ) : null}
 
-      {(lane === 'resolved' || (lane === 'all' && resolvedList.length > 0)) ? (
+      {showResolved ? (
         <section>
           <div className="flex items-center gap-2 mb-2.5">
             <CheckCircle2 size={16} className="text-emerald-600" />
             <h3 className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
-              Resolved ({resolvedList.length})
+              {filter === 'within_week' ? 'Resolved within 1 week' : 'Resolved'} ({resolvedList.length})
             </h3>
           </div>
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-            {(lane === 'resolved' ? filtered : resolvedList).slice(0, lane === 'all' ? 6 : undefined).map((c) => (
+            {resolvedList.slice(0, filter === 'total' ? 6 : undefined).map((c) => (
               <ComplaintCard key={c.id} {...cardProps(c)} />
             ))}
           </div>
         </section>
       ) : null}
 
-      {lane === 'critical' && criticalOpen.length === 0 && filtered.length > 0 ? (
+      {filter === 'over_week' && criticalOpen.length === 0 && filtered.length > 0 ? (
         <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((c) => (
             <ComplaintCard key={c.id} {...cardProps(c)} />

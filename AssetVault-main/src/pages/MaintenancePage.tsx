@@ -62,9 +62,7 @@ import {
 } from '../lib/userPermissions';
 import { toDisplayDateInput, toDateInputValue } from '../lib/formatDisplayDate';
 import MaintenancePmPlanBoard from '../components/MaintenancePmPlanBoard';
-import PremiumComplaintDashboard, {
-  type ComplaintLaneFilter,
-} from '../components/PremiumComplaintDashboard';
+import PremiumComplaintDashboard from '../components/PremiumComplaintDashboard';
 import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal from '../components/MaintenanceResolveModal';
@@ -167,7 +165,6 @@ export default function MaintenancePage() {
   const [kpiOverlay, setKpiOverlay] = useState<PmKpiId | null>(null);
   const [contactFocus, setContactFocus] = useState<'hod' | 'fh' | 'ph' | null>(null);
   const [complaintFilter, setComplaintFilter] = useState<ComplaintDashboardFilter>('total');
-  const [complaintLaneFilter, setComplaintLaneFilter] = useState<ComplaintLaneFilter>('all');
   const [complaintSearch, setComplaintSearch] = useState('');
   const [machines, setMachines] = useState<MaintenanceMachine[]>([]);
   const [machineTypes, setMachineTypes] = useState<string[]>([...DEFAULT_MACHINE_TYPES]);
@@ -530,11 +527,9 @@ export default function MaintenancePage() {
 
   const complaintStats = useMemo(() => computeComplaintStats(scopedComplaints), [scopedComplaints]);
 
-  const avgOpenAgeDays = useMemo(() => {
-    if (!openComplaints.length) return 0;
-    const sum = openComplaints.reduce((acc, c) => acc + complaintPendingDays(c.reportedAt), 0);
-    return Math.round(sum / openComplaints.length);
-  }, [openComplaints]);
+  const pickComplaintFilter = useCallback((filter: ComplaintDashboardFilter) => {
+    setComplaintFilter(filter);
+  }, []);
 
   const selectedMachines = useMemo(
     () => machines.filter((m) => selectedIds.has(m.id)),
@@ -958,42 +953,55 @@ export default function MaintenancePage() {
 
         {tab === 'complaint-dashboard' && canComplaints && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-1 overflow-visible">
-            <DashboardKpi
-              label="Total"
+            <ComplaintKpi
+              label="Total complaints"
               value={complaintStats.total}
+              className="border-slate-300 bg-slate-50"
               tone="slate"
-              active={complaintLaneFilter === 'all'}
-              onClick={() => setComplaintLaneFilter('all')}
+              active={complaintFilter === 'total'}
+              onClick={() => pickComplaintFilter('total')}
             />
-            <DashboardKpi
-              label="Open"
+            <ComplaintKpi
+              label="Pending"
               value={complaintStats.pending}
+              className="border-amber-300 bg-amber-100"
               tone="amber"
-              alert={complaintStats.pending > 0 ? 'delayed' : undefined}
-              active={complaintLaneFilter === 'open'}
-              onClick={() => setComplaintLaneFilter('open')}
+              active={complaintFilter === 'pending'}
+              onClick={() => pickComplaintFilter('pending')}
             />
-            <DashboardKpi
-              label="Critical 7d+"
-              value={complaintStats.overOneWeek}
-              tone="overdue"
-              alert={complaintStats.overOneWeek > 0 ? 'overdue' : undefined}
-              active={complaintLaneFilter === 'critical'}
-              onClick={() => setComplaintLaneFilter('critical')}
-            />
-            <DashboardKpi
+            <ComplaintKpi
               label="Resolved"
               value={complaintStats.resolved}
+              className="border-emerald-400 bg-emerald-100"
               tone="emerald"
-              active={complaintLaneFilter === 'resolved'}
-              onClick={() => setComplaintLaneFilter('resolved')}
+              active={complaintFilter === 'resolved'}
+              onClick={() => pickComplaintFilter('resolved')}
             />
-            <ComplaintKpiDisplay
-              label="SLA hit %"
+            <ComplaintKpi
+              label="Resolved %"
               value={`${complaintStats.resolvedPct}%`}
-              tone="violet"
+              className="border-blue-300 bg-blue-100"
+              tone="blue"
+              active={complaintFilter === 'resolved'}
+              onClick={() => pickComplaintFilter('resolved')}
             />
-            <ComplaintKpiDisplay label="Avg open age" value={`${avgOpenAgeDays}d`} tone="slate" />
+            <ComplaintKpi
+              label="Within 1 week"
+              value={complaintStats.resolvedWithinWeek}
+              className="border-violet-400 bg-violet-200"
+              tone="violet"
+              active={complaintFilter === 'within_week'}
+              onClick={() => pickComplaintFilter('within_week')}
+            />
+            <ComplaintKpi
+              label="Over 1 week"
+              value={complaintStats.overOneWeek}
+              className="border-red-700 bg-red-600"
+              tone="overdue"
+              alert="overdue"
+              active={complaintFilter === 'over_week'}
+              onClick={() => pickComplaintFilter('over_week')}
+            />
           </div>
         )}
       </div>
@@ -1029,7 +1037,7 @@ export default function MaintenancePage() {
           <PremiumComplaintDashboard
             complaints={scopedComplaints}
             plants={plants}
-            lane={complaintLaneFilter}
+            filter={complaintFilter}
             search={complaintSearch}
             loading={loading}
             onOpenDetail={setDetailComplaint}
@@ -1597,29 +1605,52 @@ export default function MaintenancePage() {
   );
 }
 
-function ComplaintKpiDisplay({
+function ComplaintKpi({
   label,
   value,
+  className,
   tone,
+  alert,
+  active,
+  onClick,
 }: {
   label: string;
-  value: string;
-  tone: 'slate' | 'violet';
+  value: number | string;
+  className: string;
+  tone: 'slate' | 'amber' | 'emerald' | 'blue' | 'violet' | 'overdue';
+  alert?: 'overdue';
+  active?: boolean;
+  onClick: () => void;
 }) {
-  const toneStyles =
-    tone === 'violet'
-      ? 'bg-gradient-to-br from-violet-50 to-violet-100/90 border-violet-200/80 shadow-violet-200/40'
-      : 'bg-gradient-to-br from-stone-50 to-stone-100/90 border-stone-200/80 shadow-stone-200/40';
-  const labelTone = tone === 'violet' ? 'text-violet-800' : 'text-stone-600';
+  const labelTone =
+    tone === 'overdue'
+      ? 'text-red-50'
+      : tone === 'slate'
+        ? 'text-slate-700'
+        : tone === 'amber'
+          ? 'text-amber-900'
+          : tone === 'emerald'
+            ? 'text-emerald-900'
+            : tone === 'blue'
+              ? 'text-blue-900'
+              : tone === 'violet'
+                ? 'text-violet-900'
+                : 'text-orange-900';
+  const valueTone = tone === 'overdue' ? 'text-white' : 'text-slate-900';
+  const numeric = typeof value === 'number' ? value : parseInt(String(value), 10);
+  const alertClass = alert === 'overdue' && Number.isFinite(numeric) && numeric > 0 ? 'kpi-alert-overdue' : '';
 
   return (
-    <div
-      className={`rounded-2xl border px-3.5 py-2.5 text-left w-full shadow-sm ${toneStyles}`}
-      aria-label={`${label}: ${value}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border px-3 py-2 text-left w-full cursor-pointer ${className} ${alertClass} ${
+        active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
+      }`}
     >
       <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className="text-2xl font-black tabular-nums mt-0.5 leading-none text-stone-900">{value}</p>
-    </div>
+      <p className={`text-xl font-black tabular-nums mt-0.5 ${valueTone}`}>{value}</p>
+    </button>
   );
 }
 
