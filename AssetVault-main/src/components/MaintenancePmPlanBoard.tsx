@@ -88,14 +88,17 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <div className="flex-1 min-h-0 bg-white rounded-2xl border-2 border-slate-700 overflow-hidden flex flex-col shadow-sm">
+      <div className="flex-1 min-h-0 bg-[#FFFCF8] rounded-2xl border border-stone-200/80 overflow-hidden flex flex-col shadow-[0_8px_32px_-8px_rgba(120,90,60,0.14)]">
         {loading ? (
-          <p className="p-8 text-sm text-slate-500 text-center">Loading…</p>
+          <p className="p-10 text-sm text-stone-500 text-center">Loading plan board…</p>
         ) : machines.length === 0 ? (
-          <p className="p-10 text-sm text-slate-500 text-center">No machines to show on the plan.</p>
+          <div className="p-12 text-center space-y-2">
+            <CalendarDays size={32} className="mx-auto text-stone-300" />
+            <p className="text-sm text-stone-500">No machines to show on the plan.</p>
+          </div>
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto" style={{ maxHeight: '100%' }}>
+            <div ref={scrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto bg-[#F7F3EE]/50" style={{ maxHeight: '100%' }}>
               <table
                 className="border-separate border-spacing-0 text-slate-900 table-fixed"
                 style={{ width: tableW, minWidth: tableW }}
@@ -131,7 +134,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
                       <th
                         key={col.label}
                         colSpan={4}
-                        className={`h-7 text-[10px] font-black uppercase tracking-wide border-b border-r-2 border-slate-700 box-border ${monthHeaderClass(col, now)}`}
+                        className={`h-7 text-[10px] font-black uppercase tracking-wide border-b border-r border-stone-300/70 box-border ${monthHeaderClass(col, now)}`}
                       >
                         {col.label}
                       </th>
@@ -143,7 +146,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
                         <th
                           key={`${col.label}-W${w}`}
                           data-pm-scroll-start={idx === startMonthIndex && w === 1 ? '1' : undefined}
-                          className={`h-6 text-[9px] font-black border-b-2 border-slate-700 box-border ${w === 4 ? 'border-r-2' : 'border-r'} ${weekHeaderClass(col, now)}`}
+                          className={`h-6 text-[9px] font-black border-b border-stone-300/70 box-border ${w === 4 ? 'border-r border-stone-300/70' : 'border-r border-stone-200/60'} ${weekHeaderClass(col, now)}`}
                           style={{ width: WEEK_W, minWidth: WEEK_W, maxWidth: WEEK_W }}
                         >
                           W{w}
@@ -168,15 +171,15 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
               </table>
             </div>
 
-            <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t-2 border-slate-400 bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-800">
-              <p className="normal-case font-semibold text-slate-500 tracking-normal">
-                Default: starts one month before current month. Scroll left for earlier months.
+            <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-stone-200/80 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA]">
+              <p className="normal-case font-semibold text-stone-500 text-[11px] tracking-normal">
+                Starts one month before current · scroll left for earlier months
               </p>
-              <div className="flex flex-wrap items-center gap-4">
-                <Legend swatch="bg-amber-400 ring-1 ring-amber-700" label="Plan" icon={<CalendarDays size={11} />} />
-                <Legend swatch="bg-emerald-500 ring-1 ring-emerald-800" label="Actual" icon={<Check size={11} />} />
-                <Legend swatch="bg-rose-500 ring-1 ring-rose-800" label="Overdue" icon={<AlertTriangle size={11} />} />
-                <Legend swatch="bg-sky-200 ring-2 ring-sky-600" label="This week" />
+              <div className="flex flex-wrap items-center gap-3">
+                <Legend swatch="bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-200/80 ring-1 ring-amber-300/60" label="Plan" icon={<CalendarDays size={11} />} />
+                <Legend swatch="bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-200/80 ring-1 ring-emerald-300/60" label="Actual" icon={<Check size={11} />} />
+                <Legend swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60" label="Overdue" icon={<AlertTriangle size={11} />} />
+                <Legend swatch="bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50" label="This week" />
               </div>
             </div>
           </>
@@ -204,8 +207,8 @@ function StickyTh({
   return (
     <th
       rowSpan={rowSpan}
-      className={`bg-[#dbeafe] text-[10px] font-black uppercase tracking-wide text-slate-800 border-b-2 border-r border-slate-600 box-border ${
-        edge ? 'border-r-2 border-slate-800' : ''
+      className={`bg-gradient-to-b from-[#F0EBE3] to-[#E8E2DA] text-[10px] font-black uppercase tracking-wider text-stone-700 border-b border-r border-stone-300/70 box-border ${
+        edge ? 'border-r border-stone-300/80' : ''
       }`}
       style={{
         position: 'sticky',
@@ -215,7 +218,7 @@ function StickyTh({
         width,
         minWidth: width,
         maxWidth: width,
-        boxShadow: edge ? '3px 0 0 0 #1e293b' : undefined,
+        boxShadow: edge ? '4px 0 12px -4px rgba(120,90,60,0.15)' : undefined,
       }}
     >
       {children}
@@ -232,7 +235,7 @@ function stickyTdStyle(left: number, width: number, edge?: boolean, z = 8): CSSP
     minWidth: width,
     maxWidth: width,
     boxSizing: 'border-box',
-    boxShadow: edge ? '3px 0 0 0 #1e293b' : undefined,
+    boxShadow: edge ? '4px 0 12px -4px rgba(120,90,60,0.15)' : undefined,
   };
 }
 
@@ -241,19 +244,19 @@ function isCurrentMonth(col: MonthCol, now: Date) {
 }
 
 function monthHeaderClass(col: MonthCol, now: Date) {
-  if (isCurrentMonth(col, now)) return 'bg-sky-400 text-sky-950';
-  return col.month % 2 === 0 ? 'bg-slate-300 text-slate-900' : 'bg-indigo-100 text-slate-900';
+  if (isCurrentMonth(col, now)) return 'bg-gradient-to-b from-blue-500 to-indigo-600 text-white shadow-inner';
+  return col.month % 2 === 0 ? 'bg-stone-200/80 text-stone-800' : 'bg-[#EDE8E0] text-stone-800';
 }
 
 function weekHeaderClass(col: MonthCol, now: Date) {
-  if (isCurrentMonth(col, now)) return 'bg-sky-200 text-sky-900';
-  return col.month % 2 === 0 ? 'bg-slate-200 text-slate-700' : 'bg-indigo-50 text-slate-700';
+  if (isCurrentMonth(col, now)) return 'bg-blue-100/90 text-blue-900';
+  return col.month % 2 === 0 ? 'bg-stone-100/90 text-stone-600' : 'bg-[#F5F0E8] text-stone-600';
 }
 
 function monthCellBg(col: MonthCol, now: Date, machineStripe: string) {
-  if (isCurrentMonth(col, now)) return 'bg-sky-100';
+  if (isCurrentMonth(col, now)) return 'bg-blue-50/70';
   if (col.month % 2 === 0) return machineStripe;
-  return machineStripe === 'bg-white' ? 'bg-indigo-50/80' : 'bg-indigo-100/70';
+  return machineStripe === 'bg-[#FFFCF8]' ? 'bg-[#F5F0E8]/90' : 'bg-[#EDE8E0]/80';
 }
 
 function MachineRows({
@@ -289,48 +292,64 @@ function MachineRows({
       .map(dateToPmCellKey)
   );
 
-  const name = machine.equipmentName?.trim() || `${machine.machineType} ${machine.machineNumber}`.trim();
+  const name = machine.equipmentName?.trim() || `${machine.machineType.replace(/\s+Machine$/i, '')} ${machine.machineNumber}`.trim();
   const freq = machineTrendMonths(machine);
   const freqLabel = isCustomTrend(freq) ? 'Custom' : freq === 1 ? '1 month' : `${freq} months`;
-  const stripe = index % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+  const stripe = index % 2 === 0 ? 'bg-[#FFFCF8]' : 'bg-[#F7F3EE]';
   const dept = machine.department?.trim();
   const resp = machine.responsibility?.trim();
   const cellH = { height: ROW_H, minHeight: ROW_H };
 
   return (
     <>
-      <tr>
+      <tr className="group">
         <td
           rowSpan={2}
-          className={`border-b-2 border-r border-slate-600 px-2.5 py-1 align-middle box-border ${stripe}`}
+          className={`border-b border-r border-stone-300/60 px-2.5 py-1.5 align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.name, COL_NAME, false, 9)}
         >
-          <p className="font-bold text-[11px] text-slate-900 leading-snug line-clamp-2">{name}</p>
-          <p className="font-mono text-[9px] text-blue-700 font-bold mt-0.5">{machine.assetCode}</p>
+          <p className="font-bold text-[11px] text-stone-800 leading-snug line-clamp-2">{name}</p>
+          <span className="inline-flex mt-1 px-1.5 py-0.5 rounded-md bg-blue-50/90 border border-blue-100 font-mono text-[9px] text-blue-700 font-bold">
+            {machine.assetCode}
+          </span>
         </td>
         <td
           rowSpan={2}
-          className={`border-b-2 border-r border-slate-600 text-center text-[11px] font-bold text-slate-800 align-middle box-border ${stripe}`}
+          className={`border-b border-r border-stone-300/60 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.freq, COL_FREQ, false, 9)}
         >
-          {freqLabel}
+          <span className="inline-flex px-2 py-0.5 rounded-md bg-stone-100/90 border border-stone-200/70 text-[10px] font-bold text-stone-700">
+            {freqLabel}
+          </span>
         </td>
         <td
           rowSpan={2}
-          className={`border-b-2 border-r border-slate-600 px-1 text-center text-[10px] font-semibold text-slate-700 align-middle box-border ${stripe}`}
+          className={`border-b border-r border-stone-300/60 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.dept, COL_DEPT, false, 9)}
         >
-          {dept || <span className="text-slate-400">—</span>}
+          {dept ? (
+            <span className="inline-flex px-1.5 py-0.5 rounded-md bg-violet-50/90 border border-violet-100 text-[9px] font-black uppercase text-violet-700">
+              {dept}
+            </span>
+          ) : (
+            <span className="text-stone-400">—</span>
+          )}
         </td>
         <td
           rowSpan={2}
-          className={`border-b-2 border-r border-slate-600 px-1 text-center text-[10px] font-semibold text-slate-700 align-middle box-border ${stripe}`}
+          className={`border-b border-r border-stone-300/60 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.resp, COL_RESP, false, 9)}
         >
-          {resp || <span className="text-slate-400">—</span>}
+          {resp ? (
+            <span className="inline-flex px-1.5 py-0.5 rounded-md bg-amber-50/90 border border-amber-100 text-[9px] font-bold text-amber-800">
+              {resp}
+            </span>
+          ) : (
+            <span className="text-stone-400">—</span>
+          )}
         </td>
         <td
-          className="border-b border-r-2 border-slate-800 text-center text-[9px] font-black uppercase text-amber-900 bg-amber-100 align-middle box-border"
+          className="border-b border-r border-stone-300/70 text-center text-[9px] font-black uppercase text-amber-800 bg-gradient-to-r from-amber-50 to-amber-100/80 align-middle box-border"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
           Plan
@@ -346,9 +365,9 @@ function MachineRows({
           stripe={stripe}
         />
       </tr>
-      <tr>
+      <tr className="group">
         <td
-          className="border-b-2 border-r-2 border-slate-800 text-center text-[9px] font-black uppercase text-emerald-900 bg-emerald-100 align-middle box-border"
+          className="border-b border-r border-stone-300/70 text-center text-[9px] font-black uppercase text-emerald-800 bg-gradient-to-r from-emerald-50 to-emerald-100/80 align-middle box-border"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
           Actual
@@ -395,15 +414,15 @@ function WeekCells({
           const hit = keys.has(key);
           const overdue = overdueKeys.has(key);
           const isToday = key === todayKey;
-          const monthEdge = w === 4 ? 'border-r-2 border-slate-700' : 'border-r border-slate-500';
-          const bottom = mark === 'A' ? 'border-b-2 border-slate-600' : 'border-b border-slate-500';
+          const monthEdge = w === 4 ? 'border-r border-stone-300/70' : 'border-r border-stone-200/50';
+          const bottom = mark === 'A' ? 'border-b border-stone-300/60' : 'border-b border-stone-200/50';
           let cell = `text-center align-middle box-border ${bottom} ${monthEdge} ${monthCellBg(col, now, stripe)}`;
-          if (isToday) cell += ' bg-sky-200';
+          if (isToday) cell += ' bg-blue-100/80 ring-1 ring-inset ring-blue-300/40';
           let chip =
-            'inline-flex w-[22px] h-[22px] rounded-md items-center justify-center shadow-sm';
-          if (hit && mark === 'P' && overdue) chip += ' bg-rose-500 text-white ring-1 ring-rose-800';
-          else if (hit && mark === 'P') chip += ' bg-amber-400 text-amber-950 ring-1 ring-amber-700';
-          else if (hit && mark === 'A') chip += ' bg-emerald-500 text-white ring-1 ring-emerald-800';
+            'inline-flex w-[22px] h-[22px] rounded-lg items-center justify-center shadow-sm transition-transform hover:scale-105';
+          if (hit && mark === 'P' && overdue) chip += ' bg-gradient-to-br from-rose-500 to-rose-600 text-white ring-1 ring-rose-300/60 shadow-rose-200/50';
+          else if (hit && mark === 'P') chip += ' bg-gradient-to-br from-amber-400 to-amber-500 text-amber-950 ring-1 ring-amber-300/60 shadow-amber-200/50';
+          else if (hit && mark === 'A') chip += ' bg-gradient-to-br from-emerald-500 to-emerald-600 text-white ring-1 ring-emerald-300/60 shadow-emerald-200/50';
           const dates = datesByKey.get(key) || [];
           const dateLabel = dates.map((d) => formatChipDate(d)).join(', ');
           const kind = mark === 'P' ? (overdue ? 'Overdue plan' : 'Plan') : 'Actual';
@@ -444,8 +463,8 @@ function formatChipDate(d: Date) {
 
 function Legend({ swatch, label, icon }: { swatch: string; label: string; icon?: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <span className={`w-4 h-4 rounded-md ${swatch} inline-flex items-center justify-center text-white`}>
+    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/80 border border-stone-200/60 shadow-sm text-[10px] font-bold uppercase tracking-wide text-stone-700">
+      <span className={`w-5 h-5 rounded-md ${swatch} inline-flex items-center justify-center text-white`}>
         {icon}
       </span>
       {label}

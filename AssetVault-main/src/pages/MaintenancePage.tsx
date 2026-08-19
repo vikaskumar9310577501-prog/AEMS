@@ -906,23 +906,23 @@ export default function MaintenancePage() {
 
           <div className="flex flex-wrap gap-2 shrink-0 items-center">
             {tab === 'dashboard' && canDash && (
-              <div className="inline-flex items-center gap-1 bg-white border border-slate-300 rounded-xl p-1 shadow-sm">
+              <div className="inline-flex items-center gap-1 bg-[#FFFCF8] border border-stone-200/80 rounded-xl p-1 shadow-sm shadow-stone-200/40">
                 <button
                   type="button"
                   onClick={() => setDashboardYear((y) => y - 1)}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700"
+                  className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-700 transition-colors"
                   aria-label="Previous year"
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <span className="inline-flex items-center gap-1.5 px-2 text-sm font-black text-slate-900">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-black text-stone-800 bg-white/80 rounded-lg border border-stone-200/60">
                   <CalendarRange size={14} className="text-blue-600" />
                   {dashboardYear}
                 </span>
                 <button
                   type="button"
                   onClick={() => setDashboardYear((y) => y + 1)}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700"
+                  className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-700 transition-colors"
                   aria-label="Next year"
                 >
                   <ChevronRight size={16} />
@@ -933,7 +933,7 @@ export default function MaintenancePage() {
               type="button"
               onClick={() => void load()}
               disabled={loading}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-60"
+              className="px-3 py-2 bg-white/90 hover:bg-white border border-stone-200/80 rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-60 shadow-sm text-stone-700"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
@@ -945,7 +945,6 @@ export default function MaintenancePage() {
             <DashboardKpi
               label="Machines"
               value={dashboardKpis.total}
-              className="border-slate-300 bg-slate-50"
               tone="slate"
               active={kpiOverlay === 'total'}
               onClick={() => setKpiOverlay('total')}
@@ -953,7 +952,6 @@ export default function MaintenancePage() {
             <DashboardKpi
               label="Planned this month"
               value={dashboardKpis.plannedThisMonth}
-              className="border-amber-300 bg-amber-100"
               tone="amber"
               active={kpiOverlay === 'plannedThisMonth'}
               onClick={() => setKpiOverlay('plannedThisMonth')}
@@ -961,7 +959,6 @@ export default function MaintenancePage() {
             <DashboardKpi
               label="Done this month"
               value={dashboardKpis.doneThisMonth}
-              className="border-violet-400 bg-violet-200"
               tone="violet"
               active={kpiOverlay === 'doneThisMonth'}
               onClick={() => setKpiOverlay('doneThisMonth')}
@@ -969,7 +966,6 @@ export default function MaintenancePage() {
             <DashboardKpi
               label="On time"
               value={dashboardKpis.onTime}
-              className="border-emerald-400 bg-emerald-100"
               tone="emerald"
               active={kpiOverlay === 'onTime'}
               onClick={() => setKpiOverlay('onTime')}
@@ -977,7 +973,6 @@ export default function MaintenancePage() {
             <DashboardKpi
               label="Delayed"
               value={dashboardKpis.delayed}
-              className="border-orange-300 bg-orange-100"
               tone="orange"
               alert="delayed"
               active={kpiOverlay === 'delayed'}
@@ -986,7 +981,6 @@ export default function MaintenancePage() {
             <DashboardKpi
               label="Overdue"
               value={dashboardKpis.overdue}
-              className="border-red-700 bg-red-600"
               tone="overdue"
               alert="overdue"
               active={kpiOverlay === 'overdue'}
@@ -1688,7 +1682,6 @@ function ComplaintKpi({
 function DashboardKpi({
   label,
   value,
-  className,
   tone,
   alert,
   active,
@@ -1696,25 +1689,32 @@ function DashboardKpi({
 }: {
   label: string;
   value: number;
-  className: string;
   tone: 'slate' | 'amber' | 'violet' | 'emerald' | 'orange' | 'overdue';
   alert?: 'delayed' | 'overdue';
   active?: boolean;
   onClick: () => void;
 }) {
+  const toneStyles: Record<typeof tone, string> = {
+    slate: 'bg-gradient-to-br from-stone-50 to-stone-100/90 border-stone-200/80 shadow-stone-200/40',
+    amber: 'bg-gradient-to-br from-amber-50 to-amber-100/90 border-amber-200/80 shadow-amber-200/40',
+    violet: 'bg-gradient-to-br from-violet-50 to-violet-100/90 border-violet-200/80 shadow-violet-200/40',
+    emerald: 'bg-gradient-to-br from-emerald-50 to-emerald-100/90 border-emerald-200/80 shadow-emerald-200/40',
+    orange: 'bg-gradient-to-br from-orange-50 to-orange-100/90 border-orange-200/80 shadow-orange-200/40',
+    overdue: 'bg-gradient-to-br from-red-600 to-red-700 border-red-500/80 shadow-red-500/30',
+  };
   const labelTone =
     tone === 'overdue'
-      ? 'text-red-50'
+      ? 'text-red-100'
       : tone === 'slate'
-        ? 'text-slate-700'
+        ? 'text-stone-600'
         : tone === 'amber'
-          ? 'text-amber-900'
+          ? 'text-amber-800'
           : tone === 'violet'
-            ? 'text-violet-900'
+            ? 'text-violet-800'
             : tone === 'emerald'
-              ? 'text-emerald-900'
-              : 'text-orange-900';
-  const valueTone = tone === 'overdue' ? 'text-white' : 'text-slate-900';
+              ? 'text-emerald-800'
+              : 'text-orange-800';
+  const valueTone = tone === 'overdue' ? 'text-white' : 'text-stone-900';
   const alertClass =
     value > 0 && alert === 'overdue'
       ? 'kpi-alert-overdue'
@@ -1726,12 +1726,12 @@ function DashboardKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-3 py-2 text-left w-full cursor-pointer ${className} ${alertClass} ${
-        active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
+      className={`rounded-2xl border px-3.5 py-2.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 ${toneStyles[tone]} ${alertClass} ${
+        active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
       <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0.5 ${valueTone}`}>{value}</p>
+      <p className={`text-2xl font-black tabular-nums mt-0.5 leading-none ${valueTone}`}>{value}</p>
     </button>
   );
 }
