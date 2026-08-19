@@ -42,6 +42,7 @@ import {
   pendingPlanDates,
   COMPLAINT_RESOLVE_SLA_DAYS,
   computePmPlanKpis,
+  computeComplaintStats,
   listMachinesForPmKpi,
   PM_KPI_TITLES,
   formatDowntimeLabel,
@@ -61,7 +62,9 @@ import {
 } from '../lib/userPermissions';
 import { toDisplayDateInput, toDateInputValue } from '../lib/formatDisplayDate';
 import MaintenancePmPlanBoard from '../components/MaintenancePmPlanBoard';
-import PremiumComplaintDashboard from '../components/PremiumComplaintDashboard';
+import PremiumComplaintDashboard, {
+  type ComplaintLaneFilter,
+} from '../components/PremiumComplaintDashboard';
 import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal from '../components/MaintenanceResolveModal';
@@ -164,6 +167,7 @@ export default function MaintenancePage() {
   const [kpiOverlay, setKpiOverlay] = useState<PmKpiId | null>(null);
   const [contactFocus, setContactFocus] = useState<'hod' | 'fh' | 'ph' | null>(null);
   const [complaintFilter, setComplaintFilter] = useState<ComplaintDashboardFilter>('total');
+  const [complaintLaneFilter, setComplaintLaneFilter] = useState<ComplaintLaneFilter>('all');
   const [complaintSearch, setComplaintSearch] = useState('');
   const [machines, setMachines] = useState<MaintenanceMachine[]>([]);
   const [machineTypes, setMachineTypes] = useState<string[]>([...DEFAULT_MACHINE_TYPES]);
@@ -524,6 +528,14 @@ export default function MaintenancePage() {
     );
   }, [scopedComplaints, complaintSearch, plants]);
 
+  const complaintStats = useMemo(() => computeComplaintStats(scopedComplaints), [scopedComplaints]);
+
+  const avgOpenAgeDays = useMemo(() => {
+    if (!openComplaints.length) return 0;
+    const sum = openComplaints.reduce((acc, c) => acc + complaintPendingDays(c.reportedAt), 0);
+    return Math.round(sum / openComplaints.length);
+  }, [openComplaints]);
+
   const selectedMachines = useMemo(
     () => machines.filter((m) => selectedIds.has(m.id)),
     [machines, selectedIds]
@@ -830,22 +842,36 @@ export default function MaintenancePage() {
                   )}
                 </div>
               )}
-
-              {canFhPh && (
-                <button
-                  type="button"
-                  onClick={() => goTab('settings')}
-                  className={navBtn(tab === 'settings', 'w-9 h-9 justify-center px-0')}
-                  title="HOD / FH / PH settings"
-                  aria-label="Settings"
-                >
-                  <Settings size={15} />
-                </button>
-              )}
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2 shrink-0 items-center">
+            {tab === 'complaint-dashboard' && canComplaints && (
+              <div className="relative min-w-[200px] max-w-[280px]">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+                  size={14}
+                />
+                <input
+                  type="search"
+                  value={complaintSearch}
+                  onChange={(e) => setComplaintSearch(e.target.value)}
+                  placeholder="Search asset, machine, complaint…"
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200/80 bg-white/90 text-xs font-semibold text-stone-800 placeholder:text-stone-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/60"
+                />
+              </div>
+            )}
+            {canFhPh && (
+              <button
+                type="button"
+                onClick={() => goTab('settings')}
+                className={navBtn(tab === 'settings', 'w-9 h-9 justify-center px-0')}
+                title="HOD / FH / PH settings"
+                aria-label="Settings"
+              >
+                <Settings size={15} />
+              </button>
+            )}
             {tab === 'dashboard' && canDash && (
               <div className="inline-flex items-center gap-1 bg-[#FFFCF8] border border-stone-200/80 rounded-xl p-1 shadow-sm shadow-stone-200/40">
                 <button
@@ -929,6 +955,47 @@ export default function MaintenancePage() {
             />
           </div>
         )}
+
+        {tab === 'complaint-dashboard' && canComplaints && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-1 overflow-visible">
+            <DashboardKpi
+              label="Total"
+              value={complaintStats.total}
+              tone="slate"
+              active={complaintLaneFilter === 'all'}
+              onClick={() => setComplaintLaneFilter('all')}
+            />
+            <DashboardKpi
+              label="Open"
+              value={complaintStats.pending}
+              tone="amber"
+              alert={complaintStats.pending > 0 ? 'delayed' : undefined}
+              active={complaintLaneFilter === 'open'}
+              onClick={() => setComplaintLaneFilter('open')}
+            />
+            <DashboardKpi
+              label="Critical 7d+"
+              value={complaintStats.overOneWeek}
+              tone="overdue"
+              alert={complaintStats.overOneWeek > 0 ? 'overdue' : undefined}
+              active={complaintLaneFilter === 'critical'}
+              onClick={() => setComplaintLaneFilter('critical')}
+            />
+            <DashboardKpi
+              label="Resolved"
+              value={complaintStats.resolved}
+              tone="emerald"
+              active={complaintLaneFilter === 'resolved'}
+              onClick={() => setComplaintLaneFilter('resolved')}
+            />
+            <ComplaintKpiDisplay
+              label="SLA hit %"
+              value={`${complaintStats.resolvedPct}%`}
+              tone="violet"
+            />
+            <ComplaintKpiDisplay label="Avg open age" value={`${avgOpenAgeDays}d`} tone="slate" />
+          </div>
+        )}
       </div>
 
       <div
@@ -961,13 +1028,23 @@ export default function MaintenancePage() {
         {tab === 'complaint-dashboard' && canComplaints && (
           <PremiumComplaintDashboard
             complaints={scopedComplaints}
-            plants={plants}
+            lane={complaintLaneFilter}
+            search={complaintSearch}
             loading={loading}
-            onOpenDetail={setDetailComplaint}
-            onResolve={setResolveComplaintTarget}
-            onPreviewPhoto={(c) =>
-              c.photoUrl ? setComplaintPhotoPreview({ url: c.photoUrl, name: c.photoName }) : undefined
-            }
+            renderItem={(c) => (
+              <ComplaintListItem
+                key={c.id}
+                complaint={c}
+                plants={plants}
+                hideResolve
+                onOpen={() => setDetailComplaint(c)}
+                onPreviewPhoto={
+                  c.photoUrl
+                    ? () => setComplaintPhotoPreview({ url: c.photoUrl!, name: c.photoName })
+                    : undefined
+                }
+              />
+            )}
           />
         )}
 
@@ -1529,6 +1606,32 @@ export default function MaintenancePage() {
   );
 }
 
+function ComplaintKpiDisplay({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'slate' | 'violet';
+}) {
+  const toneStyles =
+    tone === 'violet'
+      ? 'bg-gradient-to-br from-violet-50 to-violet-100/90 border-violet-200/80 shadow-violet-200/40'
+      : 'bg-gradient-to-br from-stone-50 to-stone-100/90 border-stone-200/80 shadow-stone-200/40';
+  const labelTone = tone === 'violet' ? 'text-violet-800' : 'text-stone-600';
+
+  return (
+    <div
+      className={`rounded-2xl border px-3.5 py-2.5 text-left w-full shadow-sm ${toneStyles}`}
+      aria-label={`${label}: ${value}`}
+    >
+      <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
+      <p className="text-2xl font-black tabular-nums mt-0.5 leading-none text-stone-900">{value}</p>
+    </div>
+  );
+}
+
 function DashboardKpi({
   label,
   value,
@@ -1699,9 +1802,9 @@ function DashboardKpiOverlay({
 
 function DetailField({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-w-0 overflow-visible">
-      <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-slate-900 whitespace-normal break-words leading-snug">
+    <div className="rounded-xl border border-stone-200/80 bg-white px-3 py-2.5 min-w-0 overflow-visible shadow-sm">
+      <p className="text-[9px] font-black uppercase tracking-wider text-stone-500">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-stone-900 whitespace-normal break-words leading-snug">
         {value || '—'}
       </p>
     </div>
@@ -1918,13 +2021,15 @@ function ComplaintListItem({
   onOpen,
   onPreviewPhoto,
   onResolve,
+  hideResolve = false,
   expanded = false,
 }: {
   complaint: MaintenanceComplaint;
   plants: { code: string; name: string; location: string }[];
   onOpen: () => void;
   onPreviewPhoto?: () => void;
-  onResolve: () => void;
+  onResolve?: () => void;
+  hideResolve?: boolean;
   expanded?: boolean;
 }) {
   const pending = complaintPendingDays(c.reportedAt);
@@ -2030,7 +2135,7 @@ function ComplaintListItem({
               <span className="text-xs font-black tabular-nums">{resolvedDays}d</span>
             </div>
           ) : null}
-          {c.status === 'Open' ? (
+          {c.status === 'Open' && !hideResolve && onResolve ? (
             <button
               type="button"
               onClick={onResolve}
@@ -2047,7 +2152,6 @@ function ComplaintListItem({
 
 function ComplaintDetailPopup({
   complaint: c,
-  plants,
   onClose,
   onPreviewPhoto,
   onResolve,
@@ -2065,101 +2169,140 @@ function ComplaintDetailPopup({
     c.status === 'Resolved' && c.resolvedAt
       ? complaintResolutionDays(c.reportedAt, c.resolvedAt)
       : null;
-  const machineLabel =
-    c.equipmentName?.trim() || `${c.machineType} ${c.machineNumber}`.trim();
+  const isOpen = c.status === 'Open';
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-900/45 p-3 sm:p-5 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-50 bg-stone-900/50 backdrop-blur-[2px] p-3 sm:p-5 overflow-y-auto overscroll-contain"
       onClick={onClose}
       role="presentation"
     >
       <div className="min-h-full flex items-center justify-center">
         <div
-          className="w-full max-w-[920px] max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col"
+          className="w-full max-w-[920px] max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-2xl bg-[#FFFCF8] border border-stone-200/80 shadow-[0_24px_64px_-12px_rgba(80,60,40,0.28)] flex flex-col"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
         >
-          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 bg-slate-50">
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Complaint detail</p>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 font-mono">{c.assetCode}</h3>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-wider hover:bg-slate-700"
+          <div className="shrink-0 px-5 py-4 border-b border-stone-200/60 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA] flex items-start justify-between gap-4">
+            <div className="min-w-0 flex items-start gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                  isOpen
+                    ? overWeek
+                      ? 'bg-gradient-to-br from-rose-500 to-rose-600 shadow-rose-500/25'
+                      : 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/25'
+                    : 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/25'
+                }`}
               >
-                <ArrowLeft size={14} /> Back
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-600"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
+                <MessageSquareWarning size={20} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wider text-blue-600/90">
+                  Complaint detail
+                </p>
+                <h3 className="text-lg sm:text-xl font-black text-stone-900 font-mono leading-tight">
+                  {c.assetCode}
+                </h3>
+                <p className="text-xs font-semibold text-stone-500 mt-0.5 truncate">
+                  {c.machineType} · {c.machineNumber}
+                  {c.location ? ` · ${c.location}` : ''}
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span
+                    className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${
+                      isOpen ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {isOpen ? 'Pending' : 'Resolved'}
+                  </span>
+                  {isOpen && overWeek && (
+                    <span className="inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-rose-100 text-rose-700">
+                      Over 1 week
+                    </span>
+                  )}
+                  {withinWeek && (
+                    <span className="inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-violet-100 text-violet-700">
+                      Within 1 week
+                    </span>
+                  )}
+                  {formatDowntimeLabel(c.downtimeMinutes) ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase bg-stone-100 text-stone-700">
+                      <Clock size={11} /> {formatDowntimeLabel(c.downtimeMinutes)} downtime
+                    </span>
+                  ) : null}
+                </div>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-stone-200/60 text-stone-600 transition-colors shrink-0"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               <DetailField label="Machine Type" value={c.machineType} />
-              <DetailField label="Machine Number" value={c.machineNumber} />
-              <DetailField label="Asset Code" value={c.assetCode} />
+              <DetailField label="Machine ID" value={c.machineNumber} />
+              <DetailField label="Ref ID" value={c.assetCode} />
               <DetailField label="Department" value={c.department} />
               <DetailField label="Responsibility" value={c.responsibility} />
               <DetailField label="Location" value={c.location} />
-              <DetailField label="Plant" value={plantShortName(c.plantCode, plants)} />
-              <DetailField label="Status" value={c.status === 'Open' ? 'Pending' : 'Resolved'} />
               <DetailField label="Reported On" value={formatDate(c.reportedAt)} />
-              <DetailField label="Resolved On" value={c.resolvedAt ? formatDate(c.resolvedAt) : '—'} />
+              {c.resolvedAt ? (
+                <DetailField label="Resolved On" value={formatDate(c.resolvedAt)} />
+              ) : null}
               <DetailField
-                label="Downtime"
-                value={formatDowntimeLabel(c.downtimeMinutes) || '—'}
-              />
-              <DetailField
-                label="Pending / Resolution"
+                label={isOpen ? 'Pending' : 'Resolution'}
                 value={
-                  c.status === 'Open'
-                    ? `${pending} day${pending === 1 ? '' : 's'} open${overWeek ? ' · Over 1 week' : ''}`
+                  isOpen
+                    ? `${pending} day${pending === 1 ? '' : 's'} open`
                     : resolvedDays != null
-                      ? `Resolved in ${resolvedDays} day${resolvedDays === 1 ? '' : 's'}${withinWeek ? ' · Within 1 week' : ''}`
+                      ? `${resolvedDays} day${resolvedDays === 1 ? '' : 's'}`
                       : '—'
                 }
               />
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Complaint</p>
-              <p className="mt-0.5 text-sm font-semibold text-slate-900 whitespace-pre-wrap">{c.complaintText}</p>
+            <div className="rounded-xl border border-stone-200/80 bg-white px-4 py-3 shadow-sm">
+              <p className="text-[9px] font-black uppercase tracking-wider text-stone-500">Complaint</p>
+              <p className="mt-1 text-sm font-semibold text-stone-900 whitespace-pre-wrap leading-relaxed">
+                {c.complaintText}
+              </p>
             </div>
 
             {c.remark ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Remark</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-900 whitespace-pre-wrap">{c.remark}</p>
+              <div className="rounded-xl border border-stone-200/80 bg-white px-4 py-3 shadow-sm">
+                <p className="text-[9px] font-black uppercase tracking-wider text-stone-500">Remark</p>
+                <p className="mt-1 text-sm font-semibold text-stone-900 whitespace-pre-wrap leading-relaxed">
+                  {c.remark}
+                </p>
               </div>
             ) : null}
 
             {c.remarks ? (
-              <div className="rounded-xl border border-slate-200 bg-emerald-50 px-3 py-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-emerald-700">Resolution notes</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-900 whitespace-pre-wrap">{c.remarks}</p>
+              <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 shadow-sm">
+                <p className="text-[9px] font-black uppercase tracking-wider text-emerald-700">
+                  Resolution notes
+                </p>
+                <p className="mt-1 text-sm font-semibold text-stone-900 whitespace-pre-wrap leading-relaxed">
+                  {c.remarks}
+                </p>
               </div>
             ) : null}
 
             {c.photoUrl ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Photo</p>
+              <div className="rounded-xl border border-stone-200/80 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-stone-500">Photo</p>
                   <button
                     type="button"
                     onClick={() => onPreviewPhoto(c.photoUrl!, c.photoName)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase shadow-sm shadow-indigo-500/25"
                   >
                     <Eye size={12} /> Preview image
                   </button>
@@ -2167,23 +2310,23 @@ function ComplaintDetailPopup({
                 <img
                   src={c.photoUrl}
                   alt={c.photoName || 'Complaint photo'}
-                  className="max-h-48 rounded-lg border border-slate-200 object-contain bg-white"
+                  className="max-h-52 w-full rounded-xl border border-stone-200/80 object-contain bg-stone-50"
                 />
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-6 text-center text-sm text-slate-400">
-                <ImageIcon className="mx-auto mb-1 opacity-50" size={22} />
+              <div className="rounded-xl border border-dashed border-stone-200/80 bg-stone-50/80 px-4 py-8 text-center text-sm text-stone-400">
+                <ImageIcon className="mx-auto mb-2 opacity-50" size={24} />
                 No photo attached
               </div>
             )}
           </div>
 
-          {c.status === 'Open' ? (
-            <div className="shrink-0 px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+          {isOpen ? (
+            <div className="shrink-0 px-5 py-3.5 border-t border-stone-200/60 bg-gradient-to-r from-[#FFF7EE]/80 to-[#FFFCF8] flex justify-end">
               <button
                 type="button"
                 onClick={onResolve}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase shadow-md shadow-emerald-500/25 transition-colors"
               >
                 <CheckCircle2 size={14} /> Mark Done
               </button>
