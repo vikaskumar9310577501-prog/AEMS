@@ -5,6 +5,7 @@ import { ArrowLeft, Wrench } from 'lucide-react';
 import { useApp } from '../context/AppProvider';
 import { parseJsonResponse } from '../lib/apiFetch';
 import SmartSelect from '../components/SmartSelect';
+import { DeptCombo } from '../components/MaintenanceMachineEditModal';
 import { optionsWithValue } from '../lib/formAsset';
 import { buildScopedLocationOptions, buildScopedPlantOptions, sameScopeOption } from '../lib/scopeOptions';
 import { normalizeMachineNumber } from '../lib/maintenanceCodes';
@@ -205,12 +206,7 @@ export default function NewMaintenanceMachinePage() {
           <div className="grid md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="label-caps">Department</label>
-              <input
-                value={form.department}
-                onChange={(e) => setForm((prev) => ({ ...prev, department: e.target.value }))}
-                placeholder="e.g. Production"
-                className="w-full input-geometric font-semibold"
-              />
+              <DeptCombo value={form.department} onChange={(v) => setForm((prev) => ({ ...prev, department: v }))} />
             </div>
             <div className="space-y-1.5">
               <label className="label-caps">Responsibility</label>

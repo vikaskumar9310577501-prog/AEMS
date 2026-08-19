@@ -390,7 +390,7 @@ const DEPT_PRESETS = [
   'R&D',
 ];
 
-function DeptCombo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function DeptCombo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const isOther = value !== '' && !DEPT_PRESETS.includes(value);
   const [showCustom, setShowCustom] = useState(isOther);
 

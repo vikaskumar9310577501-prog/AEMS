@@ -1,4 +1,4 @@
-# AssetQR Tracker
+# AssetQR Trackers
 
 AssetQR Tracker is an IT asset management system for tracking devices, employee assignments, inventory records, missing items, and QR-based asset lookup.
 
