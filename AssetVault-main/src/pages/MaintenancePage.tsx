@@ -768,7 +768,7 @@ export default function MaintenancePage() {
   }, [plants, machines, plantContactsDraft]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
+    <div className="flex flex-col h-full min-h-0 bg-white">
       <div className="shrink-0 px-6 lg:px-8 pt-3 lg:pt-4 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
@@ -1119,7 +1119,7 @@ export default function MaintenancePage() {
 
         {tab === 'machines' && (
           <div className="flex flex-col min-h-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-            <div className="px-3 py-1.5 border-b border-slate-200 flex flex-wrap items-center gap-2 shrink-0 bg-slate-50/80">
+            <div className="px-3 py-1.5 border-b border-slate-100 flex flex-wrap items-center gap-2 shrink-0 bg-white">
               <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 shrink-0">
                 <Factory size={14} className="text-blue-600" /> Machines
                 <span className="text-slate-400 font-normal">({filtered.length})</span>

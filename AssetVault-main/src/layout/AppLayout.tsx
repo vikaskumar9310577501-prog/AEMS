@@ -94,7 +94,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden font-sans bg-slate-50">
+    <div className="h-screen flex flex-col overflow-hidden font-sans bg-white">
       <header className="bg-[#113355] border-b border-[#0b2744] h-16 flex items-center px-4 justify-between shrink-0 shadow-sm z-40">
         <div className="flex items-center gap-4">
           <button
