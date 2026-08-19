@@ -87,7 +87,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
   }, [year, machines.length, loading, startMonthIndex]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 h-full">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <div className="flex-1 min-h-0 bg-white rounded-2xl border-2 border-slate-700 overflow-hidden flex flex-col shadow-sm">
         {loading ? (
           <p className="p-8 text-sm text-slate-500 text-center">Loading…</p>
@@ -95,7 +95,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
           <p className="p-10 text-sm text-slate-500 text-center">No machines to show on the plan.</p>
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto">
+            <div ref={scrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto" style={{ maxHeight: '100%' }}>
               <table
                 className="border-separate border-spacing-0 text-slate-900 table-fixed"
                 style={{ width: tableW, minWidth: tableW }}

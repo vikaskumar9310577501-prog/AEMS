@@ -759,7 +759,7 @@ export default function MaintenancePage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
-      <div className="shrink-0 px-4 lg:px-6 pt-3 space-y-2">
+      <div className="shrink-0 px-4 lg:px-6 pt-2 pb-1 space-y-1.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -1039,12 +1039,14 @@ export default function MaintenancePage() {
       </div>
 
       <div
-        className={`flex-1 min-h-0 overflow-hidden flex flex-col ${
-          tab === 'machines' ? 'px-4 lg:px-6 pb-0' : 'px-4 lg:px-6 pb-4 overflow-auto'
+        className={`flex-1 min-h-0 flex flex-col ${
+          tab === 'machines' || tab === 'dashboard'
+            ? 'overflow-hidden px-4 lg:px-6 pb-3'
+            : 'overflow-y-auto px-4 lg:px-6 pb-6'
         }`}
       >
         {tab === 'dashboard' && canDash && (
-          <div className="relative flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {kpiOverlay ? (
               <DashboardKpiOverlay
                 title={PM_KPI_TITLES[kpiOverlay]}
