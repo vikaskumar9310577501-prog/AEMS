@@ -758,8 +758,8 @@ export default function MaintenancePage() {
   }, [plants, machines, plantContactsDraft]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white">
-      <div className="shrink-0 px-6 lg:px-8 pt-3 lg:pt-4 space-y-2">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
+      <div className="shrink-0 px-4 lg:px-6 pt-3 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -1039,8 +1039,8 @@ export default function MaintenancePage() {
       </div>
 
       <div
-        className={`flex-1 px-6 lg:px-8 pb-4 lg:pb-6 min-h-0 ${
-          tab === 'dashboard' ? 'overflow-hidden flex flex-col' : 'overflow-auto'
+        className={`flex-1 min-h-0 overflow-hidden flex flex-col ${
+          tab === 'machines' ? 'px-4 lg:px-6 pb-0' : 'px-4 lg:px-6 pb-4 overflow-auto'
         }`}
       >
         {tab === 'dashboard' && canDash && (
@@ -1108,7 +1108,7 @@ export default function MaintenancePage() {
         )}
 
         {tab === 'machines' && (
-          <div className="flex flex-col min-h-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+          <div className="flex flex-col flex-1 min-h-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm mb-4">
             <div className="px-3 py-1.5 border-b border-slate-100 flex flex-wrap items-center gap-2 shrink-0 bg-white">
               <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 shrink-0">
                 <Factory size={14} className="text-blue-600" /> Machines
@@ -1166,7 +1166,7 @@ export default function MaintenancePage() {
                 )}
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-auto">
                 <table className="w-full min-w-[1060px] border-collapse text-[13px] leading-normal">
                   <thead className="sticky top-0 z-30 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b border-slate-200">
                     <tr>
