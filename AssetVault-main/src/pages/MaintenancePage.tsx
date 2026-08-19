@@ -1157,7 +1157,6 @@ export default function MaintenancePage() {
                       <th className="px-2 py-1.5 w-[80px]">Resp.</th>
                       <th className="px-2 py-1.5 w-[72px]">Loc</th>
                       <th className="px-2 py-1.5 w-[48px]">Plant</th>
-                      <th className="px-2 py-1.5 w-[88px]">Trend</th>
                       <th className="px-2 py-1.5 w-[108px]">Next PM</th>
                       <th className="px-2 py-1.5 w-[72px]">Status</th>
                       <th className="sticky right-0 z-40 bg-slate-100 px-2 py-1.5 w-[132px] border-l border-slate-200 text-right">
@@ -1222,22 +1221,6 @@ export default function MaintenancePage() {
                           </MachineCell>
                           <MachineCell className="font-semibold text-slate-700" title={plant.full}>
                             {plant.short}
-                          </MachineCell>
-                          <MachineCell onClick={(e) => e.stopPropagation()}>
-                            <select
-                              value={machineTrendMonths(m)}
-                              disabled={updatingTrendId === m.id}
-                              onChange={(e) => void changeMachineTrend(m, Number(e.target.value))}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full max-w-[88px] border border-slate-200 rounded text-[10px] font-semibold py-0.5 px-1 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                              title={trendMonthsLabel(machineTrendMonths(m))}
-                            >
-                              {TREND_SELECT_OPTIONS.map((n) => (
-                                <option key={n} value={n}>
-                                  {trendCompactLabel(n)}
-                                </option>
-                              ))}
-                            </select>
                           </MachineCell>
                           <MachineCell className="whitespace-normal" onClick={(e) => e.stopPropagation()}>
                             <input

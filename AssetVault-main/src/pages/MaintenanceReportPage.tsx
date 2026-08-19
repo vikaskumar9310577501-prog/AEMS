@@ -17,8 +17,8 @@ export default function MaintenanceReportPage() {
   const [loading, setLoading] = useState(true);
   const [complaintText, setComplaintText] = useState('');
   const [remark, setRemark] = useState('');
-  const [downtimeHours, setDowntimeHours] = useState('');
-  const [downtimeMinutes, setDowntimeMinutes] = useState('');
+  const [downtimeHours] = useState('');
+  const [downtimeMinutes] = useState('');
   const [photoData, setPhotoData] = useState('');
   const [photoName, setPhotoName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -32,8 +32,6 @@ export default function MaintenanceReportPage() {
       setSubmitted(false);
       setComplaintText('');
       setRemark('');
-      setDowntimeHours('');
-      setDowntimeMinutes('');
       setPhotoData('');
       setPhotoName('');
       try {
@@ -86,10 +84,6 @@ export default function MaintenanceReportPage() {
       setError('Please describe the issue (at least 5 characters).');
       return;
     }
-    if (hours * 60 + mins <= 0) {
-      setError('Downtime is required.');
-      return;
-    }
     if (remarkText.length < 3) {
       setError('Remark is required.');
       return;
@@ -132,7 +126,7 @@ export default function MaintenanceReportPage() {
           <img src={LOGO_SRC} alt={APP_NAME} className="h-8 object-contain" />
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Maintenance</p>
-            <h1 className="text-lg font-black text-slate-900">Downtime complaint</h1>
+            <h1 className="text-lg font-black text-slate-900">Machine complaint</h1>
           </div>
         </div>
 
@@ -176,39 +170,6 @@ export default function MaintenanceReportPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
-                Downtime <span className="text-rose-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <input
-                    type="number"
-                    min={0}
-                    max={999}
-                    inputMode="numeric"
-                    value={downtimeHours}
-                    onChange={(e) => setDowntimeHours(e.target.value)}
-                    placeholder="0"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-                  />
-                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Hours</p>
-                </div>
-                <div>
-                  <input
-                    type="number"
-                    min={0}
-                    max={59}
-                    inputMode="numeric"
-                    value={downtimeMinutes}
-                    onChange={(e) => setDowntimeMinutes(e.target.value)}
-                    placeholder="0"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-                  />
-                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Minutes</p>
-                </div>
-              </div>
-            </div>
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
