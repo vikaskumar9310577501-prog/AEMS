@@ -40,7 +40,6 @@ import {
   isComplaintResolvedWithinWeek,
   daysUntilDate,
   machineTrendMonths,
-  maintenancePendingDays,
   effectiveNextMaintenanceDate,
   pendingPlanDates,
   COMPLAINT_RESOLVE_SLA_DAYS,
@@ -127,55 +126,22 @@ function formatDate(value?: string) {
   }
 }
 
-function statusBadge(machine: MaintenanceMachine): { label: string; className: string; hint: string } {
-  if (machine.status === 'Down') {
-    return {
-      label: 'DOWN',
-      className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80',
-      hint: 'Machine is down / not running — breakdown reported.',
-    };
-  }
-  if (machine.status === 'Maintenance') {
-    return {
-      label: 'MAINTENANCE',
-      className: 'bg-amber-500/10 text-amber-800 border border-amber-200/80 shadow-sm shadow-amber-100/80',
-      hint: 'Maintenance work is in progress on this machine.',
-    };
-  }
-  if (machine.status === 'Planned') {
-    return {
-      label: 'PLANNED',
-      className: 'bg-sky-500/10 text-sky-700 border border-sky-200/80 shadow-sm shadow-sky-100/80',
-      hint: 'PM is scheduled — waiting for the planned date.',
-    };
-  }
+function statusBadge(machine: MaintenanceMachine): { label: string; className: string } | null {
   const days = daysUntilDate(effectiveNextMaintenanceDate(machine));
-  if (days == null) {
-    return {
-      label: machine.status?.toUpperCase() || 'ACTIVE',
-      className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80',
-      hint: 'No PM date set — machine is treated as active.',
-    };
-  }
+  if (days == null) return null;
   if (days < 0) {
     return {
       label: 'OVERDUE',
       className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80',
-      hint: `PM date passed ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago — maintenance is late.`,
     };
   }
   if (days <= 7) {
     return {
-      label: 'DUE SOON',
+      label: 'DELAYED',
       className: 'bg-orange-500/10 text-orange-700 border border-orange-200/80 shadow-sm shadow-orange-100/80',
-      hint: `PM due in ${days} day${days === 1 ? '' : 's'} — schedule maintenance now.`,
     };
   }
-  return {
-    label: 'ACTIVE',
-    className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80',
-    hint: `Next PM is ${days} days away — no action needed yet.`,
-  };
+  return null;
 }
 
 function sameLoc(a?: string, b?: string) {
@@ -1237,10 +1203,7 @@ export default function MaintenancePage() {
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Plant</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Frequency</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Next PM</th>
-                      <th
-                        className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50"
-                        title="ACTIVE = PM far away · DUE SOON = within 7 days · OVERDUE = date passed · DOWN = breakdown"
-                      >
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
                         Status
                       </th>
                       <th className="px-3 py-2.5 text-right bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tr-lg border border-stone-200/50">Actions</th>
@@ -1249,7 +1212,6 @@ export default function MaintenancePage() {
                   <tbody>
                     {filtered.map((m, rowIdx) => {
                       const badge = statusBadge(m);
-                      const pendingDays = maintenancePendingDays(m);
                       const plant = plantTableLabel(m.plantCode, plants);
                       const trendM = machineTrendMonths(m);
                       const menuDropUp = rowIdx >= filtered.length - 2;
@@ -1332,21 +1294,17 @@ export default function MaintenancePage() {
                                 {formatDate(effectiveNextMaintenanceDate(m))}
                               </span>
                             </div>
-                            {pendingDays > 0 && (
-                              <div className="flex items-center gap-1 mt-1.5">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-500/10 border border-red-200/70 text-[9px] font-black uppercase text-red-700">
-                                  {pendingDays}d overdue
-                                </span>
-                              </div>
-                            )}
                           </MachineCell>
                           <MachineCell className="shadow-sm group-hover:shadow-md">
-                            <span
-                              title={badge.hint}
-                              className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider cursor-help ${badge.className}`}
-                            >
-                              {badge.label}
-                            </span>
+                            {badge ? (
+                              <span
+                                className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${badge.className}`}
+                              >
+                                {badge.label}
+                              </span>
+                            ) : (
+                              <span className="text-[12px] font-medium text-stone-400">—</span>
+                            )}
                           </MachineCell>
                           <MachineCell
                             edge="last"
@@ -1840,9 +1798,13 @@ function DashboardKpiOverlay({
                     <td className="px-4 py-2.5 text-slate-700">{m.department || '—'}</td>
                     <td className="px-4 py-2.5 text-slate-700">{m.responsibility || '—'}</td>
                     <td className="px-4 py-2.5">
-                      <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
-                        {badge.label}
-                      </span>
+                      {badge ? (
+                        <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      ) : (
+                        <span className="text-stone-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 font-semibold text-slate-800">
                       {formatDate(effectiveNextMaintenanceDate(m))}
@@ -1969,9 +1931,11 @@ function MachineDetailPopup({
                 </h3>
               </div>
               <p className="font-mono text-sm font-bold text-blue-700">{machine.assetCode}</p>
-              <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
-                {badge.label}
-              </span>
+              {badge ? (
+                <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
+                  {badge.label}
+                </span>
+              ) : null}
             </div>
             <button
               type="button"
@@ -2004,11 +1968,10 @@ function MachineDetailPopup({
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Maintenance Schedule</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-w-0 overflow-visible">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Status</p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-900">{badge.label}</p>
-                    <p className="mt-1 text-[10px] font-medium text-slate-500 leading-snug">{badge.hint}</p>
-                  </div>
+                  <DetailField
+                    label="Status"
+                    value={badge ? badge.label : '—'}
+                  />
                   <DetailField label="Frequency" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
                   <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
                   <DetailField label="Open Complaints" value={String(openCount)} />
