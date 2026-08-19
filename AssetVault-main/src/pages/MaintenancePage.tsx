@@ -456,16 +456,6 @@ export default function MaintenancePage() {
     );
   }, [scopedMachines, search, plants]);
 
-  const [machinePage, setMachinePage] = useState(1);
-  const [machinePageSize, setMachinePageSize] = useState(10);
-  const totalMachinePages = Math.max(1, Math.ceil(filtered.length / machinePageSize));
-  const safeMachinePage = Math.min(machinePage, totalMachinePages);
-  const paginatedMachines = useMemo(() => {
-    const start = (safeMachinePage - 1) * machinePageSize;
-    return filtered.slice(start, start + machinePageSize);
-  }, [filtered, safeMachinePage, machinePageSize]);
-  useEffect(() => { setMachinePage(1); }, [search, machinePageSize]);
-
   const openComplaints = useMemo(() => scopedComplaints.filter((c) => c.status === 'Open'), [scopedComplaints]);
   const resolvedComplaints = useMemo(
     () => scopedComplaints.filter((c) => c.status === 'Resolved'),
@@ -1176,7 +1166,7 @@ export default function MaintenancePage() {
                 )}
               </div>
             ) : (
-              <div className="overflow-auto flex-1 min-h-0 max-h-[calc(100dvh-11rem)]">
+              <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
                 <table className="w-full min-w-[1060px] border-collapse text-[13px] leading-normal">
                   <thead className="sticky top-0 z-30 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b border-slate-200">
                     <tr>
@@ -1202,12 +1192,12 @@ export default function MaintenancePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {paginatedMachines.map((m, rowIdx) => {
+                    {filtered.map((m, rowIdx) => {
                       const badge = statusBadge(m);
                       const pendingDays = maintenancePendingDays(m);
                       const plant = plantTableLabel(m.plantCode, plants);
                       const trendM = machineTrendMonths(m);
-                      const menuDropUp = rowIdx >= paginatedMachines.length - 2;
+                      const menuDropUp = rowIdx >= filtered.length - 2;
                       return (
                         <tr
                           key={m.id}
@@ -1377,78 +1367,6 @@ export default function MaintenancePage() {
                     })}
                   </tbody>
                 </table>
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-[12px] text-slate-500">
-                  <span>
-                    Showing {Math.min((safeMachinePage - 1) * machinePageSize + 1, filtered.length)} to{' '}
-                    {Math.min(safeMachinePage * machinePageSize, filtered.length)} of {filtered.length} entries
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      disabled={safeMachinePage <= 1}
-                      onClick={() => setMachinePage((p) => Math.max(1, p - 1))}
-                      className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600"
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    {Array.from({ length: Math.min(totalMachinePages, 5) }, (_, i) => {
-                      let page: number;
-                      if (totalMachinePages <= 5) {
-                        page = i + 1;
-                      } else if (safeMachinePage <= 3) {
-                        page = i + 1;
-                      } else if (safeMachinePage >= totalMachinePages - 2) {
-                        page = totalMachinePages - 4 + i;
-                      } else {
-                        page = safeMachinePage - 2 + i;
-                      }
-                      return (
-                        <button
-                          key={page}
-                          type="button"
-                          onClick={() => setMachinePage(page)}
-                          className={`w-8 h-8 rounded text-[12px] font-semibold ${
-                            page === safeMachinePage
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
-                    {totalMachinePages > 5 && safeMachinePage < totalMachinePages - 2 && (
-                      <>
-                        <span className="px-1 text-slate-400">…</span>
-                        <button
-                          type="button"
-                          onClick={() => setMachinePage(totalMachinePages)}
-                          className="w-8 h-8 rounded border border-slate-200 text-[12px] font-semibold text-slate-600 hover:bg-slate-50"
-                        >
-                          {totalMachinePages}
-                        </button>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      disabled={safeMachinePage >= totalMachinePages}
-                      onClick={() => setMachinePage((p) => Math.min(totalMachinePages, p + 1))}
-                      className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600"
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                    <select
-                      value={machinePageSize}
-                      onChange={(e) => setMachinePageSize(Number(e.target.value))}
-                      className="ml-2 border border-slate-200 rounded text-[12px] py-1 px-2 bg-white text-slate-600"
-                    >
-                      {[10, 25, 50, 100].map((n) => (
-                        <option key={n} value={n}>{n} / page</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
               </div>
             )}
           </div>
