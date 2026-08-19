@@ -23,6 +23,7 @@ import {
   Pencil,
   Eye,
   ImageIcon,
+  MoreVertical,
 } from 'lucide-react';
 import { useApp } from '../context/AppProvider';
 import { parseJsonResponse } from '../lib/apiFetch';
@@ -170,6 +171,7 @@ export default function MaintenancePage() {
     Record<string, { hodEmail?: string; fhEmail?: string; phEmail?: string }>
   >({});
   const [updatingTrendId, setUpdatingTrendId] = useState<string | null>(null);
+  const [machineMenuId, setMachineMenuId] = useState<string | null>(null);
   const [updatingDateId, setUpdatingDateId] = useState<string | null>(null);
   const [deletingMachineId, setDeletingMachineId] = useState<string | null>(null);
   const [editMachine, setEditMachine] = useState<MaintenanceMachine | null>(null);
@@ -295,6 +297,13 @@ export default function MaintenancePage() {
     const next = defaultMaintenanceTab(user.role);
     setTab((prev) => (canAccessMaintenanceTab(user.role, prev) ? prev : next));
   }, [user?.role]);
+
+  useEffect(() => {
+    if (!machineMenuId) return;
+    const close = () => setMachineMenuId(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [machineMenuId]);
 
   useEffect(() => {
     if (!user || !canAccessMaintenance(user.role)) return;
@@ -1137,10 +1146,10 @@ export default function MaintenancePage() {
               </div>
             ) : (
               <div className="overflow-auto flex-1 min-h-0 max-h-[calc(100dvh-11rem)]">
-                <table className="w-full min-w-[1040px] border-collapse text-[11px] leading-snug">
-                  <thead className="sticky top-0 z-30 bg-slate-100 text-[9px] font-bold uppercase tracking-wide text-slate-600 shadow-[0_1px_0_#e2e8f0]">
+                <table className="w-full min-w-[900px] border-collapse text-[11px] leading-snug">
+                  <thead className="sticky top-0 z-30 bg-slate-50 text-[9px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-40 bg-slate-100 px-1.5 py-1.5 w-7 border-r border-slate-200">
+                      <th className="sticky left-0 z-40 bg-slate-50 px-2 py-2.5 w-8">
                         <input
                           type="checkbox"
                           checked={allFilteredSelected}
@@ -1149,33 +1158,27 @@ export default function MaintenancePage() {
                           title="Select all"
                         />
                       </th>
-                      <th className="sticky left-7 z-40 bg-slate-100 px-2 py-1.5 w-[76px] border-r border-slate-200">Asset</th>
-                      <th className="px-2 py-1.5 w-[108px]">Machine</th>
-                      <th className="px-2 py-1.5 w-[96px]">Type</th>
-                      <th className="px-2 py-1.5 w-[44px]">No.</th>
-                      <th className="px-2 py-1.5 w-[80px]">Dept</th>
-                      <th className="px-2 py-1.5 w-[80px]">Resp.</th>
-                      <th className="px-2 py-1.5 w-[72px]">Loc</th>
-                      <th className="px-2 py-1.5 w-[48px]">Plant</th>
-                      <th className="px-2 py-1.5 w-[108px]">Next PM</th>
-                      <th className="px-2 py-1.5 w-[72px]">Status</th>
-                      <th className="sticky right-0 z-40 bg-slate-100 px-2 py-1.5 w-[132px] border-l border-slate-200 text-right">
-                        Actions
-                      </th>
+                      <th className="px-3 py-2.5 text-left">Machine ID</th>
+                      <th className="px-3 py-2.5 text-left">Machine Name</th>
+                      <th className="px-3 py-2.5 text-left">Type</th>
+                      <th className="px-3 py-2.5 text-left">Department</th>
+                      <th className="px-3 py-2.5 text-left">Plant</th>
+                      <th className="px-3 py-2.5 text-left">Trend</th>
+                      <th className="px-3 py-2.5 text-left">Next PM</th>
+                      <th className="px-3 py-2.5 text-left">Status</th>
+                      <th className="sticky right-0 z-40 bg-slate-50 px-3 py-2.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {filtered.map((m, i) => {
                       const badge = statusBadge(m);
                       const pendingDays = maintenancePendingDays(m);
-                      const stripe = i % 2 === 0 ? 'bg-white' : 'bg-slate-50/90';
-                      const rowHover = 'group-hover:bg-blue-50/70';
                       const plant = plantTableLabel(m.plantCode, plants);
                       const name = machineRowName(m);
                       return (
                         <tr
                           key={m.id}
-                          className={`group ${stripe} hover:bg-blue-50/70 transition-colors cursor-pointer`}
+                          className="group hover:bg-blue-50/60 transition-colors cursor-pointer"
                           onClick={() => setDetailMachine(m)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -1185,10 +1188,10 @@ export default function MaintenancePage() {
                           }}
                           tabIndex={0}
                           role="button"
-                          title="Click anywhere on row for machine details"
+                          title="Click for machine details"
                         >
                           <td
-                            className={`sticky left-0 z-10 px-1.5 py-1 border-b border-slate-100 ${stripe} ${rowHover}`}
+                            className="sticky left-0 z-10 bg-white group-hover:bg-blue-50/60 px-2 py-3"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
@@ -1198,100 +1201,133 @@ export default function MaintenancePage() {
                               className="rounded border-slate-300 scale-90"
                             />
                           </td>
-                          <td
-                            className={`sticky left-7 z-10 px-2 py-1 border-b border-r border-slate-100 font-mono font-semibold text-blue-700 ${stripe} ${rowHover}`}
-                          >
+                          <td className="px-3 py-3 font-mono font-semibold text-blue-600 whitespace-nowrap">
                             {m.assetCode}
                           </td>
-                          <MachineCell className="max-w-[108px] truncate font-medium text-slate-800" title={name}>
+                          <td className="px-3 py-3 font-medium text-slate-800 max-w-[180px] truncate" title={name}>
                             {name}
-                          </MachineCell>
-                          <MachineCell className="max-w-[96px] truncate text-slate-700" title={m.machineType}>
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 max-w-[140px] truncate" title={m.machineType}>
                             {m.machineType}
-                          </MachineCell>
-                          <MachineCell className="font-mono text-slate-700">{m.machineNumber}</MachineCell>
-                          <MachineCell className="max-w-[80px] truncate text-slate-600" title={m.department}>
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 max-w-[120px] truncate" title={m.department}>
                             {m.department || '—'}
-                          </MachineCell>
-                          <MachineCell className="max-w-[80px] truncate text-slate-600" title={m.responsibility}>
-                            {m.responsibility || '—'}
-                          </MachineCell>
-                          <MachineCell className="max-w-[72px] truncate text-slate-600" title={m.location}>
-                            {m.location || '—'}
-                          </MachineCell>
-                          <MachineCell className="font-semibold text-slate-700" title={plant.full}>
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 font-medium whitespace-nowrap" title={plant.full}>
                             {plant.short}
-                          </MachineCell>
-                          <MachineCell className="whitespace-normal" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="date"
-                              value={toDateInputValue(m.nextMaintenanceDate)}
-                              disabled={updatingDateId === m.id}
-                              onChange={(e) => void changeMachineNextDate(m, e.target.value)}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={machineTrendMonths(m)}
+                              disabled={updatingTrendId === m.id}
+                              onChange={(e) => void changeMachineTrend(m, Number(e.target.value))}
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full max-w-[108px] border border-slate-200 rounded text-[10px] font-medium py-0.5 px-1 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                              title="Next maintenance date"
-                            />
+                              className="border border-slate-200 rounded-md text-[11px] font-medium py-1 px-2 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              title={trendMonthsLabel(machineTrendMonths(m))}
+                            >
+                              {TREND_SELECT_OPTIONS.map((n) => (
+                                <option key={n} value={n}>
+                                  {trendCompactLabel(n)}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5">
+                              <CalendarRange size={13} className="text-slate-400 shrink-0" />
+                              <input
+                                type="date"
+                                value={toDateInputValue(m.nextMaintenanceDate)}
+                                disabled={updatingDateId === m.id}
+                                onChange={(e) => void changeMachineNextDate(m, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="border border-slate-200 rounded-md text-[11px] font-medium py-1 px-2 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                title="Next maintenance date"
+                              />
+                            </div>
                             {pendingDays > 0 && (
-                              <span className="block text-[9px] font-semibold text-red-600 leading-tight mt-0.5">
-                                +{pendingDays}d
+                              <span className="block text-[9px] font-semibold text-red-600 leading-tight mt-0.5 pl-5">
+                                -{pendingDays}d
                               </span>
                             )}
                             {isCustomTrend(machineTrendMonths(m)) && (m.customPlanDates?.length || 0) > 0 ? (
-                              <span className="block text-[9px] font-medium text-amber-700 leading-tight">
+                              <span className="block text-[9px] font-medium text-amber-700 leading-tight pl-5">
                                 +{m.customPlanDates!.length} dt
                               </span>
                             ) : null}
-                          </MachineCell>
-                          <MachineCell>
+                          </td>
+                          <td className="px-3 py-3">
                             <span
-                              className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${badge.className}`}
+                              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${badge.className}`}
                             >
                               {badge.label}
                             </span>
-                          </MachineCell>
+                          </td>
                           <td
-                            className={`sticky right-0 z-10 px-1.5 py-1 border-b border-l border-slate-100 ${stripe} ${rowHover}`}
+                            className="sticky right-0 z-10 bg-white group-hover:bg-blue-50/60 px-3 py-3"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-center justify-end gap-0.5">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setDetailMachine(m)}
+                                className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                title="View details"
+                              >
+                                <Eye size={15} />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setEditMachine(m)}
-                                className="p-1 rounded hover:bg-slate-200 text-slate-700"
+                                className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
                                 title="Edit"
                               >
-                                <Pencil size={13} />
+                                <Pencil size={15} />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setPrintMachines([m])}
-                                className="p-1 rounded hover:bg-indigo-100 text-indigo-700"
-                                title="Print QR"
-                              >
-                                <QrCode size={13} />
-                              </button>
-                              {canMarkMaintenanceDone(m) && (
+                              <div className="relative">
                                 <button
                                   type="button"
-                                  disabled={markingDoneId === m.id}
-                                  onClick={() => setDoneMachine(m)}
-                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold disabled:opacity-40"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMachineMenuId(machineMenuId === m.id ? null : m.id);
+                                  }}
+                                  className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                  title="More actions"
                                 >
-                                  <CheckCircle2 size={12} /> Done
+                                  <MoreVertical size={15} />
                                 </button>
-                              )}
-                              {canDeleteMachine && (
-                                <button
-                                  type="button"
-                                  disabled={deletingMachineId === m.id}
-                                  onClick={() => void deleteMachine(m)}
-                                  className="p-1 rounded hover:bg-rose-100 text-rose-700 disabled:opacity-40"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              )}
+                                {machineMenuId === m.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+                                    <button
+                                      type="button"
+                                      onClick={() => { setPrintMachines([m]); setMachineMenuId(null); }}
+                                      className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                                    >
+                                      <QrCode size={13} /> Print QR
+                                    </button>
+                                    {canMarkMaintenanceDone(m) && (
+                                      <button
+                                        type="button"
+                                        disabled={markingDoneId === m.id}
+                                        onClick={() => { setDoneMachine(m); setMachineMenuId(null); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-emerald-700 disabled:opacity-40"
+                                      >
+                                        <CheckCircle2 size={13} /> Mark Done
+                                      </button>
+                                    )}
+                                    {canDeleteMachine && (
+                                      <button
+                                        type="button"
+                                        disabled={deletingMachineId === m.id}
+                                        onClick={() => { void deleteMachine(m); setMachineMenuId(null); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-rose-600 disabled:opacity-40"
+                                      >
+                                        <Trash2 size={13} /> Delete
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
