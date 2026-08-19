@@ -63,6 +63,7 @@ import {
 import { toDisplayDateInput, toDateInputValue } from '../lib/formatDisplayDate';
 import MaintenancePmPlanBoard from '../components/MaintenancePmPlanBoard';
 import PremiumComplaintDashboard from '../components/PremiumComplaintDashboard';
+import ComplaintsInbox, { type ComplaintsViewFilter } from '../components/ComplaintsInbox';
 import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal from '../components/MaintenanceResolveModal';
@@ -165,6 +166,7 @@ export default function MaintenancePage() {
   const [kpiOverlay, setKpiOverlay] = useState<PmKpiId | null>(null);
   const [contactFocus, setContactFocus] = useState<'hod' | 'fh' | 'ph' | null>(null);
   const [complaintFilter, setComplaintFilter] = useState<ComplaintDashboardFilter>('total');
+  const [complaintsViewFilter, setComplaintsViewFilter] = useState<ComplaintsViewFilter>('all');
   const [complaintSearch, setComplaintSearch] = useState('');
   const [machines, setMachines] = useState<MaintenanceMachine[]>([]);
   const [machineTypes, setMachineTypes] = useState<string[]>([...DEFAULT_MACHINE_TYPES]);
@@ -527,6 +529,13 @@ export default function MaintenancePage() {
 
   const complaintStats = useMemo(() => computeComplaintStats(scopedComplaints), [scopedComplaints]);
 
+  const complaintsInboxList = useMemo(() => {
+    let list = searchedComplaints;
+    if (complaintsViewFilter === 'pending') list = list.filter((c) => c.status === 'Open');
+    if (complaintsViewFilter === 'resolved') list = list.filter((c) => c.status === 'Resolved');
+    return list;
+  }, [searchedComplaints, complaintsViewFilter]);
+
   const pickComplaintFilter = useCallback((filter: ComplaintDashboardFilter) => {
     setComplaintFilter(filter);
   }, []);
@@ -841,7 +850,7 @@ export default function MaintenancePage() {
           </div>
 
           <div className="flex flex-wrap gap-2 shrink-0 items-center">
-            {tab === 'complaint-dashboard' && canComplaints && (
+            {(tab === 'complaint-dashboard' || tab === 'complaints') && canComplaints && (
               <div className="relative min-w-[200px] max-w-[280px]">
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
@@ -1378,71 +1387,23 @@ export default function MaintenancePage() {
         )}
 
         {tab === 'complaints' && canComplaints && (
-          <div className="space-y-4">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
-                value={complaintSearch}
-                onChange={(e) => setComplaintSearch(e.target.value)}
-                placeholder="Search asset, machine, plant, complaint…"
-                className="w-full input-geometric pl-10"
-                style={{ paddingLeft: '2.5rem' }}
-              />
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="px-4 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
-                      <MessageSquareWarning className="text-rose-600" size={18} />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-black text-slate-900">QR Scan Complaints</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Submitted from machine QR · resolve with Done when fixed
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-                      Total {scopedComplaints.length}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800">
-                      Pending {openComplaints.length}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700">
-                      Done {resolvedComplaints.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {loading ? (
-                <p className="p-8 text-sm text-slate-500 text-center">Loading…</p>
-              ) : searchedComplaints.length === 0 ? (
-                <p className="p-10 text-sm text-slate-500 text-center">No complaints match this filter.</p>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {searchedComplaints.map((c) => (
-                    <ComplaintListItem
-                      key={c.id}
-                      complaint={c}
-                      plants={plants}
-                      onOpen={() => setDetailComplaint(c)}
-                      onPreviewPhoto={
-                        c.photoUrl
-                          ? () => setComplaintPhotoPreview({ url: c.photoUrl!, name: c.photoName })
-                          : undefined
-                      }
-                      onResolve={() => setResolveComplaintTarget(c)}
-                      expanded
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <ComplaintsInbox
+            complaints={complaintsInboxList}
+            plants={plants}
+            loading={loading}
+            viewFilter={complaintsViewFilter}
+            onViewFilterChange={setComplaintsViewFilter}
+            stats={{
+              total: scopedComplaints.length,
+              pending: openComplaints.length,
+              done: resolvedComplaints.length,
+            }}
+            onOpenDetail={setDetailComplaint}
+            onPreviewPhoto={(c) =>
+              c.photoUrl ? setComplaintPhotoPreview({ url: c.photoUrl, name: c.photoName }) : undefined
+            }
+            onResolve={setResolveComplaintTarget}
+          />
         )}
 
         {tab === 'settings' && canFhPh && (
