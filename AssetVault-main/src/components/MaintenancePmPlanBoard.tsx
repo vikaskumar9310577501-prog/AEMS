@@ -47,7 +47,7 @@ function buildMonthCols(year: number): MonthCol[] {
 /** June of the selected year (or January if still before June). */
 function defaultStartMonthIndex(year: number, now: Date): number {
   if (now.getFullYear() === year) {
-    return now.getMonth() >= 5 ? 5 : 0;
+    return Math.max(0, now.getMonth() - 1);
   }
   if (now.getFullYear() === year + 1) {
     return 12 + Math.max(0, now.getMonth() - 1);
@@ -170,7 +170,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
 
             <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t-2 border-slate-400 bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-800">
               <p className="normal-case font-semibold text-slate-500 tracking-normal">
-                Default: June → December, then next year. Scroll left for Jan–May.
+                Default: starts one month before current month. Scroll left for earlier months.
               </p>
               <div className="flex flex-wrap items-center gap-4">
                 <Legend swatch="bg-amber-400 ring-1 ring-amber-700" label="Plan" icon={<CalendarDays size={11} />} />
