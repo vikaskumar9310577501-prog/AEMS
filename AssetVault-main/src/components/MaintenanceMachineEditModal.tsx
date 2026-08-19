@@ -277,7 +277,7 @@ export default function MaintenanceMachineEditModal({
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="label-caps">Trend</label>
+                <label className="label-caps">Frequency</label>
                 <select
                   value={trendMonths}
                   onChange={(e) => setTrendMonths(Number(e.target.value))}

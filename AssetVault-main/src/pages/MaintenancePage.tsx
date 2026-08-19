@@ -28,7 +28,7 @@ import {
 import { useApp } from '../context/AppProvider';
 import { parseJsonResponse } from '../lib/apiFetch';
 import type { MaintenanceComplaint, MaintenanceMachine, MaintenanceMeta } from '../types/maintenance';
-import { DEFAULT_MACHINE_TYPES, TREND_SELECT_OPTIONS, isCustomTrend, trendMonthsLabel } from '../types/maintenance';
+import { DEFAULT_MACHINE_TYPES, isCustomTrend, trendMonthsLabel } from '../types/maintenance';
 import {
   canMarkMaintenanceDone,
   complaintPendingDays,
@@ -145,21 +145,6 @@ function statusBadge(machine: MaintenanceMachine) {
   return { label: 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80' };
 }
 
-function MiniTrendSvg({ months }: { months: number }) {
-  const isCustom = isCustomTrend(months);
-  const color = isCustom ? '#f59e0b' : months <= 3 ? '#ef4444' : '#22c55e';
-  const points = isCustom
-    ? '2,12 8,8 14,14 20,6 26,10 32,4 38,9'
-    : months <= 3
-      ? '2,10 8,4 14,12 20,6 26,14 32,8 38,10'
-      : '2,14 8,10 14,6 20,8 26,4 32,6 38,2';
-  return (
-    <svg width={40} height={16} viewBox="0 0 40 16" className="shrink-0">
-      <polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function sameLoc(a?: string, b?: string) {
   return (
     String(a || '')
@@ -203,9 +188,7 @@ export default function MaintenancePage() {
   const [plantContactsDraft, setPlantContactsDraft] = useState<
     Record<string, { hodEmail?: string; fhEmail?: string; phEmail?: string }>
   >({});
-  const [updatingTrendId, setUpdatingTrendId] = useState<string | null>(null);
   const [machineMenuId, setMachineMenuId] = useState<string | null>(null);
-  const [updatingDateId, setUpdatingDateId] = useState<string | null>(null);
   const [deletingMachineId, setDeletingMachineId] = useState<string | null>(null);
   const [editMachine, setEditMachine] = useState<MaintenanceMachine | null>(null);
   const [detailMachine, setDetailMachine] = useState<MaintenanceMachine | null>(null);
@@ -563,76 +546,6 @@ export default function MaintenancePage() {
       toast.error(e instanceof Error ? e.message : 'Failed');
     } finally {
       setMarkingDoneId(null);
-    }
-  };
-
-  const changeMachineTrend = async (machine: MaintenanceMachine, trendMonths: number) => {
-    if (updatingTrendId || machineTrendMonths(machine) === trendMonths) return;
-    setUpdatingTrendId(machine.id);
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || ''}/api/maintenance/machines/${encodeURIComponent(machine.id)}/trend`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trendMonths }),
-        }
-      );
-      const data = await parseJsonResponse<{
-        error?: string;
-        machine?: MaintenanceMachine;
-        mail?: { ok?: boolean; skipped?: boolean };
-      }>(res);
-      if (!res.ok) throw new Error(data.error || 'Failed to update trend');
-      if (data.machine) {
-        setMachines((prev) => prev.map((m) => (m.id === data.machine!.id ? data.machine! : m)));
-      } else {
-        await load();
-      }
-      if (data.mail?.ok) {
-        toast.success(`Trend updated · mail sent to HOD / FH / PH`);
-      } else if (data.mail?.skipped) {
-        toast.success('Trend updated · add HOD/FH/PH emails in settings for notifications');
-      } else {
-        toast.success('Trend updated');
-      }
-      if (isCustomTrend(trendMonths)) {
-        toast('Custom trend: add extra PM dates from Edit. Dashboard will not auto-fill months.', { icon: '📅' });
-      }
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update trend');
-    } finally {
-      setUpdatingTrendId(null);
-    }
-  };
-
-  const changeMachineNextDate = async (machine: MaintenanceMachine, nextMaintenanceDate: string) => {
-    const current = toDateInputValue(machine.nextMaintenanceDate);
-    if (updatingDateId || !nextMaintenanceDate || nextMaintenanceDate === current) return;
-    setUpdatingDateId(machine.id);
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || ''}/api/maintenance/machines/${encodeURIComponent(machine.id)}/next-date`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nextMaintenanceDate }),
-        }
-      );
-      const data = await parseJsonResponse<{ error?: string; machine?: MaintenanceMachine }>(res);
-      if (!res.ok) throw new Error(data.error || 'Failed to update date');
-      if (data.machine) {
-        setMachines((prev) => prev.map((m) => (m.id === data.machine!.id ? data.machine! : m)));
-      } else {
-        await load();
-      }
-      toast.success('Next maintenance date updated');
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update date');
-    } finally {
-      setUpdatingDateId(null);
     }
   };
 
@@ -1201,7 +1114,7 @@ export default function MaintenancePage() {
                       <th className="px-3 py-2.5 text-left w-16 bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">No.</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Department</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Plant</th>
-                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Trend</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Frequency</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Next PM</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Status</th>
                       <th className="px-3 py-2.5 text-right bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tr-lg border border-stone-200/50">Actions</th>
@@ -1270,37 +1183,17 @@ export default function MaintenancePage() {
                               {plant.short}
                             </span>
                           </MachineCell>
-                          <MachineCell className="shadow-sm group-hover:shadow-md" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-stone-50/90 border border-stone-200/60">
-                              <MiniTrendSvg months={trendM} />
-                              <select
-                                value={trendM}
-                                disabled={updatingTrendId === m.id}
-                                onChange={(e) => void changeMachineTrend(m, Number(e.target.value))}
-                                onClick={(e) => e.stopPropagation()}
-                                className="border-0 bg-transparent text-[12px] font-bold text-stone-700 disabled:opacity-60 focus:outline-none focus:ring-0 appearance-none pr-5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%226%22%20viewBox%3D%220%200%2010%206%22%3E%3Cpath%20d%3D%22M0%200l5%206%205-6H0z%22%20fill%3D%22%2394a3b8%22/%3E%3C/svg%3E')] bg-[length:10px_6px] bg-[right_0_center] bg-no-repeat"
-                                title={trendMonthsLabel(trendM)}
-                              >
-                                {TREND_SELECT_OPTIONS.map((n) => (
-                                  <option key={n} value={n}>
-                                    {trendCompactLabel(n)}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
+                            <span className="inline-flex px-2.5 py-1 rounded-lg bg-stone-100/90 border border-stone-200/70 text-[11px] font-bold text-stone-700">
+                              {trendCompactLabel(trendM)}
+                            </span>
                           </MachineCell>
-                          <MachineCell className="shadow-sm group-hover:shadow-md" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80">
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80">
                               <CalendarRange size={14} className="text-blue-500 shrink-0" />
-                              <input
-                                type="date"
-                                value={toDateInputValue(m.nextMaintenanceDate)}
-                                disabled={updatingDateId === m.id}
-                                onChange={(e) => void changeMachineNextDate(m, e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="border-0 bg-transparent text-[12px] font-semibold text-stone-700 disabled:opacity-60 focus:outline-none focus:ring-0 p-0"
-                                title="Next maintenance date"
-                              />
+                              <span className="text-[12px] font-semibold text-stone-700">
+                                {formatDate(effectiveNextMaintenanceDate(m))}
+                              </span>
                             </div>
                             {(pendingDays > 0 || (isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0)) && (
                               <div className="flex items-center gap-1 mt-1.5">
@@ -1999,7 +1892,7 @@ function MachineDetailPopup({
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Maintenance Schedule</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
                   <DetailField label="Status" value={badge.label} />
-                  <DetailField label="PM Interval" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
+                  <DetailField label="Frequency" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
                   <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
                   <DetailField label="Open Complaints" value={String(openCount)} />
                   <DetailField label="Resolved Complaints" value={String(resolvedCount)} />
