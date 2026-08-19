@@ -232,11 +232,7 @@ export default function MaintenanceMachineEditModal({
               </div>
               <div className="space-y-1.5">
                 <label className="label-caps">Department</label>
-                <input
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full input-geometric font-semibold"
-                />
+                <DeptCombo value={department} onChange={setDepartment} />
               </div>
               <div className="space-y-1.5">
                 <label className="label-caps">Responsibility</label>
@@ -373,5 +369,66 @@ export default function MaintenanceMachineEditModal({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+const DEPT_PRESETS = [
+  'Production',
+  'Maintenance',
+  'Quality',
+  'Stores',
+  'Packing',
+  'Assembly',
+  'Dispatch',
+  'Utility',
+  'Admin',
+  'IT',
+  'HR',
+  'Finance',
+  'Purchase',
+  'Safety',
+  'R&D',
+];
+
+function DeptCombo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const isOther = value !== '' && !DEPT_PRESETS.includes(value);
+  const [showCustom, setShowCustom] = useState(isOther);
+
+  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    if (v === '__other__') {
+      setShowCustom(true);
+      onChange('');
+    } else {
+      setShowCustom(false);
+      onChange(v);
+    }
+  };
+
+  const selectValue = showCustom ? '__other__' : (value || '');
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={selectValue}
+        onChange={handleSelect}
+        className="w-full input-geometric bg-white font-semibold"
+      >
+        <option value="">— Select Department —</option>
+        {DEPT_PRESETS.map((d) => (
+          <option key={d} value={d}>{d}</option>
+        ))}
+        <option value="__other__">Other (type below)</option>
+      </select>
+      {showCustom && (
+        <input
+          autoFocus
+          placeholder="Type department name…"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full input-geometric font-semibold"
+        />
+      )}
+    </div>
   );
 }
