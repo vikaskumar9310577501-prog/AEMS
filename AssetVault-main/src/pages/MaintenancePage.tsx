@@ -24,6 +24,8 @@ import {
   Eye,
   ImageIcon,
   MoreVertical,
+  ChevronDown,
+  Info,
 } from 'lucide-react';
 import { useApp } from '../context/AppProvider';
 import { parseJsonResponse } from '../lib/apiFetch';
@@ -128,19 +130,31 @@ function formatDate(value?: string) {
 
 function statusBadge(machine: MaintenanceMachine) {
   if (machine.status === 'Down') {
-    return { label: 'DOWN', className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80' };
+    return { label: 'DOWN', className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80', hint: 'Machine is marked down for breakdown or repair.' };
   }
   if (machine.status === 'Maintenance') {
-    return { label: 'MAINTENANCE', className: 'bg-amber-500/10 text-amber-800 border border-amber-200/80 shadow-sm shadow-amber-100/80' };
+    return { label: 'MAINTENANCE', className: 'bg-amber-500/10 text-amber-800 border border-amber-200/80 shadow-sm shadow-amber-100/80', hint: 'Preventive maintenance is in progress.' };
   }
   if (machine.status === 'Planned') {
-    return { label: 'PLANNED', className: 'bg-sky-500/10 text-sky-700 border border-sky-200/80 shadow-sm shadow-sky-100/80' };
+    return { label: 'PLANNED', className: 'bg-sky-500/10 text-sky-700 border border-sky-200/80 shadow-sm shadow-sky-100/80', hint: 'PM is scheduled but not yet due.' };
   }
   const days = daysUntilDate(effectiveNextMaintenanceDate(machine));
-  if (days == null) return { label: machine.status?.toUpperCase() || 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80' };
-  if (days < 0) return { label: 'OVERDUE', className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80' };
-  if (days <= 7) return { label: 'OVERDUE', className: 'bg-orange-500/10 text-orange-700 border border-orange-200/80 shadow-sm shadow-orange-100/80' };
-  return { label: 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80' };
+  if (days == null) {
+    return { label: machine.status?.toUpperCase() || 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80', hint: 'No PM date set — treated as active.' };
+  }
+  if (days < 0) {
+    return { label: 'OVERDUE', className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80', hint: `PM date was ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago — action needed.` };
+  }
+  if (days <= 7) {
+    return { label: 'DUE SOON', className: 'bg-orange-500/10 text-orange-700 border border-orange-200/80 shadow-sm shadow-orange-100/80', hint: `PM due in ${days} day${days === 1 ? '' : 's'} — Done button opens within this window.` };
+  }
+  return { label: 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80', hint: `Next PM is ${days} days away — on track.` };
+}
+
+function frequencyDisplayLabel(months?: number) {
+  const m = Number(months ?? 2);
+  if (isCustomTrend(m)) return 'Custom';
+  return trendMonthsLabel(m);
 }
 
 function sameLoc(a?: string, b?: string) {
@@ -176,6 +190,11 @@ export default function MaintenancePage() {
   const complaintListRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterMachineType, setFilterMachineType] = useState('');
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  const [statusHelpOpen, setStatusHelpOpen] = useState(false);
+  const typeFilterRef = useRef<HTMLTableCellElement | null>(null);
+  const statusHelpRef = useRef<HTMLTableCellElement | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [printMachines, setPrintMachines] = useState<MaintenanceMachine[] | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -320,6 +339,21 @@ export default function MaintenancePage() {
   }, [machineMenuId]);
 
   useEffect(() => {
+    if (!typeFilterOpen && !statusHelpOpen) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (typeFilterOpen && typeFilterRef.current && !typeFilterRef.current.contains(t)) {
+        setTypeFilterOpen(false);
+      }
+      if (statusHelpOpen && statusHelpRef.current && !statusHelpRef.current.contains(t)) {
+        setStatusHelpOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [typeFilterOpen, statusHelpOpen]);
+
+  useEffect(() => {
     if (!user || !canAccessMaintenance(user.role)) return;
     void load();
   }, [load, user?.role]);
@@ -429,9 +463,10 @@ export default function MaintenancePage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return scopedMachines;
-    return scopedMachines.filter((m) =>
-      [
+    return scopedMachines.filter((m) => {
+      if (filterMachineType && m.machineType !== filterMachineType) return false;
+      if (!q) return true;
+      return [
         m.assetCode,
         m.machineType,
         m.machineNumber,
@@ -445,9 +480,14 @@ export default function MaintenancePage() {
       ]
         .join(' ')
         .toLowerCase()
-        .includes(q)
-    );
-  }, [scopedMachines, search, plants]);
+        .includes(q);
+    });
+  }, [scopedMachines, search, plants, filterMachineType]);
+
+  const availableMachineTypes = useMemo(() => {
+    const fromMachines = machines.map((m) => m.machineType).filter(Boolean);
+    return Array.from(new Set([...machineTypes, ...fromMachines])).sort((a, b) => a.localeCompare(b));
+  }, [machines, machineTypes]);
 
   const openComplaints = useMemo(() => scopedComplaints.filter((c) => c.status === 'Open'), [scopedComplaints]);
   const resolvedComplaints = useMemo(
@@ -1093,7 +1133,10 @@ export default function MaintenancePage() {
                 )}
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-auto bg-[#F7F3EE]/60 px-3 py-3">
+              <div
+                className="flex-1 min-h-0 overflow-auto bg-[#F7F3EE]/60 px-3 py-3"
+                onScroll={() => setMachineMenuId(null)}
+              >
                 <table className="w-full min-w-[1060px] border-separate border-spacing-y-2.5 text-[13px] leading-normal">
                   <thead className="sticky top-0 z-30">
                     <tr className="text-[10px] font-black uppercase tracking-wider text-stone-500">
@@ -1108,13 +1151,96 @@ export default function MaintenancePage() {
                       </th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Machine ID</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Machine Name</th>
-                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Type</th>
+                      <th
+                        ref={typeFilterRef}
+                        className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50 relative"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTypeFilterOpen((v) => !v);
+                            setStatusHelpOpen(false);
+                          }}
+                          className={`inline-flex items-center gap-1 hover:text-stone-800 transition-colors ${
+                            filterMachineType ? 'text-blue-700' : ''
+                          }`}
+                          title="Filter by machine type"
+                        >
+                          Type
+                          <ChevronDown size={12} className={filterMachineType ? 'text-blue-600' : 'text-stone-400'} />
+                        </button>
+                        {filterMachineType ? (
+                          <span className="ml-1 inline-flex px-1.5 py-0.5 rounded-md bg-blue-100 text-[8px] font-black text-blue-700 uppercase">
+                            1
+                          </span>
+                        ) : null}
+                        {typeFilterOpen ? (
+                          <div className="absolute left-0 top-full mt-1 min-w-[220px] max-h-56 overflow-y-auto bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[60] normal-case font-semibold tracking-normal">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFilterMachineType('');
+                                setTypeFilterOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 ${
+                                !filterMachineType ? 'text-blue-700 font-bold bg-blue-50/60' : 'text-stone-700'
+                              }`}
+                            >
+                              All types
+                            </button>
+                            {availableMachineTypes.map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => {
+                                  setFilterMachineType(t);
+                                  setTypeFilterOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 ${
+                                  filterMachineType === t ? 'text-blue-700 font-bold bg-blue-50/60' : 'text-stone-700'
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </th>
                       <th className="px-3 py-2.5 text-left w-16 bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">No.</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Department</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Plant</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Frequency</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Next PM</th>
-                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Status</th>
+                      <th
+                        ref={statusHelpRef}
+                        className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50 relative"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusHelpOpen((v) => !v);
+                            setTypeFilterOpen(false);
+                          }}
+                          className="inline-flex items-center gap-1 hover:text-stone-800 transition-colors"
+                          title="What does status mean?"
+                        >
+                          Status
+                          <Info size={12} className="text-stone-400" />
+                        </button>
+                        {statusHelpOpen ? (
+                          <div className="absolute left-0 top-full mt-1 w-[min(92vw,260px)] bg-white rounded-xl shadow-xl border border-stone-200/80 p-3 z-[60] normal-case font-medium tracking-normal text-left">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-stone-500 mb-2">Status guide</p>
+                            <ul className="space-y-1.5 text-[11px] text-stone-700 leading-snug">
+                              <li><span className="font-black text-emerald-700">ACTIVE</span> — Next PM is 8+ days away</li>
+                              <li><span className="font-black text-orange-700">DUE SOON</span> — PM within 7 days (mark Done opens)</li>
+                              <li><span className="font-black text-red-700">OVERDUE</span> — PM date has passed</li>
+                              <li><span className="font-black text-red-700">DOWN</span> — Machine marked down</li>
+                            </ul>
+                          </div>
+                        ) : null}
+                      </th>
                       <th className="px-3 py-2.5 text-right bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tr-lg border border-stone-200/50">Actions</th>
                     </tr>
                   </thead>
@@ -1129,11 +1255,20 @@ export default function MaintenancePage() {
                       return (
                         <tr
                           key={m.id}
-                          className="group cursor-pointer transition-all duration-200 hover:-translate-y-px hover:drop-shadow-[0_8px_16px_rgba(120,90,60,0.10)]"
-                          onClick={() => setDetailMachine(m)}
+                          className={`group cursor-pointer transition-all duration-200 hover:-translate-y-px hover:drop-shadow-[0_8px_16px_rgba(120,90,60,0.10)] ${
+                            machineMenuId === m.id ? 'relative z-40' : ''
+                          }`}
+                          onClick={() => {
+                            setMachineMenuId(null);
+                            setDetailMachine(m);
+                          }}
+                          onMouseEnter={() => {
+                            if (machineMenuId && machineMenuId !== m.id) setMachineMenuId(null);
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
+                              setMachineMenuId(null);
                               setDetailMachine(m);
                             }
                           }}
@@ -1204,6 +1339,7 @@ export default function MaintenancePage() {
                           <MachineCell className="shadow-sm group-hover:shadow-md">
                             <span
                               className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${badge.className}`}
+                              title={badge.hint}
                             >
                               {badge.label}
                             </span>
@@ -1230,7 +1366,7 @@ export default function MaintenancePage() {
                               >
                                 <Pencil size={15} />
                               </button>
-                              <div className="relative">
+                              <div className="relative" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1242,8 +1378,13 @@ export default function MaintenancePage() {
                                 >
                                   <MoreVertical size={15} />
                                 </button>
-                                {machineMenuId === m.id && (
-                                  <div className={`absolute right-0 min-w-[160px] bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-50 whitespace-nowrap ${menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                                {machineMenuId === m.id ? (
+                                  <div
+                                    className={`absolute right-0 min-w-[160px] bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[70] whitespace-nowrap ${
+                                      menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'
+                                    }`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     <button
                                       type="button"
                                       onClick={() => { setPrintMachines([m]); setMachineMenuId(null); }}
@@ -1272,7 +1413,7 @@ export default function MaintenancePage() {
                                       </button>
                                     )}
                                   </div>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                           </MachineCell>
@@ -1734,15 +1875,15 @@ function DetailField({ label, value }: { label: string; value?: React.ReactNode 
 }
 
 function PmHistoryPanel({ machine }: { machine: MaintenanceMachine }) {
-  const today = formatDateIso(new Date());
   const pending = pendingPlanDates(machine);
   const nextKey = pending[0] ? formatDateIso(pending[0]) : '';
+  const currentPlan = effectiveNextMaintenanceDate(machine);
 
   return (
     <div className="space-y-3 mt-4">
-      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-        <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Current date</p>
-        <p className="mt-0.5 text-sm font-bold text-slate-900">{formatDate(today)}</p>
+      <div className="rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2.5 shadow-sm">
+        <p className="text-[9px] font-black uppercase tracking-wider text-blue-700/80">Current plan date</p>
+        <p className="mt-0.5 text-sm font-bold text-blue-900">{currentPlan ? formatDate(currentPlan) : '—'}</p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
@@ -1833,17 +1974,10 @@ function MachineDetailPopup({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-wider hover:bg-slate-700"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-600"
+                className="p-2 rounded-xl hover:bg-slate-200 text-slate-600 transition-colors"
                 aria-label="Close"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
           </div>
@@ -1869,8 +2003,8 @@ function MachineDetailPopup({
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Maintenance Schedule</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                  <DetailField label="Status" value={badge.label} />
-                  <DetailField label="Frequency" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
+                  <DetailField label="Status" value={<span title={badge.hint}>{badge.label}</span>} />
+                  <DetailField label="Frequency" value={frequencyDisplayLabel(machine.trendMonths)} />
                   <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
                   <DetailField label="Open Complaints" value={String(openCount)} />
                   <DetailField label="Resolved Complaints" value={String(resolvedCount)} />
