@@ -1326,22 +1326,22 @@ export default function MaintenancePage() {
                                   <MoreVertical size={16} />
                                 </button>
                                 {machineMenuId === m.id && (
-                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50">
+                                  <div className="absolute right-0 top-full mt-1 min-w-[160px] bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 whitespace-nowrap">
                                     <button
                                       type="button"
                                       onClick={() => { setPrintMachines([m]); setMachineMenuId(null); }}
-                                      className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
+                                      className="w-full text-left px-4 py-2 text-[13px] hover:bg-slate-50 flex items-center gap-3 text-slate-700"
                                     >
-                                      <QrCode size={14} /> Print QR
+                                      <QrCode size={15} className="shrink-0" /> Print QR
                                     </button>
                                     {canMarkMaintenanceDone(m) && (
                                       <button
                                         type="button"
                                         disabled={markingDoneId === m.id}
                                         onClick={() => { setDoneMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-slate-50 flex items-center gap-2.5 text-emerald-700 disabled:opacity-40"
+                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-slate-50 flex items-center gap-3 text-emerald-700 disabled:opacity-40"
                                       >
-                                        <CheckCircle2 size={14} /> Mark Done
+                                        <CheckCircle2 size={15} className="shrink-0" /> Mark Done
                                       </button>
                                     )}
                                     {canDeleteMachine && (
@@ -1349,9 +1349,9 @@ export default function MaintenancePage() {
                                         type="button"
                                         disabled={deletingMachineId === m.id}
                                         onClick={() => { void deleteMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-slate-50 flex items-center gap-2.5 text-rose-600 disabled:opacity-40"
+                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-slate-50 flex items-center gap-3 text-rose-600 disabled:opacity-40"
                                       >
-                                        <Trash2 size={14} /> Delete
+                                        <Trash2 size={15} className="shrink-0" /> Delete
                                       </button>
                                     )}
                                   </div>

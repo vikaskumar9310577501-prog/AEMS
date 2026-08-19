@@ -113,7 +113,7 @@ export default function AppLayout() {
               <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
             <h1 className="text-sm sm:text-base md:text-lg font-black text-white leading-none whitespace-nowrap">
-              {APP_NAME}
+              A.E.M.S
               {isMaintenance ? (
                 <span className="font-bold text-sky-200">
                   {' '}
