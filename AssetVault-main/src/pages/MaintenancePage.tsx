@@ -34,8 +34,6 @@ import {
   canMarkMaintenanceDone,
   complaintPendingDays,
   complaintResolutionDays,
-  computeComplaintStats,
-  filterComplaintsByDashboard,
   isComplaintOverOneWeek,
   isComplaintResolvedWithinWeek,
   daysUntilDate,
@@ -63,7 +61,7 @@ import {
 } from '../lib/userPermissions';
 import { toDisplayDateInput, toDateInputValue } from '../lib/formatDisplayDate';
 import MaintenancePmPlanBoard from '../components/MaintenancePmPlanBoard';
-import MaintenanceComplaintCharts from '../components/MaintenanceComplaintCharts';
+import PremiumComplaintDashboard from '../components/PremiumComplaintDashboard';
 import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal from '../components/MaintenanceResolveModal';
@@ -126,18 +124,21 @@ function formatDate(value?: string) {
   }
 }
 
-function statusBadge(machine: MaintenanceMachine): { label: string; className: string } | null {
+function statusBadge(machine: MaintenanceMachine): { label: string; className: string; detail?: string } | null {
   const days = daysUntilDate(effectiveNextMaintenanceDate(machine));
   if (days == null) return null;
   if (days < 0) {
+    const overdueDays = Math.abs(days);
     return {
       label: 'OVERDUE',
+      detail: `${overdueDays}d late`,
       className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80',
     };
   }
   if (days <= 7) {
     return {
       label: 'DELAYED',
+      detail: `${days}d left`,
       className: 'bg-orange-500/10 text-orange-700 border border-orange-200/80 shadow-sm shadow-orange-100/80',
     };
   }
@@ -177,7 +178,6 @@ export default function MaintenancePage() {
   const [typeFilterOpen, setTypeFilterOpen] = useState(false);
   const filterWrapRef = React.useRef<HTMLDivElement | null>(null);
   const typeFilterRef = React.useRef<HTMLDivElement | null>(null);
-  const complaintListRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -492,7 +492,6 @@ export default function MaintenancePage() {
     [scopedComplaints]
   );
 
-  const complaintStats = useMemo(() => computeComplaintStats(scopedComplaints), [scopedComplaints]);
   const dashboardKpis = useMemo(
     () => computePmPlanKpis(scopedMachines, dashboardYear),
     [scopedMachines, dashboardYear]
@@ -503,18 +502,6 @@ export default function MaintenancePage() {
     () => listMachinesForPmKpi(scopedMachines, new Date().getFullYear(), 'plannedThisMonth'),
     [scopedMachines]
   );
-
-  const complaintDashboardList = useMemo(
-    () => filterComplaintsByDashboard(scopedComplaints, complaintFilter),
-    [scopedComplaints, complaintFilter]
-  );
-
-  const pickComplaintFilter = useCallback((filter: ComplaintDashboardFilter) => {
-    setComplaintFilter(filter);
-    window.setTimeout(() => {
-      complaintListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
-  }, []);
 
   const searchedComplaints = useMemo(() => {
     const q = complaintSearch.trim().toLowerCase();
@@ -942,60 +929,6 @@ export default function MaintenancePage() {
             />
           </div>
         )}
-
-        {tab === 'complaint-dashboard' && canComplaints && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-1 overflow-visible">
-            <ComplaintKpi
-              label="Total complaints"
-              value={complaintStats.total}
-              className="border-slate-300 bg-slate-50"
-              tone="slate"
-              active={complaintFilter === 'total'}
-              onClick={() => pickComplaintFilter('total')}
-            />
-            <ComplaintKpi
-              label="Pending"
-              value={complaintStats.pending}
-              className="border-amber-300 bg-amber-100"
-              tone="amber"
-              active={complaintFilter === 'pending'}
-              onClick={() => pickComplaintFilter('pending')}
-            />
-            <ComplaintKpi
-              label="Resolved"
-              value={complaintStats.resolved}
-              className="border-emerald-400 bg-emerald-100"
-              tone="emerald"
-              active={complaintFilter === 'resolved'}
-              onClick={() => pickComplaintFilter('resolved')}
-            />
-            <ComplaintKpi
-              label="Resolved %"
-              value={`${complaintStats.resolvedPct}%`}
-              className="border-blue-300 bg-blue-100"
-              tone="blue"
-              active={complaintFilter === 'resolved'}
-              onClick={() => pickComplaintFilter('resolved')}
-            />
-            <ComplaintKpi
-              label="Within 1 week"
-              value={complaintStats.resolvedWithinWeek}
-              className="border-violet-400 bg-violet-200"
-              tone="violet"
-              active={complaintFilter === 'within_week'}
-              onClick={() => pickComplaintFilter('within_week')}
-            />
-            <ComplaintKpi
-              label="Over 1 week"
-              value={complaintStats.overOneWeek}
-              className="border-red-700 bg-red-600"
-              tone="overdue"
-              alert="overdue"
-              active={complaintFilter === 'over_week'}
-              onClick={() => pickComplaintFilter('over_week')}
-            />
-          </div>
-        )}
       </div>
 
       <div
@@ -1026,51 +959,16 @@ export default function MaintenancePage() {
         )}
 
         {tab === 'complaint-dashboard' && canComplaints && (
-          <div className="space-y-3">
-            <MaintenanceComplaintCharts complaints={scopedComplaints} plants={plants} />
-            <div ref={complaintListRef} className="bg-white rounded-2xl border border-slate-200 overflow-hidden scroll-mt-4">
-              <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between gap-2">
-                <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                  {complaintFilter === 'total'
-                    ? 'All complaints'
-                    : complaintFilter === 'pending'
-                      ? 'Pending complaints'
-                      : complaintFilter === 'resolved'
-                        ? 'Resolved complaints'
-                        : complaintFilter === 'within_week'
-                          ? 'Resolved within 1 week'
-                          : 'Over 1 week'}
-                </h2>
-                <span className="text-[10px] font-bold text-slate-500">{complaintDashboardList.length} shown</span>
-              </div>
-              {loading ? (
-                <p className="p-6 text-sm text-slate-500">Loading complaints…</p>
-              ) : complaintDashboardList.length === 0 ? (
-                <div className="p-8 text-center">
-                  <BarChart3 className="mx-auto text-slate-300 mb-2" size={28} />
-                  <p className="text-sm text-slate-500">No complaints in this category.</p>
-                </div>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {complaintDashboardList.map((c) => (
-                    <ComplaintListItem
-                      key={c.id}
-                      complaint={c}
-                      plants={plants}
-                      onOpen={() => setDetailComplaint(c)}
-                      onPreviewPhoto={
-                        c.photoUrl
-                          ? () => setComplaintPhotoPreview({ url: c.photoUrl!, name: c.photoName })
-                          : undefined
-                      }
-                      onResolve={() => setResolveComplaintTarget(c)}
-                      expanded
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <PremiumComplaintDashboard
+            complaints={scopedComplaints}
+            plants={plants}
+            loading={loading}
+            onOpenDetail={setDetailComplaint}
+            onResolve={setResolveComplaintTarget}
+            onPreviewPhoto={(c) =>
+              c.photoUrl ? setComplaintPhotoPreview({ url: c.photoUrl, name: c.photoName }) : undefined
+            }
+          />
         )}
 
         {tab === 'machines' && (
@@ -1307,11 +1205,16 @@ export default function MaintenancePage() {
                           </MachineCell>
                           <MachineCell className="shadow-sm group-hover:shadow-md">
                             {badge ? (
-                              <span
-                                className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${badge.className}`}
-                              >
-                                {badge.label}
-                              </span>
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span
+                                  className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </span>
+                                {badge.detail ? (
+                                  <span className="text-[9px] font-bold text-stone-500 pl-0.5">{badge.detail}</span>
+                                ) : null}
+                              </div>
                             ) : (
                               <span className="text-[12px] font-medium text-stone-400">—</span>
                             )}
@@ -1626,55 +1529,6 @@ export default function MaintenancePage() {
   );
 }
 
-function ComplaintKpi({
-  label,
-  value,
-  className,
-  tone,
-  alert,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number | string;
-  className: string;
-  tone: 'slate' | 'amber' | 'emerald' | 'blue' | 'violet' | 'overdue';
-  alert?: 'overdue';
-  active?: boolean;
-  onClick: () => void;
-}) {
-  const labelTone =
-    tone === 'overdue'
-      ? 'text-red-50'
-      : tone === 'slate'
-        ? 'text-slate-700'
-        : tone === 'amber'
-          ? 'text-amber-900'
-          : tone === 'emerald'
-            ? 'text-emerald-900'
-            : tone === 'blue'
-              ? 'text-blue-900'
-              : tone === 'violet'
-                ? 'text-violet-900'
-                : 'text-orange-900';
-  const valueTone = tone === 'overdue' ? 'text-white' : 'text-slate-900';
-  const numeric = typeof value === 'number' ? value : parseInt(String(value), 10);
-  const alertClass = alert === 'overdue' && Number.isFinite(numeric) && numeric > 0 ? 'kpi-alert-overdue' : '';
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-xl border px-3 py-2 text-left w-full cursor-pointer ${className} ${alertClass} ${
-        active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
-      }`}
-    >
-      <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0.5 ${valueTone}`}>{value}</p>
-    </button>
-  );
-}
-
 function DashboardKpi({
   label,
   value,
@@ -1809,9 +1663,14 @@ function DashboardKpiOverlay({
                     <td className="px-4 py-2.5 text-slate-700">{m.responsibility || '—'}</td>
                     <td className="px-4 py-2.5">
                       {badge ? (
-                        <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
-                          {badge.label}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase w-fit ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                          {badge.detail ? (
+                            <span className="text-[9px] font-bold text-stone-500">{badge.detail}</span>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="text-stone-400">—</span>
                       )}
@@ -1942,8 +1801,9 @@ function MachineDetailPopup({
               </div>
               <p className="font-mono text-sm font-bold text-blue-700">{machine.assetCode}</p>
               {badge ? (
-                <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
-                  {badge.label}
+                <span className={`inline-flex flex-col px-2 py-1 rounded-lg text-[10px] font-black uppercase ${badge.className}`}>
+                  <span>{badge.label}</span>
+                  {badge.detail ? <span className="text-[8px] font-bold normal-case opacity-80">{badge.detail}</span> : null}
                 </span>
               ) : null}
             </div>
@@ -1978,10 +1838,7 @@ function MachineDetailPopup({
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Maintenance Schedule</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                  <DetailField
-                    label="Status"
-                    value={badge ? badge.label : '—'}
-                  />
+                  <DetailField label="Status" value={badge ? `${badge.label}${badge.detail ? ` · ${badge.detail}` : ''}` : '—'} />
                   <DetailField label="Frequency" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
                   <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
                   <DetailField label="Open Complaints" value={String(openCount)} />
