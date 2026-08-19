@@ -118,13 +118,34 @@ function formatDate(value?: string) {
 
 function statusBadge(machine: MaintenanceMachine) {
   if (machine.status === 'Down') {
-    return { label: 'Down', className: 'bg-rose-100 text-rose-700' };
+    return { label: 'DOWN', className: 'bg-red-50 text-red-600 border border-red-200' };
+  }
+  if (machine.status === 'Maintenance') {
+    return { label: 'MAINTENANCE', className: 'bg-emerald-50 text-emerald-600 border border-emerald-200' };
+  }
+  if (machine.status === 'Planned') {
+    return { label: 'PLANNED', className: 'bg-blue-50 text-blue-600 border border-blue-200' };
   }
   const days = daysUntilDate(effectiveNextMaintenanceDate(machine));
-  if (days == null) return { label: machine.status || 'Active', className: 'bg-slate-100 text-slate-700' };
-  if (days < 0) return { label: `Overdue ${Math.abs(days)}d`, className: 'bg-red-100 text-red-700' };
-  if (days <= 7) return { label: `Due in ${days}d`, className: 'bg-amber-100 text-amber-800' };
-  return { label: 'Active', className: 'bg-emerald-100 text-emerald-700' };
+  if (days == null) return { label: machine.status?.toUpperCase() || 'ACTIVE', className: 'bg-emerald-50 text-emerald-600 border border-emerald-200' };
+  if (days < 0) return { label: `OVERDUE`, className: 'bg-red-50 text-red-600 border border-red-200' };
+  if (days <= 7) return { label: `OVERDUE`, className: 'bg-orange-50 text-orange-600 border border-orange-200' };
+  return { label: 'ACTIVE', className: 'bg-emerald-50 text-emerald-600 border border-emerald-200' };
+}
+
+function MiniTrendSvg({ months }: { months: number }) {
+  const isCustom = isCustomTrend(months);
+  const color = isCustom ? '#f59e0b' : months <= 3 ? '#ef4444' : '#22c55e';
+  const points = isCustom
+    ? '2,12 8,8 14,14 20,6 26,10 32,4 38,9'
+    : months <= 3
+      ? '2,10 8,4 14,12 20,6 26,14 32,8 38,10'
+      : '2,14 8,10 14,6 20,8 26,4 32,6 38,2';
+  return (
+    <svg width={40} height={16} viewBox="0 0 40 16" className="shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function sameLoc(a?: string, b?: string) {
@@ -434,6 +455,16 @@ export default function MaintenancePage() {
         .includes(q)
     );
   }, [scopedMachines, search, plants]);
+
+  const [machinePage, setMachinePage] = useState(1);
+  const [machinePageSize, setMachinePageSize] = useState(10);
+  const totalMachinePages = Math.max(1, Math.ceil(filtered.length / machinePageSize));
+  const safeMachinePage = Math.min(machinePage, totalMachinePages);
+  const paginatedMachines = useMemo(() => {
+    const start = (safeMachinePage - 1) * machinePageSize;
+    return filtered.slice(start, start + machinePageSize);
+  }, [filtered, safeMachinePage, machinePageSize]);
+  useEffect(() => { setMachinePage(1); }, [search, machinePageSize]);
 
   const openComplaints = useMemo(() => scopedComplaints.filter((c) => c.status === 'Open'), [scopedComplaints]);
   const resolvedComplaints = useMemo(
@@ -1146,39 +1177,40 @@ export default function MaintenancePage() {
               </div>
             ) : (
               <div className="overflow-auto flex-1 min-h-0 max-h-[calc(100dvh-11rem)]">
-                <table className="w-full min-w-[900px] border-collapse text-[11px] leading-snug">
-                  <thead className="sticky top-0 z-30 bg-slate-50 text-[9px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <table className="w-full min-w-[1060px] border-collapse text-[13px] leading-normal">
+                  <thead className="sticky top-0 z-30 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b-2 border-slate-100">
                     <tr>
-                      <th className="sticky left-0 z-40 bg-slate-50 px-2 py-2.5 w-8">
+                      <th className="px-4 py-3 w-10 text-center">
                         <input
                           type="checkbox"
                           checked={allFilteredSelected}
                           onChange={toggleAllFiltered}
-                          className="rounded border-slate-300 scale-90"
+                          className="rounded border-slate-300"
                           title="Select all"
                         />
                       </th>
-                      <th className="px-3 py-2.5 text-left">Machine ID</th>
-                      <th className="px-3 py-2.5 text-left">Machine Name</th>
-                      <th className="px-3 py-2.5 text-left">Type</th>
-                      <th className="px-3 py-2.5 text-left">Department</th>
-                      <th className="px-3 py-2.5 text-left">Plant</th>
-                      <th className="px-3 py-2.5 text-left">Trend</th>
-                      <th className="px-3 py-2.5 text-left">Next PM</th>
-                      <th className="px-3 py-2.5 text-left">Status</th>
-                      <th className="sticky right-0 z-40 bg-slate-50 px-3 py-2.5 text-right">Actions</th>
+                      <th className="px-4 py-3 text-left font-semibold">Machine ID</th>
+                      <th className="px-4 py-3 text-left font-semibold">Machine Name</th>
+                      <th className="px-4 py-3 text-left font-semibold">Type</th>
+                      <th className="px-4 py-3 text-left font-semibold w-16">No.</th>
+                      <th className="px-4 py-3 text-left font-semibold">Department</th>
+                      <th className="px-4 py-3 text-left font-semibold">Plant</th>
+                      <th className="px-4 py-3 text-left font-semibold">Trend</th>
+                      <th className="px-4 py-3 text-left font-semibold">Next PM</th>
+                      <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      <th className="px-4 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filtered.map((m, i) => {
+                  <tbody>
+                    {paginatedMachines.map((m) => {
                       const badge = statusBadge(m);
                       const pendingDays = maintenancePendingDays(m);
                       const plant = plantTableLabel(m.plantCode, plants);
-                      const name = machineRowName(m);
+                      const trendM = machineTrendMonths(m);
                       return (
                         <tr
                           key={m.id}
-                          className="group hover:bg-blue-50/60 transition-colors cursor-pointer"
+                          className="group border-b border-slate-100 hover:bg-blue-50/40 transition-colors cursor-pointer"
                           onClick={() => setDetailMachine(m)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -1188,101 +1220,98 @@ export default function MaintenancePage() {
                           }}
                           tabIndex={0}
                           role="button"
-                          title="Click for machine details"
                         >
                           <td
-                            className="sticky left-0 z-10 bg-white group-hover:bg-blue-50/60 px-2 py-3"
+                            className="px-4 py-4 text-center"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
                               type="checkbox"
                               checked={selectedIds.has(m.id)}
                               onChange={() => toggleOne(m.id)}
-                              className="rounded border-slate-300 scale-90"
+                              className="rounded border-slate-300"
                             />
                           </td>
-                          <td className="px-3 py-3 font-mono font-semibold text-blue-600 whitespace-nowrap">
+                          <td className="px-4 py-4 font-semibold text-blue-600 whitespace-nowrap">
                             {m.assetCode}
                           </td>
-                          <td className="px-3 py-3 font-medium text-slate-800 max-w-[180px] truncate" title={name}>
-                            {name}
+                          <td className="px-4 py-4 font-medium text-slate-800" title={m.equipmentName || m.machineType}>
+                            {m.equipmentName || m.machineType}
                           </td>
-                          <td className="px-3 py-3 text-slate-600 max-w-[140px] truncate" title={m.machineType}>
+                          <td className="px-4 py-4 text-slate-600">
                             {m.machineType}
                           </td>
-                          <td className="px-3 py-3 text-slate-600 max-w-[120px] truncate" title={m.department}>
+                          <td className="px-4 py-4 text-slate-600 font-mono">
+                            {m.machineNumber}
+                          </td>
+                          <td className="px-4 py-4 text-slate-600 uppercase text-[12px]">
                             {m.department || '—'}
                           </td>
-                          <td className="px-3 py-3 text-slate-600 font-medium whitespace-nowrap" title={plant.full}>
+                          <td className="px-4 py-4 text-slate-600 uppercase text-[12px] font-medium" title={plant.full}>
                             {plant.short}
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <select
-                              value={machineTrendMonths(m)}
-                              disabled={updatingTrendId === m.id}
-                              onChange={(e) => void changeMachineTrend(m, Number(e.target.value))}
-                              onClick={(e) => e.stopPropagation()}
-                              className="border border-slate-200 rounded-md text-[11px] font-medium py-1 px-2 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                              title={trendMonthsLabel(machineTrendMonths(m))}
-                            >
-                              {TREND_SELECT_OPTIONS.map((n) => (
-                                <option key={n} value={n}>
-                                  {trendCompactLabel(n)}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5">
-                              <CalendarRange size={13} className="text-slate-400 shrink-0" />
-                              <input
-                                type="date"
-                                value={toDateInputValue(m.nextMaintenanceDate)}
-                                disabled={updatingDateId === m.id}
-                                onChange={(e) => void changeMachineNextDate(m, e.target.value)}
+                          <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2">
+                              <MiniTrendSvg months={trendM} />
+                              <select
+                                value={trendM}
+                                disabled={updatingTrendId === m.id}
+                                onChange={(e) => void changeMachineTrend(m, Number(e.target.value))}
                                 onClick={(e) => e.stopPropagation()}
-                                className="border border-slate-200 rounded-md text-[11px] font-medium py-1 px-2 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                title="Next maintenance date"
-                              />
+                                className="border border-slate-200 rounded text-[12px] font-medium py-0.5 px-1.5 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400 appearance-none pr-5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%226%22%20viewBox%3D%220%200%2010%206%22%3E%3Cpath%20d%3D%22M0%200l5%206%205-6H0z%22%20fill%3D%22%2394a3b8%22/%3E%3C/svg%3E')] bg-[length:10px_6px] bg-[right_6px_center] bg-no-repeat"
+                                title={trendMonthsLabel(trendM)}
+                              >
+                                {TREND_SELECT_OPTIONS.map((n) => (
+                                  <option key={n} value={n}>
+                                    {trendCompactLabel(n)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5 text-slate-700">
+                              <CalendarRange size={14} className="text-slate-400 shrink-0" />
+                              <span className="text-[13px] font-medium">{formatDate(m.nextMaintenanceDate)}</span>
                             </div>
                             {pendingDays > 0 && (
-                              <span className="block text-[9px] font-semibold text-red-600 leading-tight mt-0.5 pl-5">
+                              <span className="block text-[10px] font-semibold text-red-500 leading-tight mt-0.5 pl-5">
                                 -{pendingDays}d
                               </span>
                             )}
-                            {isCustomTrend(machineTrendMonths(m)) && (m.customPlanDates?.length || 0) > 0 ? (
-                              <span className="block text-[9px] font-medium text-amber-700 leading-tight pl-5">
+                            {isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0 ? (
+                              <span className="block text-[10px] font-medium text-amber-600 leading-tight pl-5">
                                 +{m.customPlanDates!.length} dt
                               </span>
                             ) : null}
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-4 py-4">
                             <span
-                              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${badge.className}`}
+                              className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${badge.className}`}
                             >
                               {badge.label}
                             </span>
                           </td>
                           <td
-                            className="sticky right-0 z-10 bg-white group-hover:bg-blue-50/60 px-3 py-3"
+                            className="px-4 py-4"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => setDetailMachine(m)}
-                                className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
                                 title="View details"
                               >
-                                <Eye size={15} />
+                                <Eye size={16} />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditMachine(m)}
-                                className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
                                 title="Edit"
                               >
-                                <Pencil size={15} />
+                                <Pencil size={16} />
                               </button>
                               <div className="relative">
                                 <button
@@ -1291,28 +1320,28 @@ export default function MaintenancePage() {
                                     e.stopPropagation();
                                     setMachineMenuId(machineMenuId === m.id ? null : m.id);
                                   }}
-                                  className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
                                   title="More actions"
                                 >
-                                  <MoreVertical size={15} />
+                                  <MoreVertical size={16} />
                                 </button>
                                 {machineMenuId === m.id && (
-                                  <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+                                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50">
                                     <button
                                       type="button"
                                       onClick={() => { setPrintMachines([m]); setMachineMenuId(null); }}
-                                      className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                                      className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
                                     >
-                                      <QrCode size={13} /> Print QR
+                                      <QrCode size={14} /> Print QR
                                     </button>
                                     {canMarkMaintenanceDone(m) && (
                                       <button
                                         type="button"
                                         disabled={markingDoneId === m.id}
                                         onClick={() => { setDoneMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-emerald-700 disabled:opacity-40"
+                                        className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-slate-50 flex items-center gap-2.5 text-emerald-700 disabled:opacity-40"
                                       >
-                                        <CheckCircle2 size={13} /> Mark Done
+                                        <CheckCircle2 size={14} /> Mark Done
                                       </button>
                                     )}
                                     {canDeleteMachine && (
@@ -1320,9 +1349,9 @@ export default function MaintenancePage() {
                                         type="button"
                                         disabled={deletingMachineId === m.id}
                                         onClick={() => { void deleteMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-rose-600 disabled:opacity-40"
+                                        className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-slate-50 flex items-center gap-2.5 text-rose-600 disabled:opacity-40"
                                       >
-                                        <Trash2 size={13} /> Delete
+                                        <Trash2 size={14} /> Delete
                                       </button>
                                     )}
                                   </div>
@@ -1335,6 +1364,78 @@ export default function MaintenancePage() {
                     })}
                   </tbody>
                 </table>
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-[12px] text-slate-500">
+                  <span>
+                    Showing {Math.min((safeMachinePage - 1) * machinePageSize + 1, filtered.length)} to{' '}
+                    {Math.min(safeMachinePage * machinePageSize, filtered.length)} of {filtered.length} entries
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={safeMachinePage <= 1}
+                      onClick={() => setMachinePage((p) => Math.max(1, p - 1))}
+                      className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    {Array.from({ length: Math.min(totalMachinePages, 5) }, (_, i) => {
+                      let page: number;
+                      if (totalMachinePages <= 5) {
+                        page = i + 1;
+                      } else if (safeMachinePage <= 3) {
+                        page = i + 1;
+                      } else if (safeMachinePage >= totalMachinePages - 2) {
+                        page = totalMachinePages - 4 + i;
+                      } else {
+                        page = safeMachinePage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => setMachinePage(page)}
+                          className={`w-8 h-8 rounded text-[12px] font-semibold ${
+                            page === safeMachinePage
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                    {totalMachinePages > 5 && safeMachinePage < totalMachinePages - 2 && (
+                      <>
+                        <span className="px-1 text-slate-400">…</span>
+                        <button
+                          type="button"
+                          onClick={() => setMachinePage(totalMachinePages)}
+                          className="w-8 h-8 rounded border border-slate-200 text-[12px] font-semibold text-slate-600 hover:bg-slate-50"
+                        >
+                          {totalMachinePages}
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      disabled={safeMachinePage >= totalMachinePages}
+                      onClick={() => setMachinePage((p) => Math.min(totalMachinePages, p + 1))}
+                      className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                    <select
+                      value={machinePageSize}
+                      onChange={(e) => setMachinePageSize(Number(e.target.value))}
+                      className="ml-2 border border-slate-200 rounded text-[12px] py-1 px-2 bg-white text-slate-600"
+                    >
+                      {[10, 25, 50, 100].map((n) => (
+                        <option key={n} value={n}>{n} / page</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
           </div>
