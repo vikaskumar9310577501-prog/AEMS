@@ -14,6 +14,8 @@ import {
   canDeleteUser,
   canEditUser,
   isItAdminRole,
+  PREVENTION_MODULE_CATEGORY,
+  hasPreventionModuleCategory,
 } from '../lib/userPermissions';
 import { ViewModeToggle, useListViewMode } from '../components/ViewModeToggle';
 
@@ -37,9 +39,10 @@ const emptyForm = (): AppUser => ({
   allowDelete: false,
 });
 
-const MANAGEABLE_CATEGORIES = MISSING_ITEMS_FEATURE_ENABLED
+const MANAGEABLE_CATEGORIES = (MISSING_ITEMS_FEATURE_ENABLED
   ? MAIN_CATEGORIES
-  : MAIN_CATEGORIES.filter((cat) => String(cat) !== 'Missing Items');
+  : MAIN_CATEGORIES.filter((cat) => String(cat) !== 'Missing Items')
+).filter((cat) => String(cat) !== PREVENTION_MODULE_CATEGORY);
 
 const sanitizeCategories = (categories: string[] = []) =>
   MISSING_ITEMS_FEATURE_ENABLED
@@ -76,6 +79,7 @@ export default function UserManagement() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedPlants, setSelectedPlants] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [preventionAccess, setPreventionAccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useListViewMode('assetvault.users.viewMode', 'grid');
 
@@ -191,6 +195,7 @@ export default function UserManagement() {
     setSelectedLocations([]);
     setSelectedPlants([]);
     setSelectedCategories(allowedCategories.length === 1 ? [...allowedCategories] : []);
+    setPreventionAccess(false);
     setModalOpen(true);
   };
 
@@ -203,7 +208,10 @@ export default function UserManagement() {
     setForm({ ...user });
     setSelectedLocations([...user.locations]);
     setSelectedPlants([...user.plants]);
-    setSelectedCategories(sanitizeCategories(user.categories || []));
+    setSelectedCategories(
+      sanitizeCategories(user.categories || []).filter((c) => c !== PREVENTION_MODULE_CATEGORY)
+    );
+    setPreventionAccess(hasPreventionModuleCategory(user.categories));
     setModalOpen(true);
   };
 
@@ -217,18 +225,26 @@ export default function UserManagement() {
     if (isRoleITAdmin && !isITAdmin) {
       return toast.error('Only IT Admin can assign the IT Admin role');
     }
+    const mergedCategories = isRoleITAdmin
+      ? ['All']
+      : [
+          ...selectedCategories,
+          ...(preventionAccess ? [PREVENTION_MODULE_CATEGORY] : []),
+        ];
     const payload: AppUser = {
       ...form,
       email: form.email.trim().toLowerCase(),
       locations: isRoleITAdmin ? ['All'] : selectedLocations,
       plants: isRoleITAdmin ? ['All'] : selectedPlants,
-      categories: isRoleITAdmin ? ['All'] : selectedCategories,
+      categories: mergedCategories,
     };
     if (!payload.email) return toast.error('Email is required');
     if (!isRoleITAdmin) {
       if (selectedLocations.length === 0) return toast.error('Select at least one location');
       if (selectedPlants.length === 0) return toast.error('Select at least one plant');
-      if (selectedCategories.length === 0) return toast.error('Select at least one category access');
+      if (selectedCategories.length === 0 && !preventionAccess) {
+        return toast.error('Select at least one asset category or Prevention (PM) access');
+      }
       if (!isITAdmin && selectedCategories.some((c) => !allowedCategories.includes(c))) {
         return toast.error('You can only assign categories you have access to');
       }
@@ -388,7 +404,14 @@ export default function UserManagement() {
                     <td className="p-3 text-sm text-gray-600">{u.locations.join(', ') || '—'}</td>
                     <td className="p-3 text-sm text-gray-600">{u.plants.join(', ') || '—'}</td>
                     <td className="p-3 text-sm text-gray-600">
-                      {u.role === 'IT Admin' ? 'All' : sanitizeCategories(u.categories || []).join(', ') || '—'}
+                      {u.role === 'IT Admin'
+                        ? 'All'
+                        : [
+                            ...sanitizeCategories(u.categories || []).filter(
+                              (c) => c !== PREVENTION_MODULE_CATEGORY
+                            ),
+                            ...(hasPreventionModuleCategory(u.categories) ? [PREVENTION_MODULE_CATEGORY] : []),
+                          ].join(', ') || '—'}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">
@@ -564,6 +587,30 @@ export default function UserManagement() {
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-3">
+                    <label className="block text-xs font-bold text-teal-900 mb-2">
+                      Prevention (PM) module
+                    </label>
+                    <p className="text-[11px] text-teal-800/80 mb-2">
+                      Separate from asset categories. Grants access to PM machines &amp; QR complaints when combined with User role.
+                    </p>
+                    <label
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer border ${
+                        preventionAccess
+                          ? 'bg-teal-100 border-teal-400 text-teal-900 font-bold'
+                          : 'bg-white border-teal-200 text-gray-700'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={preventionAccess}
+                        onChange={() => setPreventionAccess((v) => !v)}
+                        className="w-4 h-4"
+                      />
+                      {PREVENTION_MODULE_CATEGORY}
+                    </label>
                   </div>
                 </>
               )}

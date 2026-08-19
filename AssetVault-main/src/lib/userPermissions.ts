@@ -50,14 +50,28 @@ export function assignableRoles(actorRole: string | undefined | null): string[] 
   return [];
 }
 
-/** Maintenance module — IT Admin only. */
-export function canAccessMaintenance(role: string | undefined | null): boolean {
-  return isItAdminRole(role);
+/** Prevention module scope — assign in User Management (separate from asset categories). */
+export const PREVENTION_MODULE_CATEGORY = 'Prevention (PM)';
+
+export function hasPreventionModuleCategory(categories: string[] | undefined): boolean {
+  return (categories || []).some(
+    (c) => String(c || '').trim().toLowerCase() === PREVENTION_MODULE_CATEGORY.toLowerCase()
+  );
 }
 
-/** User: machines + PM plan. Admin: dashboard + machines + complaints. IT Admin: all. */
+/** IT Admin, Admin, or User with Prevention (PM) category (User role always allowed). */
+export function canAccessMaintenance(
+  role: string | undefined | null,
+  categories?: string[]
+): boolean {
+  if (isItAdminRole(role) || isAdminRole(role)) return true;
+  if (isUserRole(role)) return true;
+  return hasPreventionModuleCategory(categories);
+}
+
+/** PM prevention dashboard — Admin + IT Admin. */
 export function canViewMaintenanceDashboard(role: string | undefined | null): boolean {
-  return canAccessMaintenance(role);
+  return isAdminRole(role);
 }
 
 export function canViewMaintenanceMachines(role: string | undefined | null): boolean {
@@ -65,11 +79,22 @@ export function canViewMaintenanceMachines(role: string | undefined | null): boo
 }
 
 export function canAddMaintenanceMachine(role: string | undefined | null): boolean {
-  return canAccessMaintenance(role);
+  return isAdminRole(role);
 }
 
-export function canViewMaintenanceComplaints(role: string | undefined | null): boolean {
+/** Complaint analytics dashboard — Admin + IT Admin. */
+export function canViewMaintenanceComplaintDashboard(role: string | undefined | null): boolean {
   return isAdminRole(role);
+}
+
+/** QR complaints inbox (Mark Done) — User + IT Admin. Admin uses analytics dashboard. */
+export function canViewMaintenanceComplaintsInbox(role: string | undefined | null): boolean {
+  return isItAdminRole(role) || isUserRole(role);
+}
+
+/** @deprecated use dashboard or inbox helpers */
+export function canViewMaintenanceComplaints(role: string | undefined | null): boolean {
+  return canViewMaintenanceComplaintDashboard(role) || canViewMaintenanceComplaintsInbox(role);
 }
 
 /** FH / PH plant contact settings — IT Admin only. */
@@ -86,6 +111,7 @@ export type MaintenanceTabId =
 
 export function defaultMaintenanceTab(role: string | undefined | null): MaintenanceTabId {
   if (canViewMaintenanceDashboard(role)) return 'dashboard';
+  if (canViewMaintenanceComplaintsInbox(role)) return 'complaints';
   return 'machines';
 }
 
@@ -95,8 +121,8 @@ export function canAccessMaintenanceTab(
 ): boolean {
   if (tab === 'dashboard') return canViewMaintenanceDashboard(role);
   if (tab === 'machines') return canViewMaintenanceMachines(role);
-  if (tab === 'complaint-dashboard') return canViewMaintenanceComplaints(role);
-  if (tab === 'complaints') return canViewMaintenanceComplaints(role);
+  if (tab === 'complaint-dashboard') return canViewMaintenanceComplaintDashboard(role);
+  if (tab === 'complaints') return canViewMaintenanceComplaintsInbox(role);
   if (tab === 'settings') return canManageMaintenanceFhPh(role);
   return false;
 }

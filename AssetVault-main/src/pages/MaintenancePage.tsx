@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
@@ -54,7 +55,8 @@ import {
   canAccessMaintenanceTab,
   canAddMaintenanceMachine,
   canManageMaintenanceFhPh,
-  canViewMaintenanceComplaints,
+  canViewMaintenanceComplaintDashboard,
+  canViewMaintenanceComplaintsInbox,
   canViewMaintenanceDashboard,
   defaultMaintenanceTab,
   isItAdminRole,
@@ -272,7 +274,8 @@ export default function MaintenancePage() {
     try {
       const base = import.meta.env.VITE_API_BASE_URL || '';
       const role = user?.role;
-      const wantComplaints = canViewMaintenanceComplaints(role);
+      const wantComplaints =
+        canViewMaintenanceComplaintDashboard(role) || canViewMaintenanceComplaintsInbox(role);
       const [machRes, cmpRes, settingsRes] = await Promise.all([
         fetch(`${base}/api/maintenance/machines`, { credentials: 'include' }),
         wantComplaints
@@ -314,7 +317,7 @@ export default function MaintenancePage() {
   }, [user?.role]);
 
   useEffect(() => {
-    if (!user || !canAccessMaintenance(user.role)) return;
+    if (!user || !canAccessMaintenance(user.role, user.categories)) return;
     const next = defaultMaintenanceTab(user.role);
     setTab((prev) => (canAccessMaintenanceTab(user.role, prev) ? prev : next));
   }, [user?.role]);
@@ -351,12 +354,16 @@ export default function MaintenancePage() {
   }, [typeFilterOpen]);
 
   useEffect(() => {
-    if (!user || !canAccessMaintenance(user.role)) return;
+    if (!user || !canAccessMaintenance(user.role, user.categories)) return;
     void load();
   }, [load, user?.role]);
 
   useEffect(() => {
-    if (!user || !canViewMaintenanceComplaints(user.role)) return;
+    if (
+      !user ||
+      (!canViewMaintenanceComplaintsInbox(user.role) && !canViewMaintenanceComplaintDashboard(user.role))
+    )
+      return;
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission === 'default') {
       void Notification.requestPermission();
@@ -364,7 +371,11 @@ export default function MaintenancePage() {
   }, [user?.role]);
 
   useEffect(() => {
-    if (!user || !canViewMaintenanceComplaints(user.role)) return;
+    if (
+      !user ||
+      (!canViewMaintenanceComplaintsInbox(user.role) && !canViewMaintenanceComplaintDashboard(user.role))
+    )
+      return;
     const base = import.meta.env.VITE_API_BASE_URL || '';
     let cancelled = false;
 
@@ -696,12 +707,13 @@ export default function MaintenancePage() {
     }
   };
 
-  if (!user || !canAccessMaintenance(user.role)) {
+  if (!user || !canAccessMaintenance(user.role, user.categories)) {
     return <Navigate to={user?.role === 'HR' ? '/employees' : '/dashboard'} replace />;
   }
 
   const canDash = canViewMaintenanceDashboard(user.role);
-  const canComplaints = canViewMaintenanceComplaints(user.role);
+  const canComplaintDash = canViewMaintenanceComplaintDashboard(user.role);
+  const canComplaintsInbox = canViewMaintenanceComplaintsInbox(user.role);
   const canFhPh = canManageMaintenanceFhPh(user.role);
   const canAddMachine = canAddMaintenanceMachine(user.role);
   const canDeleteMachine = isItAdminRole(user.role);
@@ -750,27 +762,25 @@ export default function MaintenancePage() {
                 <Factory size={14} />
                 Machines
               </button>
-              {canComplaints && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => goTab('complaint-dashboard')}
-                    className={navBtn(tab === 'complaint-dashboard')}
-                  >
-                    <BarChart3 size={14} />
-                    Complaint Dashboard
-                  </button>
-                  {(tab === 'complaint-dashboard' || tab === 'complaints') && (
-                    <button
-                      type="button"
-                      onClick={() => goTab('complaints')}
-                      className={navBtn(tab === 'complaints')}
-                    >
-                      <AlertTriangle size={14} />
-                      Complaints
-                    </button>
-                  )}
-                </>
+              {canComplaintDash && (
+                <button
+                  type="button"
+                  onClick={() => goTab('complaint-dashboard')}
+                  className={navBtn(tab === 'complaint-dashboard')}
+                >
+                  <BarChart3 size={14} />
+                  Complaint Dashboard
+                </button>
+              )}
+              {canComplaintsInbox && (
+                <button
+                  type="button"
+                  onClick={() => goTab('complaints')}
+                  className={navBtn(tab === 'complaints')}
+                >
+                  <AlertTriangle size={14} />
+                  Complaints
+                </button>
               )}
 
               {(tab === 'dashboard' || tab === 'machines' || tab === 'complaint-dashboard' || tab === 'complaints') && (
@@ -850,7 +860,8 @@ export default function MaintenancePage() {
           </div>
 
           <div className="flex flex-wrap gap-2 shrink-0 items-center">
-            {(tab === 'complaint-dashboard' || tab === 'complaints') && canComplaints && (
+            {(tab === 'complaint-dashboard' || tab === 'complaints') &&
+              (canComplaintDash || canComplaintsInbox) && (
               <div className="relative min-w-[200px] max-w-[280px]">
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
@@ -960,7 +971,7 @@ export default function MaintenancePage() {
           </div>
         )}
 
-        {tab === 'complaint-dashboard' && canComplaints && (
+        {tab === 'complaint-dashboard' && canComplaintDash && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-1 overflow-visible">
             <ComplaintKpi
               label="Total complaints"
@@ -1023,7 +1034,7 @@ export default function MaintenancePage() {
         }`}
       >
         {tab === 'dashboard' && canDash && (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
             {kpiOverlay ? (
               <DashboardKpiOverlay
                 title={PM_KPI_TITLES[kpiOverlay]}
@@ -1031,6 +1042,7 @@ export default function MaintenancePage() {
                 complaints={scopedComplaints}
                 plants={plants}
                 onBack={() => setKpiOverlay(null)}
+                onOpenMachine={setDetailMachine}
               />
             ) : (
               <MaintenancePmPlanBoard
@@ -1042,7 +1054,7 @@ export default function MaintenancePage() {
           </div>
         )}
 
-        {tab === 'complaint-dashboard' && canComplaints && (
+        {tab === 'complaint-dashboard' && canComplaintDash && (
           <PremiumComplaintDashboard
             complaints={scopedComplaints}
             plants={plants}
@@ -1386,7 +1398,7 @@ export default function MaintenancePage() {
           </div>
         )}
 
-        {tab === 'complaints' && canComplaints && (
+        {tab === 'complaints' && canComplaintsInbox && (
           <ComplaintsInbox
             complaints={complaintsInboxList}
             plants={plants}
@@ -1675,20 +1687,19 @@ function DashboardKpi({
 function DashboardKpiOverlay({
   title,
   machines,
-  complaints,
   plants,
   onBack,
+  onOpenMachine,
 }: {
   title: string;
   machines: MaintenanceMachine[];
   complaints: MaintenanceComplaint[];
   plants: { code: string; name: string; location: string }[];
   onBack: () => void;
+  onOpenMachine: (machine: MaintenanceMachine) => void;
 }) {
-  const [detail, setDetail] = useState<MaintenanceMachine | null>(null);
-
   return (
-    <div className="absolute inset-0 z-20 bg-white rounded-2xl border-2 border-slate-300 shadow-sm flex flex-col min-h-0 overflow-hidden">
+    <div className="absolute inset-0 z-20 bg-white rounded-2xl border-2 border-stone-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
         <button
           type="button"
@@ -1727,19 +1738,28 @@ function DashboardKpiOverlay({
                   <tr
                     key={m.id}
                     className="hover:bg-blue-50 cursor-pointer"
-                    onClick={() => setDetail(m)}
+                    onClick={() => onOpenMachine(m)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setDetail(m);
+                        onOpenMachine(m);
                       }
                     }}
                     tabIndex={0}
                     role="button"
                   >
                     <td className="px-4 py-2.5">
-                      <p className="font-bold text-slate-900">{name}</p>
-                      <p className="text-[11px] text-slate-500">{m.machineType}</p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMachine(m);
+                        }}
+                        className="text-left font-bold text-stone-900 hover:text-blue-700 underline-offset-2 hover:underline"
+                      >
+                        {name}
+                      </button>
+                      <p className="text-[11px] text-stone-500">{m.machineType}</p>
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs font-bold text-blue-700">{m.assetCode}</td>
                     <td className="px-4 py-2.5 font-semibold text-slate-700">
@@ -1771,14 +1791,6 @@ function DashboardKpiOverlay({
           </table>
         )}
       </div>
-      {detail && (
-        <MachineDetailPopup
-          machine={detail}
-          complaints={complaints.filter((c) => c.machineId === detail.id || c.assetCode === detail.assetCode)}
-          plants={plants}
-          onClose={() => setDetail(null)}
-        />
-      )}
     </div>
   );
 }
@@ -1863,21 +1875,22 @@ function MachineDetailPopup({
   const badge = statusBadge(machine);
   const openCount = complaints.filter((c) => c.status === 'Open').length;
   const resolvedCount = complaints.filter((c) => c.status === 'Resolved').length;
-  return (
+
+  const popup = (
     <div
-      className="fixed inset-0 z-50 bg-slate-900/45 p-3 sm:p-5 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-[200] bg-stone-900/50 backdrop-blur-[2px] p-2 sm:p-4 md:p-5 overflow-y-auto overscroll-contain"
       onClick={onClose}
       role="presentation"
     >
-      <div className="min-h-full flex items-center justify-center">
+      <div className="min-h-[min(100%,100dvh)] flex items-start sm:items-center justify-center py-2 sm:py-4">
         <div
-          className="w-full max-w-[1120px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-2xl flex flex-col"
+          className="w-full max-w-[1120px] max-h-none sm:max-h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-[#FFFCF8] border border-stone-200/80 shadow-[0_24px_64px_-12px_rgba(80,60,40,0.28)] flex flex-col my-auto"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
           aria-labelledby="machine-detail-title"
         >
-          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 bg-slate-50">
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-stone-200/60 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA]">
             <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Machine detail</p>
@@ -1996,6 +2009,9 @@ function MachineDetailPopup({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(popup, document.body);
 }
 
 function ComplaintListItem({

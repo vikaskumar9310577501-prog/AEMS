@@ -4004,8 +4004,8 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
 app.get("/api/maintenance/complaints", async (req, res) => {
   try {
     const role = String(req.authUser?.role || "").trim().toLowerCase();
-    if (role === "user" || role === "hr") {
-      return res.status(403).json({ error: "Complaints are available to Admin and IT Admin only" });
+    if (role === "hr") {
+      return res.status(403).json({ error: "Complaints are not available for HR role" });
     }
     const complaints = await listMaintenanceComplaints();
     complaints.sort((a, b) => String(b.reportedAt).localeCompare(String(a.reportedAt)));
@@ -4131,8 +4131,8 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
 app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
   try {
     const role = String(req.authUser?.role || "").trim().toLowerCase();
-    if (role === "user" || role === "hr") {
-      return res.status(403).json({ error: "Only Admin or IT Admin can resolve complaints" });
+    if (role === "hr") {
+      return res.status(403).json({ error: "HR cannot resolve complaints" });
     }
     const id = String(req.params.id || "").trim();
     const current = await getMaintenanceComplaint(id);

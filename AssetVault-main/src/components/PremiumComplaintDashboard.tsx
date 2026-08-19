@@ -64,12 +64,12 @@ function ComplaintCard({
 
   return (
     <article
-      className={`group rounded-2xl border p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer ${
+      className={`group rounded-2xl border p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer bg-white ${
         critical
-          ? 'border-rose-200/90 bg-gradient-to-br from-rose-50/90 to-white shadow-sm shadow-rose-100/50'
+          ? 'border-stone-200/90 border-l-[4px] border-l-rose-500 shadow-sm shadow-stone-200/40'
           : open
-            ? 'border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-white shadow-sm shadow-amber-100/40'
-            : 'border-emerald-200/70 bg-gradient-to-br from-emerald-50/50 to-white shadow-sm'
+            ? 'border-stone-200/90 border-l-[4px] border-l-orange-500 shadow-sm shadow-stone-200/40'
+            : 'border-stone-200/90 border-l-[4px] border-l-emerald-500 shadow-sm shadow-stone-200/30'
       }`}
       onClick={onOpen}
       onKeyDown={(e) => {
@@ -107,7 +107,7 @@ function ComplaintCard({
             <span className="text-[10px] font-bold text-stone-500 truncate">
               {c.machineType} · {c.machineNumber}
             </span>
-            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-100">
+            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-stone-100 text-stone-700 border border-stone-200/80">
               {plantShortName(c.plantCode, plants)}
             </span>
           </div>
@@ -116,7 +116,7 @@ function ComplaintCard({
             {open ? (
               <span
                 className={`inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${
-                  critical ? 'bg-rose-500 text-white' : 'bg-amber-500/15 text-amber-800 border border-amber-200'
+                  critical ? 'bg-rose-600 text-white' : 'bg-orange-50 text-orange-800 border border-orange-200/80'
                 }`}
               >
                 <Clock size={10} />

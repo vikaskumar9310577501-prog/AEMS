@@ -43,13 +43,16 @@ function InboxRow({
     !isOpen && c.resolvedAt ? complaintResolutionDays(c.reportedAt, c.resolvedAt) : null;
   const downtime = formatDowntimeLabel(c.downtimeMinutes);
 
+  const accent =
+    overWeek && isOpen
+      ? 'border-l-rose-500'
+      : isOpen
+        ? 'border-l-orange-500'
+        : 'border-l-emerald-500';
+
   return (
     <li
-      className={`group px-4 sm:px-5 py-4 transition-colors cursor-pointer border-b border-stone-100/90 last:border-b-0 ${
-        overWeek && isOpen
-          ? 'bg-gradient-to-r from-rose-50/70 via-[#FFFCF8] to-white hover:from-rose-50'
-          : 'bg-white/80 hover:bg-[#FFFDF9]'
-      }`}
+      className={`group px-4 sm:px-5 py-4 bg-white hover:bg-[#FFFDF9] transition-colors cursor-pointer border-b border-stone-100 last:border-b-0 border-l-[4px] ${accent}`}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -68,7 +71,7 @@ function InboxRow({
               e.stopPropagation();
               onPreviewPhoto?.();
             }}
-            className="shrink-0 w-[72px] h-[72px] rounded-xl overflow-hidden border border-stone-200/80 bg-stone-100 shadow-sm hover:ring-2 hover:ring-blue-400/40 transition-all"
+            className="shrink-0 w-[72px] h-[72px] rounded-xl overflow-hidden border border-stone-200/80 bg-stone-50 shadow-sm hover:ring-2 hover:ring-blue-400/40 transition-all"
           >
             <img src={c.photoUrl} alt={c.photoName || 'Complaint photo'} className="w-full h-full object-cover" />
           </button>
@@ -85,18 +88,20 @@ function InboxRow({
             </span>
             <span
               className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                isOpen ? 'bg-amber-100 text-amber-800 border border-amber-200/80' : 'bg-emerald-100 text-emerald-700 border border-emerald-200/80'
+                isOpen
+                  ? 'bg-orange-50 text-orange-800 border border-orange-200/80'
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
               }`}
             >
               {isOpen ? 'Pending' : 'Done'}
             </span>
             {isOpen && overWeek && (
-              <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-rose-500 text-white">
+              <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-rose-600 text-white">
                 Over 1 week
               </span>
             )}
             {withinWeek && (
-              <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-violet-100 text-violet-700 border border-violet-200/80">
+              <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-violet-50 text-violet-700 border border-violet-200/80">
                 Within 1 week
               </span>
             )}
@@ -117,7 +122,7 @@ function InboxRow({
           {(downtime || c.remark || c.remarks) && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
               {downtime ? (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200/60">
                   <Zap size={10} /> {downtime}
                 </span>
               ) : null}
@@ -144,7 +149,9 @@ function InboxRow({
           {isOpen ? (
             <div
               className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-black tabular-nums ${
-                overWeek ? 'bg-rose-100 text-rose-700' : 'bg-amber-50 text-amber-800 border border-amber-200/60'
+                overWeek
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200/70'
+                  : 'bg-orange-50 text-orange-800 border border-orange-200/60'
               }`}
             >
               <Clock size={13} />
@@ -191,25 +198,20 @@ function LaneBlock({
   count: number;
   children: ReactNode;
 }) {
-  const styles =
-    tone === 'rose'
-      ? 'border-rose-200/80 from-rose-50/60'
-      : tone === 'amber'
-        ? 'border-amber-200/80 from-amber-50/50'
-        : 'border-emerald-200/80 from-emerald-50/40';
-  const label = tone === 'rose' ? 'text-rose-700' : tone === 'amber' ? 'text-amber-800' : 'text-emerald-800';
+  const label =
+    tone === 'rose' ? 'text-rose-700' : tone === 'amber' ? 'text-orange-800' : 'text-emerald-800';
   const icon =
     tone === 'rose' ? (
       <ShieldAlert size={15} className="text-rose-600" />
     ) : tone === 'amber' ? (
-      <Clock size={15} className="text-amber-600" />
+      <Clock size={15} className="text-orange-600" />
     ) : (
       <CheckCircle2 size={15} className="text-emerald-600" />
     );
 
   return (
-    <section className={`rounded-2xl border bg-gradient-to-br to-white overflow-hidden shadow-sm ${styles}`}>
-      <div className="px-4 py-2.5 border-b border-stone-200/40 flex items-center gap-2 bg-white/60">
+    <section className="rounded-2xl border border-stone-200/80 bg-white overflow-hidden shadow-[0_8px_32px_-8px_rgba(120,90,60,0.12)]">
+      <div className="px-4 py-2.5 border-b border-stone-200/60 flex items-center gap-2 bg-[#FFFCF8]">
         {icon}
         <h3 className={`text-[11px] font-black uppercase tracking-wider ${label}`}>
           {title} ({count})
@@ -260,7 +262,7 @@ export default function ComplaintsInbox({
       onClick={() => onViewFilterChange(id)}
       className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border transition-colors ${
         viewFilter === id
-          ? 'bg-stone-800 text-white border-stone-800 shadow-sm'
+          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
           : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
       }`}
     >
@@ -270,33 +272,33 @@ export default function ComplaintsInbox({
 
   return (
     <div className="space-y-4 pb-4">
-      <div className="rounded-2xl border border-stone-200/80 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA] px-4 sm:px-5 py-4 shadow-[0_8px_32px_-8px_rgba(120,90,60,0.12)]">
+      <div className="rounded-2xl border border-stone-200/80 bg-white px-4 sm:px-5 py-4 shadow-[0_8px_32px_-8px_rgba(120,90,60,0.12)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center shadow-lg shadow-rose-500/25 shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
               <MessageSquareWarning size={20} className="text-white" />
             </div>
             <div className="min-w-0">
               <h2 className="text-base font-black text-stone-900 tracking-tight">QR Scan Complaints</h2>
               <p className="text-[11px] font-medium text-stone-500 mt-0.5">
-                Machine QR se aayi complaints · fix hone par Mark Done karo
+                Field inbox · fix hone par Mark Done karo
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/90 border border-stone-200/80 text-[10px] font-black uppercase text-stone-700 shadow-sm">
-              Total <span className="text-stone-900 tabular-nums">{stats.total}</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-50 border border-stone-200/80 text-[10px] font-black uppercase text-stone-700">
+              Total <span className="tabular-nums">{stats.total}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100/90 border border-amber-200/80 text-[10px] font-black uppercase text-amber-900 shadow-sm">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-200/80 text-[10px] font-black uppercase text-orange-900">
               Pending <span className="tabular-nums">{stats.pending}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100/90 border border-emerald-200/80 text-[10px] font-black uppercase text-emerald-800 shadow-sm">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-[10px] font-black uppercase text-emerald-800">
               Done <span className="tabular-nums">{stats.done}</span>
             </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-stone-200/50">
+        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-stone-100">
           {filterBtn('all', 'All')}
           {filterBtn('pending', 'Pending')}
           {filterBtn('resolved', 'Done')}

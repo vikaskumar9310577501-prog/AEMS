@@ -26,7 +26,7 @@ import {
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
-import { canAccessUserManagement, isItAdminRole, isHrRole } from '../lib/userPermissions';
+import { canAccessUserManagement, canAccessMaintenance, isItAdminRole, isHrRole, isAdminRole } from '../lib/userPermissions';
 import { SIDEBAR_CCTV_CATEGORY } from '../lib/dashboardCategories';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -215,10 +215,10 @@ export default function AppLayout() {
                 <span>Damaged / Scrap</span>
               </NavLink>
             )}
-            {isItAdmin && (
-              <NavLink to="/maintenance" className={navClass} title="Maintenance" onClick={closeSidebar}>
+            {canAccessMaintenance(user.role, user.categories) && (
+              <NavLink to="/maintenance" className={navClass} title="Prevention (PM)" onClick={closeSidebar}>
                 <Wrench size={18} className="text-slate-600 shrink-0" />
-                <span>Maintenance</span>
+                <span>Prevention</span>
               </NavLink>
             )}
             {isAdminRole && !isHr && (
