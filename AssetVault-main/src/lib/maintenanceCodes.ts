@@ -143,15 +143,19 @@ export function completedPlanDateKeys(machine: Pick<MaintenanceMachine, 'lastMai
   return keys;
 }
 
-/** Manual plan = current next date + extra dates on or after it (stale earlier extras are ignored). */
+/** Manual plan = all stored dates (next + extras), sorted earliest first. */
 export function manualPlanDates(
   machine: Pick<MaintenanceMachine, 'nextMaintenanceDate' | 'customPlanDates'>
 ): Date[] {
-  const next = parseDateOnly(machine.nextMaintenanceDate);
-  const extras = uniqueDates(machine.customPlanDates || []).filter(
-    (d) => !next || d.getTime() >= next.getTime()
-  );
-  return uniqueDates([machine.nextMaintenanceDate, ...extras.map((d) => formatDateOnly(d))]);
+  const sorted = uniqueDates([machine.nextMaintenanceDate, ...(machine.customPlanDates || [])]);
+  return sorted.sort((a, b) => a.getTime() - b.getTime());
+}
+
+/** Combined custom plan inputs for editing (next + extras, deduped). */
+export function allCustomPlanDateStrings(
+  machine: Pick<MaintenanceMachine, 'nextMaintenanceDate' | 'customPlanDates'>
+): string[] {
+  return normalizeCustomPlanDates([machine.nextMaintenanceDate, ...(machine.customPlanDates || [])]);
 }
 
 export function isPlanDateCompleted(machine: PlanMachine, planned: Date): boolean {
@@ -180,15 +184,16 @@ export function effectiveNextMaintenanceDate(machine: PlanMachine): string {
   return String(machine.nextMaintenanceDate || '').trim();
 }
 
+/** Merge all manual dates — earliest becomes next, rest stay as extras (nothing dropped). */
 export function mergeCustomPlan(
   next: string,
   extras?: string[]
 ): { nextMaintenanceDate: string; customPlanDates: string[] } {
-  const nextK = dateKey(next);
-  const extra = normalizeCustomPlanDates(extras).filter((d) => d && d !== nextK && (!nextK || d > nextK));
+  const all = normalizeCustomPlanDates([next, ...(extras || [])]);
+  if (!all.length) return { nextMaintenanceDate: String(next || '').trim(), customPlanDates: [] };
   return {
-    nextMaintenanceDate: nextK || extra[0] || String(next || '').trim(),
-    customPlanDates: extra,
+    nextMaintenanceDate: all[0],
+    customPlanDates: all.slice(1),
   };
 }
 

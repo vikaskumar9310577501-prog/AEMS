@@ -62,6 +62,8 @@ import {
   formatDowntimeLabel,
   mergeCustomPlan,
   effectiveNextMaintenanceDate,
+  pendingPlanDates,
+  formatDateOnly,
 } from "./src/lib/maintenanceCodes.js";
 import type { MaintenanceComplaint, MaintenanceMachine } from "./src/types/maintenance.js";
 import { isCustomTrend } from "./src/types/maintenance.js";
@@ -3725,17 +3727,14 @@ app.patch("/api/maintenance/machines/:id/trend", async (req, res) => {
     const nextMaintenanceDate = isCustomTrend(newTrend)
       ? String(current.nextMaintenanceDate || "").trim()
       : nextDateForTrend(current, newTrend);
-    const customPlanDates = isCustomTrend(newTrend)
-      ? normalizeCustomPlanDates([
-          ...(current.customPlanDates || []),
-          current.nextMaintenanceDate,
-        ])
-      : [];
+    const mergedCustom = isCustomTrend(newTrend)
+      ? mergeCustomPlan(current.nextMaintenanceDate, current.customPlanDates)
+      : null;
     const updated: MaintenanceMachine = {
       ...current,
       trendMonths: newTrend,
-      customPlanDates: customPlanDates.length ? customPlanDates : undefined,
-      nextMaintenanceDate,
+      customPlanDates: mergedCustom?.customPlanDates.length ? mergedCustom.customPlanDates : undefined,
+      nextMaintenanceDate: mergedCustom?.nextMaintenanceDate ?? nextMaintenanceDate,
       lastReminderEmailOn: undefined,
       lastEscalationEmailOn: undefined,
       lastDailyEmailOn: undefined,
@@ -3790,15 +3789,17 @@ app.patch("/api/maintenance/machines/:id/next-date", async (req, res) => {
     const actor = String(req.authUser?.email || req.body?.updatedBy || "System");
     const oldNext = String(current.nextMaintenanceDate || "").trim().slice(0, 10);
     const custom = isCustomTrend(machineTrendMonths(current));
-    const customPlanDates = custom
-      ? normalizeCustomPlanDates(current.customPlanDates).filter(
-          (d) => d !== oldNext && d !== nextMaintenanceDate && d > nextMaintenanceDate
-        )
-      : current.customPlanDates;
+    const mergedCustom = custom
+      ? mergeCustomPlan(nextMaintenanceDate, [oldNext, ...(current.customPlanDates || [])])
+      : null;
     const updated: MaintenanceMachine = {
       ...current,
-      nextMaintenanceDate,
-      customPlanDates,
+      nextMaintenanceDate: mergedCustom?.nextMaintenanceDate ?? nextMaintenanceDate,
+      customPlanDates: mergedCustom
+        ? mergedCustom.customPlanDates.length
+          ? mergedCustom.customPlanDates
+          : undefined
+        : current.customPlanDates,
       lastReminderEmailOn: undefined,
       lastEscalationEmailOn: undefined,
       lastDailyEmailOn: undefined,
@@ -3919,32 +3920,51 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
     const body = (req.body || {}) as { nextMaintenanceDate?: string; remarks?: string };
     const actor = String(req.authUser?.email || "System");
     const doneOn = todayKey();
-    let nextDate = String(body.nextMaintenanceDate || "").trim();
     const custom = isCustomTrend(machineTrendMonths(current));
-    if (!nextDate) {
-      if (custom) {
-        return res.status(400).json({ error: "Enter the next maintenance date (custom trend has no auto interval)" });
+    const plannedDate = effectiveNextMaintenanceDate(current);
+    const plannedKey = String(plannedDate || "").trim().slice(0, 10);
+    const inputNext = String(body.nextMaintenanceDate || "").trim();
+    let resolvedNext = inputNext;
+    let customPlanDates = current.customPlanDates;
+
+    if (custom) {
+      const remaining = pendingPlanDates(current)
+        .map((d) => formatDateOnly(d))
+        .filter((d) => d !== plannedKey);
+      if (inputNext && !remaining.includes(inputNext)) {
+        remaining.push(inputNext);
       }
-      nextDate = suggestNextMaintenanceDate(new Date(), machineTrendMonths(current));
+      if (!remaining.length) {
+        return res.status(400).json({
+          error: "Enter the next maintenance date (custom trend has no auto interval)",
+        });
+      }
+      const merged = mergeCustomPlan("", remaining);
+      resolvedNext = merged.nextMaintenanceDate;
+      customPlanDates = merged.customPlanDates.length ? merged.customPlanDates : undefined;
+    } else {
+      if (!resolvedNext) {
+        resolvedNext = suggestNextMaintenanceDate(new Date(), machineTrendMonths(current));
+      }
     }
-    const nextDays = daysUntilDate(nextDate);
-    if (nextDays == null || nextDays <= 7) {
-      return res.status(400).json({
-        error: "Enter a next maintenance date more than 7 days from today so Done hides until the next window",
-      });
+
+    const wasAlreadyPlanned = pendingPlanDates(current).some(
+      (d) => formatDateOnly(d) === resolvedNext
+    );
+    if (!custom || !wasAlreadyPlanned) {
+      const nextDays = daysUntilDate(resolvedNext);
+      if (nextDays == null || nextDays <= 7) {
+        return res.status(400).json({
+          error: "Enter a next maintenance date more than 7 days from today so Done hides until the next window",
+        });
+      }
     }
 
     const reminderCount = current.reminderCount || 0;
-    const plannedDate = current.nextMaintenanceDate;
-    const customPlanDates = custom
-      ? normalizeCustomPlanDates(
-          [...(current.customPlanDates || []), nextDate].filter((d) => d && d !== String(plannedDate || "").slice(0, 10))
-        )
-      : current.customPlanDates;
     const updated: MaintenanceMachine = {
       ...current,
       lastMaintenanceDate: doneOn,
-      nextMaintenanceDate: nextDate,
+      nextMaintenanceDate: resolvedNext,
       customPlanDates,
       status: "Active",
       remarks: body.remarks !== undefined ? String(body.remarks || "").trim() || undefined : current.remarks,

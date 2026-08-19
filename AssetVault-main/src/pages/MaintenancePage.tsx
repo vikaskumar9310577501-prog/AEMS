@@ -1189,24 +1189,34 @@ export default function MaintenancePage() {
                             </span>
                           </MachineCell>
                           <MachineCell className="shadow-sm group-hover:shadow-md">
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80">
-                              <CalendarRange size={14} className="text-blue-500 shrink-0" />
-                              <span className="text-[12px] font-semibold text-stone-700">
-                                {formatDate(effectiveNextMaintenanceDate(m))}
-                              </span>
-                            </div>
-                            {(pendingDays > 0 || (isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0)) && (
+                            {isCustomTrend(trendM) ? (
+                              <div className="flex flex-col gap-1">
+                                {pendingPlanDates(m).map((d) => {
+                                  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                  return (
+                                    <div
+                                      key={iso}
+                                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80"
+                                    >
+                                      <CalendarRange size={14} className="text-blue-500 shrink-0" />
+                                      <span className="text-[12px] font-semibold text-stone-700">{formatDate(iso)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80">
+                                <CalendarRange size={14} className="text-blue-500 shrink-0" />
+                                <span className="text-[12px] font-semibold text-stone-700">
+                                  {formatDate(effectiveNextMaintenanceDate(m))}
+                                </span>
+                              </div>
+                            )}
+                            {pendingDays > 0 && (
                               <div className="flex items-center gap-1 mt-1.5">
-                                {pendingDays > 0 && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-500/10 border border-red-200/70 text-[9px] font-black uppercase text-red-700">
-                                    {pendingDays}d overdue
-                                  </span>
-                                )}
-                                {isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0 && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-200/70 text-[9px] font-black uppercase text-amber-800">
-                                    {m.customPlanDates!.length} extra
-                                  </span>
-                                )}
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-500/10 border border-red-200/70 text-[9px] font-black uppercase text-red-700">
+                                  {pendingDays}d overdue
+                                </span>
                               </div>
                             )}
                           </MachineCell>
@@ -1709,7 +1719,22 @@ function DashboardKpiOverlay({
                         {badge.label}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 font-semibold text-slate-800">{formatDate(effectiveNextMaintenanceDate(m))}</td>
+                    <td className="px-4 py-2.5 font-semibold text-slate-800">
+                      {isCustomTrend(freq) ? (
+                        <div className="flex flex-col gap-0.5">
+                          {pendingPlanDates(m).map((d) => {
+                            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                            return (
+                              <span key={iso} className="block text-[12px]">
+                                {formatDate(iso)}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        formatDate(effectiveNextMaintenanceDate(m))
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -1771,14 +1796,14 @@ function MachinePlanCard({ machine }: { machine: MaintenanceMachine }) {
                 : ` · ${formatDate(span.from)}`}
             </p>
           ) : (
-            <p className="text-xs text-slate-600">No extra dates yet — only the next PM date is stored.</p>
+            <p className="text-xs text-slate-600">No planned dates stored yet.</p>
           )}
           <p className="text-xs font-semibold text-slate-800">
             Next due: {next ? formatDate(formatDateIso(next)) : '—'}
           </p>
-          {pending.length > 1 ? (
+          {pending.length > 0 ? (
             <p className="text-xs text-slate-700">
-              Remaining planned: {pending.map((d) => formatDate(formatDateIso(d))).join(' · ')}
+              All planned: {pending.map((d) => formatDate(formatDateIso(d))).join(' · ')}
             </p>
           ) : null}
         </div>

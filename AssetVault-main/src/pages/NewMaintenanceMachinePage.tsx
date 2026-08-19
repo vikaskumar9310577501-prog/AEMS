@@ -275,7 +275,7 @@ export default function NewMaintenanceMachinePage() {
               </select>
               <p className="text-[11px] text-slate-500">
                 {isCustomTrend(form.trendMonths)
-                  ? 'Custom — no auto interval. Next date is the current due. Extra dates you add after that appear on the dashboard as a manual plan.'
+                  ? 'Custom — add your first date below, then any additional dates. All dates are kept and shown on the dashboard.'
                   : `After each Done, next date auto-suggests +${form.trendMonths} month${form.trendMonths === 1 ? '' : 's'} (${trendMonthsLabel(form.trendMonths)}). Change anytime from Machines list.`}
               </p>
             </div>

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { CheckCircle2, X } from 'lucide-react';
 import type { MaintenanceMachine } from '../types/maintenance';
 import { isCustomTrend, trendMonthsLabel } from '../types/maintenance';
-import { suggestNextMaintenanceDate, machineTrendMonths } from '../lib/maintenanceCodes';
+import { suggestNextMaintenanceDate, machineTrendMonths, pendingPlanDates } from '../lib/maintenanceCodes';
 import { plantShortName } from '../lib/plantDisplay';
 
 interface MaintenanceDoneModalProps {
@@ -28,14 +28,30 @@ export default function MaintenanceDoneModal({
   useEffect(() => {
     if (machine) {
       const trend = machineTrendMonths(machine);
-      setNextDate(isCustomTrend(trend) ? '' : suggestNextMaintenanceDate(new Date(), trend));
+      if (isCustomTrend(trend)) {
+        const pending = pendingPlanDates(machine);
+        const next = pending[1];
+        setNextDate(
+          next
+            ? `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+            : ''
+        );
+      } else {
+        setNextDate(suggestNextMaintenanceDate(new Date(), trend));
+      }
       setError('');
     }
   }, [machine]);
 
   const submit = () => {
     const trimmed = nextDate.trim();
+    const pending = machine ? pendingPlanDates(machine) : [];
+    const canAutoAdvance = custom && pending.length > 1;
     if (!trimmed) {
+      if (canAutoAdvance) {
+        void onConfirm('');
+        return;
+      }
       setError('Next maintenance date is required');
       return;
     }
@@ -97,8 +113,9 @@ export default function MaintenanceDoneModal({
               <br />
               {custom ? (
                 <>
-                  Trend: <strong>Custom (manual dates)</strong>. Enter the next PM date yourself — no interval will be
-                  applied. Must be more than 7 days from today. It will show on the dashboard as entered.
+                  Trend: <strong>Custom (manual dates)</strong>. The next planned date will advance automatically if
+                  more dates are already set. You can also enter a new date — must be more than 7 days from today unless
+                  it is already on your plan.
                 </>
               ) : (
                 <>

@@ -9,7 +9,7 @@ import {
   isCustomTrend,
   trendMonthsLabel,
 } from '../types/maintenance';
-import { normalizeCustomPlanDates, normalizeMachineNumber } from '../lib/maintenanceCodes';
+import { normalizeCustomPlanDates, normalizeMachineNumber, allCustomPlanDateStrings, mergeCustomPlan } from '../lib/maintenanceCodes';
 import { plantShortName } from '../lib/plantDisplay';
 import { toDateInputValue } from '../lib/formatDisplayDate';
 import { optionsWithValue } from '../lib/formAsset';
@@ -50,7 +50,7 @@ export function CustomPlanDatesField({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-          Extra planned dates (dashboard)
+          Planned PM dates
         </label>
         <button
           type="button"
@@ -62,7 +62,7 @@ export function CustomPlanDatesField({
       </div>
       {dates.length === 0 ? (
         <p className="text-[11px] text-slate-500">
-        Add extra PM dates after the next due date. These show on the dashboard. The machine will not follow a month trend.
+          Add every PM date you want on the dashboard. All dates are kept — nothing is removed when you add more.
         </p>
       ) : (
         <div className="space-y-1.5">
@@ -124,7 +124,7 @@ export default function MaintenanceMachineEditModal({
     setNextMaintenanceDate(toDateInputValue(machine.nextMaintenanceDate));
     setStatus(machine.status || 'Active');
     setRemarks(machine.remarks || '');
-    setCustomPlanDates(normalizeCustomPlanDates(machine.customPlanDates));
+    setCustomPlanDates(allCustomPlanDateStrings(machine));
     setError('');
   }, [machine]);
 
@@ -143,8 +143,12 @@ export default function MaintenanceMachineEditModal({
     if (!machineType.trim()) return setError('Machine type is required');
     if (!machineNumber.trim()) return setError('Machine number is required');
     if (!location.trim() || !plantCode.trim()) return setError('Location and plant are required');
-    if (!nextMaintenanceDate.trim()) return setError('Next maintenance date is required');
-    const extras = isCustomTrend(trendMonths) ? normalizeCustomPlanDates(customPlanDates) : [];
+    const custom = isCustomTrend(trendMonths);
+    const merged = custom ? mergeCustomPlan('', normalizeCustomPlanDates(customPlanDates)) : null;
+    if (custom && !merged?.nextMaintenanceDate) {
+      return setError('At least one planned date is required for Custom frequency');
+    }
+    if (!custom && !nextMaintenanceDate.trim()) return setError('Next maintenance date is required');
     void onSave({
       machineType: machineType.trim(),
       machineNumber: normalizeMachineNumber(machineNumber),
@@ -153,10 +157,10 @@ export default function MaintenanceMachineEditModal({
       location: location.trim(),
       plantCode: plantCode.trim(),
       trendMonths,
-      nextMaintenanceDate,
+      nextMaintenanceDate: custom ? merged!.nextMaintenanceDate : nextMaintenanceDate,
       status,
       remarks: remarks.trim(),
-      customPlanDates: extras,
+      customPlanDates: custom ? merged!.customPlanDates : [],
     });
   };
 
@@ -290,23 +294,25 @@ export default function MaintenanceMachineEditModal({
                   ))}
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <label className="label-caps">
-                  Next Maintenance Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={nextMaintenanceDate}
-                  onChange={(e) => setNextMaintenanceDate(e.target.value)}
-                  className="w-full input-geometric"
-                />
-              </div>
+              {!isCustomTrend(trendMonths) ? (
+                <div className="space-y-1.5">
+                  <label className="label-caps">
+                    Next Maintenance Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={nextMaintenanceDate}
+                    onChange={(e) => setNextMaintenanceDate(e.target.value)}
+                    className="w-full input-geometric"
+                  />
+                </div>
+              ) : null}
             </div>
 
             {isCustomTrend(trendMonths) ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="text-[11px] text-amber-900 font-semibold mb-2">
-                  Manual plan — no month trend. Next date is the current due. Extra dates after that show on the dashboard. Past extra dates are ignored.
+                  Manual plan — add every PM date below. All dates appear on the dashboard and in the machines list.
                 </p>
                 <CustomPlanDatesField dates={customPlanDates} onChange={setCustomPlanDates} />
               </div>
