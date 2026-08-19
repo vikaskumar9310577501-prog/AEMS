@@ -85,20 +85,32 @@ function trendCompactLabel(months: number): string {
   return `${months} mo`;
 }
 
+function machineTypeShort(type: string) {
+  return type.replace(/\s+Machine$/i, '').trim() || type;
+}
+
 function MachineCell({
   children,
   className = '',
   title,
   onClick,
+  edge = 'mid',
 }: {
   children: React.ReactNode;
   className?: string;
   title?: string;
   onClick?: React.MouseEventHandler<HTMLTableCellElement>;
+  edge?: 'first' | 'mid' | 'last';
 }) {
+  const edgeClass =
+    edge === 'first'
+      ? 'border-l rounded-l-xl pl-4'
+      : edge === 'last'
+        ? 'border-r rounded-r-xl pr-4'
+        : '';
   return (
     <td
-      className={`px-2 py-1.5 align-middle whitespace-nowrap border-b border-slate-100 ${className}`}
+      className={`px-3 py-3.5 align-middle border-y border-stone-200/70 bg-white group-hover:bg-[#FFFDF9] group-hover:border-stone-300/80 transition-colors ${edgeClass} ${className}`}
       title={title}
       onClick={onClick}
     >
@@ -118,19 +130,19 @@ function formatDate(value?: string) {
 
 function statusBadge(machine: MaintenanceMachine) {
   if (machine.status === 'Down') {
-    return { label: 'DOWN', className: 'bg-red-50 text-red-600 border border-red-200' };
+    return { label: 'DOWN', className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80' };
   }
   if (machine.status === 'Maintenance') {
-    return { label: 'MAINTENANCE', className: 'bg-emerald-50 text-emerald-600 border border-emerald-200' };
+    return { label: 'MAINTENANCE', className: 'bg-amber-500/10 text-amber-800 border border-amber-200/80 shadow-sm shadow-amber-100/80' };
   }
   if (machine.status === 'Planned') {
-    return { label: 'PLANNED', className: 'bg-blue-50 text-blue-600 border border-blue-200' };
+    return { label: 'PLANNED', className: 'bg-sky-500/10 text-sky-700 border border-sky-200/80 shadow-sm shadow-sky-100/80' };
   }
   const days = daysUntilDate(effectiveNextMaintenanceDate(machine));
-  if (days == null) return { label: machine.status?.toUpperCase() || 'ACTIVE', className: 'bg-emerald-50 text-emerald-600 border border-emerald-200' };
-  if (days < 0) return { label: `OVERDUE`, className: 'bg-red-50 text-red-600 border border-red-200' };
-  if (days <= 7) return { label: `OVERDUE`, className: 'bg-orange-50 text-orange-600 border border-orange-200' };
-  return { label: 'ACTIVE', className: 'bg-emerald-50 text-emerald-600 border border-emerald-200' };
+  if (days == null) return { label: machine.status?.toUpperCase() || 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80' };
+  if (days < 0) return { label: 'OVERDUE', className: 'bg-red-500/10 text-red-700 border border-red-200/80 shadow-sm shadow-red-100/80' };
+  if (days <= 7) return { label: 'OVERDUE', className: 'bg-orange-500/10 text-orange-700 border border-orange-200/80 shadow-sm shadow-orange-100/80' };
+  return { label: 'ACTIVE', className: 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/80 shadow-sm shadow-emerald-100/80' };
 }
 
 function MiniTrendSvg({ months }: { months: number }) {
@@ -758,7 +770,7 @@ export default function MaintenancePage() {
   }, [plants, machines, plantContactsDraft]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF8F5]">
       <div className="shrink-0 px-4 lg:px-6 pt-2 pb-1 space-y-1.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
@@ -1110,42 +1122,47 @@ export default function MaintenancePage() {
         )}
 
         {tab === 'machines' && (
-          <div className="flex flex-col flex-1 min-h-0 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm mb-4">
-            <div className="px-3 py-1.5 border-b border-slate-100 flex flex-wrap items-center gap-2 shrink-0 bg-white">
-              <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 shrink-0">
-                <Factory size={14} className="text-blue-600" /> Machines
-                <span className="text-slate-400 font-normal">({filtered.length})</span>
-              </h2>
+          <div className="flex flex-col flex-1 min-h-0 bg-[#FFFCF8] rounded-2xl border border-stone-200/80 overflow-hidden shadow-[0_8px_32px_-8px_rgba(120,90,60,0.14)] mb-4">
+            <div className="px-4 py-3 border-b border-stone-200/60 flex flex-wrap items-center gap-3 shrink-0 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA]">
+              <div className="flex items-center gap-2.5 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+                  <Factory size={16} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-stone-800 leading-none">Machines</h2>
+                  <p className="text-[10px] font-semibold text-stone-500 mt-0.5">{filtered.length} registered</p>
+                </div>
+              </div>
               {selectedMachines.length > 0 ? (
                 <button
                   type="button"
                   onClick={() => setPrintMachines(selectedMachines)}
-                  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 shadow-sm shadow-indigo-500/25"
                 >
-                  <QrCode size={11} /> QR ({selectedMachines.length})
+                  <QrCode size={12} /> Print QR ({selectedMachines.length})
                 </button>
               ) : scopedMachines.length > 0 ? (
                 <button
                   type="button"
                   onClick={() => setPrintMachines(scopedMachines)}
-                  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 shadow-sm shadow-indigo-500/25"
                 >
-                  <QrCode size={11} /> Print All QR
+                  <QrCode size={12} /> Print All QR
                 </button>
               ) : null}
-              <div className="relative flex-1 min-w-[160px] max-w-xs ml-auto">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+              <div className="relative flex-1 min-w-[180px] max-w-sm ml-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={14} />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search…"
-                  className="w-full border border-slate-200 rounded text-[11px] py-1 pl-7 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  placeholder="Search machines…"
+                  className="w-full border border-stone-200/80 rounded-xl text-[12px] py-2 pl-9 pr-3 bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-300 shadow-inner shadow-stone-100/50"
                 />
               </div>
               {canAddMachine && (
                 <Link
                   to="/maintenance/machines/new"
-                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-semibold shrink-0"
+                  className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wide shrink-0 shadow-md shadow-blue-500/25"
                 >
                   + Add
                 </Link>
@@ -1153,57 +1170,61 @@ export default function MaintenancePage() {
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-xs text-slate-500">Loading machines…</div>
+              <div className="p-10 text-center text-sm text-stone-500">Loading machines…</div>
             ) : filtered.length === 0 ? (
-              <div className="p-8 text-center space-y-2">
-                <p className="text-xs text-slate-500">No machines for this filter.</p>
+              <div className="p-10 text-center space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-stone-100 flex items-center justify-center">
+                  <Factory size={24} className="text-stone-400" />
+                </div>
+                <p className="text-sm text-stone-500">No machines for this filter.</p>
                 {canAddMachine && (
                   <button
                     type="button"
                     onClick={() => navigate('/maintenance/machines/new')}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded text-[10px] font-semibold"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-sm"
                   >
                     Add Machine
                   </button>
                 )}
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-auto">
-                <table className="w-full min-w-[1060px] border-collapse text-[13px] leading-normal">
-                  <thead className="sticky top-0 z-30 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 w-10 text-center">
+              <div className="flex-1 min-h-0 overflow-auto bg-[#F7F3EE]/60 px-3 py-3">
+                <table className="w-full min-w-[1060px] border-separate border-spacing-y-2.5 text-[13px] leading-normal">
+                  <thead className="sticky top-0 z-30">
+                    <tr className="text-[10px] font-black uppercase tracking-wider text-stone-500">
+                      <th className="px-3 py-2.5 w-10 text-center bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tl-lg border border-stone-200/50">
                         <input
                           type="checkbox"
                           checked={allFilteredSelected}
                           onChange={toggleAllFiltered}
-                          className="rounded border-slate-300"
+                          className="rounded border-stone-300 text-blue-600 focus:ring-blue-400/40"
                           title="Select all"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold">Machine ID</th>
-                      <th className="px-4 py-3 text-left font-semibold">Machine Name</th>
-                      <th className="px-4 py-3 text-left font-semibold">Type</th>
-                      <th className="px-4 py-3 text-left font-semibold w-16">No.</th>
-                      <th className="px-4 py-3 text-left font-semibold">Department</th>
-                      <th className="px-4 py-3 text-left font-semibold">Plant</th>
-                      <th className="px-4 py-3 text-left font-semibold">Trend</th>
-                      <th className="px-4 py-3 text-left font-semibold">Next PM</th>
-                      <th className="px-4 py-3 text-left font-semibold">Status</th>
-                      <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Machine ID</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Machine Name</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Type</th>
+                      <th className="px-3 py-2.5 text-left w-16 bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">No.</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Department</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Plant</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Trend</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Next PM</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Status</th>
+                      <th className="px-3 py-2.5 text-right bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tr-lg border border-stone-200/50">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody>
                     {filtered.map((m, rowIdx) => {
                       const badge = statusBadge(m);
                       const pendingDays = maintenancePendingDays(m);
                       const plant = plantTableLabel(m.plantCode, plants);
                       const trendM = machineTrendMonths(m);
                       const menuDropUp = rowIdx >= filtered.length - 2;
+                      const displayName = m.equipmentName?.trim() || machineTypeShort(m.machineType);
                       return (
                         <tr
                           key={m.id}
-                          className="group border-b border-slate-200 hover:bg-blue-50/40 transition-colors cursor-pointer"
+                          className="group cursor-pointer transition-all duration-200 hover:-translate-y-px hover:drop-shadow-[0_8px_16px_rgba(120,90,60,0.10)]"
                           onClick={() => setDetailMachine(m)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -1214,44 +1235,56 @@ export default function MaintenancePage() {
                           tabIndex={0}
                           role="button"
                         >
-                          <td
-                            className="px-4 py-4 text-center"
+                          <MachineCell
+                            edge="first"
+                            className="text-center shadow-sm group-hover:shadow-md"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
                               type="checkbox"
                               checked={selectedIds.has(m.id)}
                               onChange={() => toggleOne(m.id)}
-                              className="rounded border-slate-300"
+                              className="rounded border-stone-300 text-blue-600 focus:ring-blue-400/40"
                             />
-                          </td>
-                          <td className="px-4 py-4 font-semibold text-blue-600 whitespace-nowrap">
-                            {m.assetCode}
-                          </td>
-                          <td className="px-4 py-4 font-medium text-slate-800" title={m.equipmentName || m.machineType}>
-                            {m.equipmentName || m.machineType}
-                          </td>
-                          <td className="px-4 py-4 text-slate-600">
-                            {m.machineType}
-                          </td>
-                          <td className="px-4 py-4 text-slate-600 font-mono">
-                            {m.machineNumber}
-                          </td>
-                          <td className="px-4 py-4 text-slate-600 uppercase text-[12px]">
-                            {m.department || '—'}
-                          </td>
-                          <td className="px-4 py-4 text-slate-600 uppercase text-[12px] font-medium" title={plant.full}>
-                            {plant.short}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2">
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
+                            <span className="inline-flex px-2.5 py-1 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/80 font-mono text-[12px] font-bold text-blue-700 shadow-sm">
+                              {m.assetCode}
+                            </span>
+                          </MachineCell>
+                          <MachineCell title={machineRowName(m)} className="shadow-sm group-hover:shadow-md">
+                            <p className="font-bold text-stone-800 leading-tight">{displayName}</p>
+                            <p className="text-[10px] font-semibold text-stone-400 mt-0.5 font-mono">{m.machineNumber}</p>
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
+                            <span className="inline-flex px-2 py-1 rounded-md bg-stone-100/80 border border-stone-200/60 text-[11px] font-semibold text-stone-600">
+                              {machineTypeShort(m.machineType)}
+                            </span>
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
+                            <span className="font-mono text-[12px] font-bold text-stone-700 bg-stone-50 px-2 py-1 rounded-md border border-stone-200/60">
+                              {m.machineNumber}
+                            </span>
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
+                            <span className="inline-flex px-2 py-1 rounded-md bg-violet-50/80 border border-violet-100 text-[10px] font-black uppercase tracking-wide text-violet-700">
+                              {m.department || '—'}
+                            </span>
+                          </MachineCell>
+                          <MachineCell title={plant.full} className="shadow-sm group-hover:shadow-md">
+                            <span className="inline-flex px-2 py-1 rounded-md bg-amber-50/80 border border-amber-100 text-[10px] font-black uppercase tracking-wide text-amber-800">
+                              {plant.short}
+                            </span>
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-stone-50/90 border border-stone-200/60">
                               <MiniTrendSvg months={trendM} />
                               <select
                                 value={trendM}
                                 disabled={updatingTrendId === m.id}
                                 onChange={(e) => void changeMachineTrend(m, Number(e.target.value))}
                                 onClick={(e) => e.stopPropagation()}
-                                className="border border-slate-200 rounded text-[12px] font-medium py-0.5 px-1.5 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400 appearance-none pr-5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%226%22%20viewBox%3D%220%200%2010%206%22%3E%3Cpath%20d%3D%22M0%200l5%206%205-6H0z%22%20fill%3D%22%2394a3b8%22/%3E%3C/svg%3E')] bg-[length:10px_6px] bg-[right_6px_center] bg-no-repeat"
+                                className="border-0 bg-transparent text-[12px] font-bold text-stone-700 disabled:opacity-60 focus:outline-none focus:ring-0 appearance-none pr-5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%226%22%20viewBox%3D%220%200%2010%206%22%3E%3Cpath%20d%3D%22M0%200l5%206%205-6H0z%22%20fill%3D%22%2394a3b8%22/%3E%3C/svg%3E')] bg-[length:10px_6px] bg-[right_0_center] bg-no-repeat"
                                 title={trendMonthsLabel(trendM)}
                               >
                                 {TREND_SELECT_OPTIONS.map((n) => (
@@ -1261,62 +1294,63 @@ export default function MaintenancePage() {
                                 ))}
                               </select>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5">
-                              <CalendarRange size={14} className="text-slate-400 shrink-0" />
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80">
+                              <CalendarRange size={14} className="text-blue-500 shrink-0" />
                               <input
                                 type="date"
                                 value={toDateInputValue(m.nextMaintenanceDate)}
                                 disabled={updatingDateId === m.id}
                                 onChange={(e) => void changeMachineNextDate(m, e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
-                                className="border border-slate-200 rounded text-[12px] font-medium py-0.5 px-1.5 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                className="border-0 bg-transparent text-[12px] font-semibold text-stone-700 disabled:opacity-60 focus:outline-none focus:ring-0 p-0"
                                 title="Next maintenance date"
                               />
                             </div>
                             {(pendingDays > 0 || (isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0)) && (
-                              <div className="flex items-center gap-1 mt-1 pl-5">
+                              <div className="flex items-center gap-1 mt-1.5">
                                 {pendingDays > 0 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-[9px] font-bold text-red-600">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-500/10 border border-red-200/70 text-[9px] font-black uppercase text-red-700">
                                     {pendingDays}d overdue
                                   </span>
                                 )}
                                 {isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-[9px] font-bold text-amber-700">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-200/70 text-[9px] font-black uppercase text-amber-800">
                                     {m.customPlanDates!.length} extra
                                   </span>
                                 )}
                               </div>
                             )}
-                          </td>
-                          <td className="px-4 py-4">
+                          </MachineCell>
+                          <MachineCell className="shadow-sm group-hover:shadow-md">
                             <span
-                              className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${badge.className}`}
+                              className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${badge.className}`}
                             >
                               {badge.label}
                             </span>
-                          </td>
-                          <td
-                            className="px-4 py-4"
+                          </MachineCell>
+                          <MachineCell
+                            edge="last"
+                            className="text-right shadow-sm group-hover:shadow-md"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-center justify-end gap-1.5">
+                            <div className="inline-flex items-center gap-0.5 p-1 rounded-xl bg-stone-100/90 border border-stone-200/70 shadow-inner">
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setDetailMachine(m); }}
-                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-white hover:shadow-sm text-stone-500 hover:text-blue-600 transition-all"
                                 title="View details"
                               >
-                                <Eye size={16} />
+                                <Eye size={15} />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditMachine(m)}
-                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-white hover:shadow-sm text-stone-500 hover:text-blue-600 transition-all"
                                 title="Edit"
                               >
-                                <Pencil size={16} />
+                                <Pencil size={15} />
                               </button>
                               <div className="relative">
                                 <button
@@ -1325,17 +1359,17 @@ export default function MaintenancePage() {
                                     e.stopPropagation();
                                     setMachineMenuId(machineMenuId === m.id ? null : m.id);
                                   }}
-                                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-white hover:shadow-sm text-stone-500 hover:text-stone-800 transition-all"
                                   title="More actions"
                                 >
-                                  <MoreVertical size={16} />
+                                  <MoreVertical size={15} />
                                 </button>
                                 {machineMenuId === m.id && (
-                                  <div className={`absolute right-0 min-w-[160px] bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 whitespace-nowrap ${menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                                  <div className={`absolute right-0 min-w-[160px] bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-50 whitespace-nowrap ${menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                                     <button
                                       type="button"
                                       onClick={() => { setPrintMachines([m]); setMachineMenuId(null); }}
-                                      className="w-full text-left px-4 py-2 text-[13px] hover:bg-slate-50 flex items-center gap-3 text-slate-700"
+                                      className="w-full text-left px-4 py-2 text-[13px] hover:bg-stone-50 flex items-center gap-3 text-stone-700"
                                     >
                                       <QrCode size={15} className="shrink-0" /> Print QR
                                     </button>
@@ -1344,7 +1378,7 @@ export default function MaintenancePage() {
                                         type="button"
                                         disabled={markingDoneId === m.id}
                                         onClick={() => { setDoneMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-slate-50 flex items-center gap-3 text-emerald-700 disabled:opacity-40"
+                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-stone-50 flex items-center gap-3 text-emerald-700 disabled:opacity-40"
                                       >
                                         <CheckCircle2 size={15} className="shrink-0" /> Mark Done
                                       </button>
@@ -1354,7 +1388,7 @@ export default function MaintenancePage() {
                                         type="button"
                                         disabled={deletingMachineId === m.id}
                                         onClick={() => { void deleteMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-slate-50 flex items-center gap-3 text-rose-600 disabled:opacity-40"
+                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-stone-50 flex items-center gap-3 text-rose-600 disabled:opacity-40"
                                       >
                                         <Trash2 size={15} className="shrink-0" /> Delete
                                       </button>
@@ -1363,7 +1397,7 @@ export default function MaintenancePage() {
                                 )}
                               </div>
                             </div>
-                          </td>
+                          </MachineCell>
                         </tr>
                       );
                     })}
