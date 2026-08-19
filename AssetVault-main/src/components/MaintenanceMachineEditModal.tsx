@@ -101,14 +101,12 @@ export default function MaintenanceMachineEditModal({
 }: MaintenanceMachineEditModalProps) {
   const [machineType, setMachineType] = useState('');
   const [machineNumber, setMachineNumber] = useState('');
-  const [equipmentName, setEquipmentName] = useState('');
   const [department, setDepartment] = useState('');
   const [responsibility, setResponsibility] = useState('');
   const [location, setLocation] = useState('');
   const [plantCode, setPlantCode] = useState('');
   const [trendMonths, setTrendMonths] = useState(2);
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState('');
-  const [lastMaintenanceDate, setLastMaintenanceDate] = useState('');
   const [status, setStatus] = useState<MaintenanceMachine['status']>('Active');
   const [remarks, setRemarks] = useState('');
   const [customPlanDates, setCustomPlanDates] = useState<string[]>([]);
@@ -118,14 +116,12 @@ export default function MaintenanceMachineEditModal({
     if (!machine) return;
     setMachineType(machine.machineType || '');
     setMachineNumber(machine.machineNumber || '');
-    setEquipmentName(machine.equipmentName || '');
     setDepartment(machine.department || '');
     setResponsibility(machine.responsibility || '');
     setLocation(machine.location || '');
     setPlantCode(machine.plantCode || '');
     setTrendMonths(Number(machine.trendMonths) === CUSTOM_TREND_MONTHS ? CUSTOM_TREND_MONTHS : Number(machine.trendMonths) || 2);
     setNextMaintenanceDate(toDateInputValue(machine.nextMaintenanceDate));
-    setLastMaintenanceDate(toDateInputValue(machine.lastMaintenanceDate));
     setStatus(machine.status || 'Active');
     setRemarks(machine.remarks || '');
     setCustomPlanDates(normalizeCustomPlanDates(machine.customPlanDates));
@@ -152,14 +148,12 @@ export default function MaintenanceMachineEditModal({
     void onSave({
       machineType: machineType.trim(),
       machineNumber: normalizeMachineNumber(machineNumber),
-      equipmentName: equipmentName.trim(),
       department: department.trim(),
       responsibility: responsibility.trim(),
       location: location.trim(),
       plantCode: plantCode.trim(),
       trendMonths,
       nextMaintenanceDate,
-      lastMaintenanceDate: lastMaintenanceDate.trim() || undefined,
       status,
       remarks: remarks.trim(),
       customPlanDates: extras,
@@ -220,14 +214,6 @@ export default function MaintenanceMachineEditModal({
                   value={machineNumber}
                   onChange={(e) => setMachineNumber(e.target.value.toUpperCase())}
                   className="w-full input-geometric uppercase font-mono font-bold"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="label-caps">Machine</label>
-                <input
-                  value={equipmentName}
-                  onChange={(e) => setEquipmentName(e.target.value)}
-                  className="w-full input-geometric font-semibold"
                 />
               </div>
               <div className="space-y-1.5">
@@ -312,15 +298,6 @@ export default function MaintenanceMachineEditModal({
                   type="date"
                   value={nextMaintenanceDate}
                   onChange={(e) => setNextMaintenanceDate(e.target.value)}
-                  className="w-full input-geometric"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="label-caps">Last Maintenance Date</label>
-                <input
-                  type="date"
-                  value={lastMaintenanceDate}
-                  onChange={(e) => setLastMaintenanceDate(e.target.value)}
                   className="w-full input-geometric"
                 />
               </div>

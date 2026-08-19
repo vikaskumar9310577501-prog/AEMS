@@ -1967,7 +1967,6 @@ function MachineDetailPopup({
                   <DetailField label="Status" value={badge.label} />
                   <DetailField label="PM Interval" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
                   <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
-                  <DetailField label="Last PM Date" value={formatDate(machine.lastMaintenanceDate) || '—'} />
                   <DetailField label="Open Complaints" value={String(openCount)} />
                   <DetailField label="Resolved Complaints" value={String(resolvedCount)} />
                   <DetailField label="Created By" value={machine.createdBy || '—'} />
@@ -2256,7 +2255,6 @@ function ComplaintDetailPopup({
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              <DetailField label="Machine" value={machineLabel} />
               <DetailField label="Machine Type" value={c.machineType} />
               <DetailField label="Machine Number" value={c.machineNumber} />
               <DetailField label="Asset Code" value={c.assetCode} />

@@ -2298,18 +2298,6 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
             {formData.maintenanceRequired === 'Yes' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formData.condition !== 'NEW PURCHASE' && (
-                  <div className="space-y-1.5 flex-1">
-                    <label className="label-caps">Last Maintenance Date</label>
-                    <input
-                      type="date"
-                      name="lastMaintenanceDate"
-                      value={formData.lastMaintenanceDate || ""}
-                      onChange={handleChange}
-                      className="w-full input-geometric bg-white text-slate-800"
-                    />
-                  </div>
-                )}
                 <div className={cn("space-y-1.5 flex-1", formData.condition === 'NEW PURCHASE' && "md:col-span-2")}>
                   <label className="label-caps">Next Maintenance Date</label>
                   <input
