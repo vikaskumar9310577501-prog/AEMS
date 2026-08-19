@@ -1,0 +1,23 @@
+IF DB_ID(N'AEMS') IS NULL
+BEGIN
+  CREATE DATABASE [AEMS];
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'aems_app')
+BEGIN
+  CREATE LOGIN [aems_app] WITH PASSWORD = N'AemsLocal2026!Sql', CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
+END
+GO
+
+USE [AEMS];
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'aems_app')
+BEGIN
+  CREATE USER [aems_app] FOR LOGIN [aems_app];
+END
+GO
+
+ALTER ROLE db_owner ADD MEMBER [aems_app];
+GO

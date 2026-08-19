@@ -1,0 +1,377 @@
+import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Pencil, Plus, Trash2, X } from 'lucide-react';
+import type { MaintenanceMachine } from '../types/maintenance';
+import {
+  CUSTOM_TREND_MONTHS,
+  DEFAULT_MACHINE_TYPES,
+  TREND_SELECT_OPTIONS,
+  isCustomTrend,
+  trendMonthsLabel,
+} from '../types/maintenance';
+import { normalizeCustomPlanDates, normalizeMachineNumber } from '../lib/maintenanceCodes';
+import { plantShortName } from '../lib/plantDisplay';
+import { toDateInputValue } from '../lib/formatDisplayDate';
+import { optionsWithValue } from '../lib/formAsset';
+import SmartSelect from './SmartSelect';
+
+type PlantRec = { code: string; name: string; location: string };
+
+export interface MaintenanceMachineEditModalProps {
+  machine: MaintenanceMachine | null;
+  saving?: boolean;
+  machineTypes: string[];
+  locations: string[];
+  plants: PlantRec[];
+  onClose: () => void;
+  onSave: (payload: Partial<MaintenanceMachine>) => void | Promise<void>;
+}
+
+function sameLoc(a?: string, b?: string) {
+  return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+}
+
+export function CustomPlanDatesField({
+  dates,
+  onChange,
+}: {
+  dates: string[];
+  onChange: (dates: string[]) => void;
+}) {
+  const add = () => onChange([...dates, '']);
+  const setAt = (i: number, value: string) => {
+    const next = dates.slice();
+    next[i] = value;
+    onChange(next);
+  };
+  const removeAt = (i: number) => onChange(dates.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+          Extra planned dates (dashboard)
+        </label>
+        <button
+          type="button"
+          onClick={add}
+          className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-blue-700 hover:text-blue-900"
+        >
+          <Plus size={12} /> Add date
+        </button>
+      </div>
+      {dates.length === 0 ? (
+        <p className="text-[11px] text-slate-500">
+        Add extra PM dates after the next due date. These show on the dashboard. The machine will not follow a month trend.
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {dates.map((d, i) => (
+            <div key={`custom-date-${i}`} className="flex items-center gap-2">
+              <input
+                type="date"
+                value={d}
+                onChange={(e) => setAt(i, e.target.value)}
+                className="flex-1 input-geometric text-sm font-semibold"
+              />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="p-2 rounded-lg text-rose-500 hover:bg-rose-50"
+                aria-label="Remove date"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function MaintenanceMachineEditModal({
+  machine,
+  saving = false,
+  machineTypes,
+  locations,
+  plants,
+  onClose,
+  onSave,
+}: MaintenanceMachineEditModalProps) {
+  const [machineType, setMachineType] = useState('');
+  const [machineNumber, setMachineNumber] = useState('');
+  const [equipmentName, setEquipmentName] = useState('');
+  const [department, setDepartment] = useState('');
+  const [responsibility, setResponsibility] = useState('');
+  const [location, setLocation] = useState('');
+  const [plantCode, setPlantCode] = useState('');
+  const [trendMonths, setTrendMonths] = useState(2);
+  const [nextMaintenanceDate, setNextMaintenanceDate] = useState('');
+  const [lastMaintenanceDate, setLastMaintenanceDate] = useState('');
+  const [status, setStatus] = useState<MaintenanceMachine['status']>('Active');
+  const [remarks, setRemarks] = useState('');
+  const [customPlanDates, setCustomPlanDates] = useState<string[]>([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!machine) return;
+    setMachineType(machine.machineType || '');
+    setMachineNumber(machine.machineNumber || '');
+    setEquipmentName(machine.equipmentName || '');
+    setDepartment(machine.department || '');
+    setResponsibility(machine.responsibility || '');
+    setLocation(machine.location || '');
+    setPlantCode(machine.plantCode || '');
+    setTrendMonths(Number(machine.trendMonths) === CUSTOM_TREND_MONTHS ? CUSTOM_TREND_MONTHS : Number(machine.trendMonths) || 2);
+    setNextMaintenanceDate(toDateInputValue(machine.nextMaintenanceDate));
+    setLastMaintenanceDate(toDateInputValue(machine.lastMaintenanceDate));
+    setStatus(machine.status || 'Active');
+    setRemarks(machine.remarks || '');
+    setCustomPlanDates(normalizeCustomPlanDates(machine.customPlanDates));
+    setError('');
+  }, [machine]);
+
+  const typeOptions = useMemo(
+    () => Array.from(new Set([...DEFAULT_MACHINE_TYPES, ...machineTypes, machineType].filter(Boolean))),
+    [machineTypes, machineType]
+  );
+
+  const plantsForLocation = useMemo(
+    () => plants.filter((p) => !location || !p.location || sameLoc(p.location, location)),
+    [plants, location]
+  );
+
+  const submit = () => {
+    if (!machine) return;
+    if (!machineType.trim()) return setError('Machine type is required');
+    if (!machineNumber.trim()) return setError('Machine number is required');
+    if (!location.trim() || !plantCode.trim()) return setError('Location and plant are required');
+    if (!nextMaintenanceDate.trim()) return setError('Next maintenance date is required');
+    const extras = isCustomTrend(trendMonths) ? normalizeCustomPlanDates(customPlanDates) : [];
+    void onSave({
+      machineType: machineType.trim(),
+      machineNumber: normalizeMachineNumber(machineNumber),
+      equipmentName: equipmentName.trim(),
+      department: department.trim(),
+      responsibility: responsibility.trim(),
+      location: location.trim(),
+      plantCode: plantCode.trim(),
+      trendMonths,
+      nextMaintenanceDate,
+      lastMaintenanceDate: lastMaintenanceDate.trim() || undefined,
+      status,
+      remarks: remarks.trim(),
+      customPlanDates: extras,
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {machine && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 font-sans"
+          onClick={() => !saving && onClose()}
+        >
+          <motion.div
+            initial={{ scale: 0.97, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.97, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl p-5 sm:p-6 max-w-2xl w-full max-h-[calc(100dvh-2rem)] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <Pencil className="text-blue-600" size={18} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Edit machine</h3>
+                  <p className="text-xs font-mono font-bold text-blue-700 mt-0.5">{machine.assetCode}</p>
+                  <p className="text-[10px] font-semibold text-slate-400">Asset code cannot be changed</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <SmartSelect
+                label="Machine Type"
+                required
+                value={machineType}
+                options={optionsWithValue(typeOptions, machineType)}
+                onChange={setMachineType}
+              />
+              <div className="space-y-1.5">
+                <label className="label-caps">
+                  Machine Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={machineNumber}
+                  onChange={(e) => setMachineNumber(e.target.value.toUpperCase())}
+                  className="w-full input-geometric uppercase font-mono font-bold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Machine</label>
+                <input
+                  value={equipmentName}
+                  onChange={(e) => setEquipmentName(e.target.value)}
+                  className="w-full input-geometric font-semibold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Department</label>
+                <input
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full input-geometric font-semibold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Responsibility</label>
+                <input
+                  value={responsibility}
+                  onChange={(e) => setResponsibility(e.target.value)}
+                  className="w-full input-geometric font-semibold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as MaintenanceMachine['status'])}
+                  className="w-full input-geometric bg-white font-semibold"
+                >
+                  {['Active', 'Maintenance Due', 'Overdue', 'Done', 'Down'].map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <SmartSelect
+                label="Location"
+                required
+                value={location}
+                options={optionsWithValue(locations, location)}
+                onChange={(next) => {
+                  setLocation(next);
+                  if (!plants.some((p) => sameLoc(p.location, next) && p.code === plantCode)) {
+                    setPlantCode('');
+                  }
+                }}
+              />
+              <div className="space-y-1.5">
+                <label className="label-caps">
+                  Plant <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={plantCode}
+                  onChange={(e) => setPlantCode(e.target.value)}
+                  className="w-full input-geometric bg-white font-bold"
+                >
+                  <option value="" disabled>
+                    Select plant
+                  </option>
+                  {plantsForLocation.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {plantShortName(p.code, plants)}
+                    </option>
+                  ))}
+                  {plantCode && !plantsForLocation.some((p) => p.code === plantCode) ? (
+                    <option value={plantCode}>{plantShortName(plantCode, plants)}</option>
+                  ) : null}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Trend</label>
+                <select
+                  value={trendMonths}
+                  onChange={(e) => setTrendMonths(Number(e.target.value))}
+                  className="w-full input-geometric bg-white font-bold"
+                >
+                  {TREND_SELECT_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {trendMonthsLabel(n)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">
+                  Next Maintenance Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={nextMaintenanceDate}
+                  onChange={(e) => setNextMaintenanceDate(e.target.value)}
+                  className="w-full input-geometric"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Last Maintenance Date</label>
+                <input
+                  type="date"
+                  value={lastMaintenanceDate}
+                  onChange={(e) => setLastMaintenanceDate(e.target.value)}
+                  className="w-full input-geometric"
+                />
+              </div>
+            </div>
+
+            {isCustomTrend(trendMonths) ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-[11px] text-amber-900 font-semibold mb-2">
+                  Manual plan — no month trend. Next date is the current due. Extra dates after that show on the dashboard. Past extra dates are ignored.
+                </p>
+                <CustomPlanDatesField dates={customPlanDates} onChange={setCustomPlanDates} />
+              </div>
+            ) : null}
+
+            <div className="mt-3 space-y-1.5">
+              <label className="label-caps">Remarks</label>
+              <textarea
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                rows={2}
+                className="w-full input-geometric"
+              />
+            </div>
+
+            {error ? <p className="text-xs font-bold text-red-600 mt-3">{error}</p> : null}
+
+            <div className="flex gap-3 justify-end mt-5">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={saving}
+                className="px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

@@ -1,0 +1,33 @@
+{
+  "buildCommand": "npm run build && npm run build:vercel-server",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/maintenance/cron",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/maintenance",
+      "schedule": "30 10 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/scan/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
