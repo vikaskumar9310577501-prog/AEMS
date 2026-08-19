@@ -390,19 +390,49 @@ const DEPT_PRESETS = [
   'R&D',
 ];
 
+const CUSTOM_DEPTS_KEY = 'aems_custom_departments';
+
+function getCustomDepts(): string[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_DEPTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveCustomDept(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const existing = getCustomDepts();
+  if (DEPT_PRESETS.includes(trimmed) || existing.includes(trimmed)) return;
+  localStorage.setItem(CUSTOM_DEPTS_KEY, JSON.stringify([...existing, trimmed]));
+}
+
 export function DeptCombo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const isOther = value !== '' && !DEPT_PRESETS.includes(value);
+  const [customDepts, setCustomDepts] = useState<string[]>(getCustomDepts);
+  const allDepts = [...DEPT_PRESETS, ...customDepts];
+  const isOther = value !== '' && !allDepts.includes(value);
   const [showCustom, setShowCustom] = useState(isOther);
+  const [customInput, setCustomInput] = useState(isOther ? value : '');
 
   const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const v = e.target.value;
     if (v === '__other__') {
       setShowCustom(true);
+      setCustomInput('');
       onChange('');
     } else {
       setShowCustom(false);
       onChange(v);
     }
+  };
+
+  const handleAdd = () => {
+    const trimmed = customInput.trim();
+    if (!trimmed) return;
+    saveCustomDept(trimmed);
+    setCustomDepts(getCustomDepts());
+    setShowCustom(false);
+    onChange(trimmed);
   };
 
   const selectValue = showCustom ? '__other__' : (value || '');
@@ -415,19 +445,29 @@ export function DeptCombo({ value, onChange }: { value: string; onChange: (v: st
         className="w-full input-geometric bg-white font-semibold"
       >
         <option value="">— Select Department —</option>
-        {DEPT_PRESETS.map((d) => (
+        {allDepts.map((d) => (
           <option key={d} value={d}>{d}</option>
         ))}
-        <option value="__other__">Other (type below)</option>
+        <option value="__other__">+ Add New Department</option>
       </select>
       {showCustom && (
-        <input
-          autoFocus
-          placeholder="Type department name…"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full input-geometric font-semibold"
-        />
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            placeholder="Type department name…"
+            value={customInput}
+            onChange={(e) => { setCustomInput(e.target.value); onChange(e.target.value); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
+            className="w-full input-geometric font-semibold"
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+          >
+            Add
+          </button>
+        </div>
       )}
     </div>
   );
