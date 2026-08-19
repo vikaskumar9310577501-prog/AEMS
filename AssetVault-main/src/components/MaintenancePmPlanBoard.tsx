@@ -94,7 +94,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
         ) : machines.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <CalendarDays size={32} className="mx-auto text-stone-300" />
-            <p className="text-sm text-stone-500">No machines to show on the plan.</p>
+            <p className="text-sm text-stone-500">No machines with PM planned this month.</p>
           </div>
         ) : (
           <>

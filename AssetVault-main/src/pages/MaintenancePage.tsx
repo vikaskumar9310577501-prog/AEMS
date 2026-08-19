@@ -498,6 +498,12 @@ export default function MaintenancePage() {
     [scopedMachines, dashboardYear]
   );
 
+  /** Plan board: only machines with at least one PM date in the real current calendar month. */
+  const currentMonthPlanMachines = useMemo(
+    () => listMachinesForPmKpi(scopedMachines, new Date().getFullYear(), 'plannedThisMonth'),
+    [scopedMachines]
+  );
+
   const complaintDashboardList = useMemo(
     () => filterComplaintsByDashboard(scopedComplaints, complaintFilter),
     [scopedComplaints, complaintFilter]
@@ -1010,7 +1016,11 @@ export default function MaintenancePage() {
                 onBack={() => setKpiOverlay(null)}
               />
             ) : (
-              <MaintenancePmPlanBoard machines={scopedMachines} loading={loading} year={dashboardYear} />
+              <MaintenancePmPlanBoard
+                machines={currentMonthPlanMachines}
+                loading={loading}
+                year={dashboardYear}
+              />
             )}
           </div>
         )}
