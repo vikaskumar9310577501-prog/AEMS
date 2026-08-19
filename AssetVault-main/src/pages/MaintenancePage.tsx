@@ -1028,23 +1028,14 @@ export default function MaintenancePage() {
         {tab === 'complaint-dashboard' && canComplaints && (
           <PremiumComplaintDashboard
             complaints={scopedComplaints}
+            plants={plants}
             lane={complaintLaneFilter}
             search={complaintSearch}
             loading={loading}
-            renderItem={(c) => (
-              <ComplaintListItem
-                key={c.id}
-                complaint={c}
-                plants={plants}
-                hideResolve
-                onOpen={() => setDetailComplaint(c)}
-                onPreviewPhoto={
-                  c.photoUrl
-                    ? () => setComplaintPhotoPreview({ url: c.photoUrl!, name: c.photoName })
-                    : undefined
-                }
-              />
-            )}
+            onOpenDetail={setDetailComplaint}
+            onPreviewPhoto={(c) =>
+              c.photoUrl ? setComplaintPhotoPreview({ url: c.photoUrl, name: c.photoName }) : undefined
+            }
           />
         )}
 
