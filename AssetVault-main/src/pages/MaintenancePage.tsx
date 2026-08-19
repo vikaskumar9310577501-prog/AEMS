@@ -1304,7 +1304,7 @@ export default function MaintenancePage() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => setDetailMachine(m)}
+                                onClick={(e) => { e.stopPropagation(); setDetailMachine(m); }}
                                 className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
                                 title="View details"
                               >
@@ -1942,51 +1942,117 @@ function MachineDetailPopup({
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_260px]">
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 content-start overflow-y-auto min-h-0">
-              <DetailField label="Machine Name" value={name} />
-              <DetailField label="Machine Type" value={machine.machineType} />
-              <DetailField label="Machine Number" value={machine.machineNumber} />
-              <DetailField label="Asset Code" value={machine.assetCode} />
-              <DetailField label="Department" value={machine.department} />
-              <DetailField label="Responsibility" value={machine.responsibility} />
-              <DetailField label="Location" value={machine.location} />
-              <DetailField label="Plant" value={plantShortName(machine.plantCode, plants)} />
-              <MachinePlanCard machine={machine} />
-              <DetailField label="Status" value={machine.status} />
-              <DetailField label="Next Maintenance Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
-              <DetailField label="Last Maintenance Date" value={formatDate(machine.lastMaintenanceDate)} />
-              <DetailField label="Complaints" value={`${openCount} open · ${resolvedCount} resolved`} />
+          <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_300px]">
+            {/* Left: Machine Info + Complaints */}
+            <div className="overflow-y-auto min-h-0 p-5 space-y-5">
+              {/* Machine Info Grid */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Machine Information</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                  <DetailField label="Machine ID" value={machine.assetCode} />
+                  <DetailField label="Machine Name" value={machine.equipmentName || '—'} />
+                  <DetailField label="Machine Type" value={machine.machineType} />
+                  <DetailField label="Machine No." value={machine.machineNumber} />
+                  <DetailField label="Department" value={machine.department || '—'} />
+                  <DetailField label="Responsibility" value={machine.responsibility || '—'} />
+                  <DetailField label="Location" value={machine.location || '—'} />
+                  <DetailField label="Plant" value={plantShortName(machine.plantCode, plants)} />
+                </div>
+              </div>
+
+              {/* Maintenance Info */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Maintenance Schedule</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                  <DetailField label="Status" value={badge.label} />
+                  <DetailField label="PM Interval" value={trendMonthsLabel(machine.trendMonths ?? 2)} />
+                  <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
+                  <DetailField label="Last PM Date" value={formatDate(machine.lastMaintenanceDate) || '—'} />
+                  <DetailField label="Open Complaints" value={String(openCount)} />
+                  <DetailField label="Resolved Complaints" value={String(resolvedCount)} />
+                  <DetailField label="Created By" value={machine.createdBy || '—'} />
+                  <DetailField label="Created At" value={formatDate(machine.createdAt) || '—'} />
+                </div>
+              </div>
+
               {machine.remarks ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:col-span-2 xl:col-span-4 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Remarks</p>
-                  <p className="mt-0.5 text-sm font-semibold text-slate-900 whitespace-pre-wrap break-words">{machine.remarks}</p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">Remarks</p>
+                  <p className="text-sm font-semibold text-slate-900 whitespace-pre-wrap break-words">{machine.remarks}</p>
                 </div>
               ) : null}
+
+              {/* Complaints List */}
+              {complaints.length > 0 ? (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                    Complaints ({complaints.length})
+                  </p>
+                  <div className="space-y-2">
+                    {complaints.map((c) => (
+                      <div
+                        key={c.id}
+                        className={`rounded-xl border px-4 py-2.5 ${
+                          c.status === 'Open'
+                            ? 'border-amber-200 bg-amber-50'
+                            : 'border-emerald-200 bg-emerald-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="font-mono text-xs font-bold text-slate-600">{c.assetCode}</span>
+                          <span
+                            className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              c.status === 'Open'
+                                ? 'bg-amber-200 text-amber-800'
+                                : 'bg-emerald-200 text-emerald-700'
+                            }`}
+                          >
+                            {c.status === 'Open' ? 'Pending' : 'Resolved'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-800 leading-snug">{c.complaintText}</p>
+                        {c.remark ? (
+                          <p className="text-xs text-slate-500 mt-0.5">{c.remark}</p>
+                        ) : null}
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Reported: {formatDate(c.reportedAt)}
+                          {c.resolvedAt ? ` · Resolved: ${formatDate(c.resolvedAt)}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  No complaints recorded for this machine.
+                </div>
+              )}
             </div>
 
-            <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/80 p-4 overflow-y-auto min-h-0">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">PM history</p>
+            {/* Right: PM History */}
+            <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50 p-4 overflow-y-auto min-h-0">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">PM History</p>
               {logs.length === 0 ? (
-                <p className="text-sm text-slate-500">No completed cycles recorded yet.</p>
+                <p className="text-sm text-slate-500">No completed PM cycles recorded yet.</p>
               ) : (
-                <table className="w-full text-left text-sm">
-                  <thead className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    <tr>
-                      <th className="py-1 pr-2">Planned</th>
-                      <th className="py-1">Done</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {logs.map((log, i) => (
-                      <tr key={`${log.doneOn}-${i}`}>
-                        <td className="py-1.5 pr-2 font-semibold text-slate-800">{formatDate(log.plannedDate)}</td>
-                        <td className="py-1.5 font-semibold text-slate-800">{formatDate(log.doneOn)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="space-y-1.5">
+                  {logs.map((log, i) => (
+                    <div key={`${log.doneOn}-${i}`} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-[9px] font-black uppercase text-slate-400">Planned</p>
+                          <p className="text-xs font-bold text-slate-800">{formatDate(log.plannedDate) || '—'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] font-black uppercase text-slate-400">Done On</p>
+                          <p className="text-xs font-bold text-emerald-700">{formatDate(log.doneOn)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
+              <MachinePlanCard machine={machine} />
             </div>
           </div>
         </div>
