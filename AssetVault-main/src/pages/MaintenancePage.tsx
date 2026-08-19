@@ -1202,11 +1202,12 @@ export default function MaintenancePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {paginatedMachines.map((m) => {
+                    {paginatedMachines.map((m, rowIdx) => {
                       const badge = statusBadge(m);
                       const pendingDays = maintenancePendingDays(m);
                       const plant = plantTableLabel(m.plantCode, plants);
                       const trendM = machineTrendMonths(m);
+                      const menuDropUp = rowIdx >= paginatedMachines.length - 2;
                       return (
                         <tr
                           key={m.id}
@@ -1270,20 +1271,32 @@ export default function MaintenancePage() {
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5 text-slate-700">
+                            <div className="flex items-center gap-1.5">
                               <CalendarRange size={14} className="text-slate-400 shrink-0" />
-                              <span className="text-[13px] font-medium">{formatDate(m.nextMaintenanceDate)}</span>
+                              <input
+                                type="date"
+                                value={toDateInputValue(m.nextMaintenanceDate)}
+                                disabled={updatingDateId === m.id}
+                                onChange={(e) => void changeMachineNextDate(m, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="border border-slate-200 rounded text-[12px] font-medium py-0.5 px-1.5 bg-white disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                title="Next maintenance date"
+                              />
                             </div>
-                            {pendingDays > 0 && (
-                              <span className="block text-[10px] font-semibold text-red-500 leading-tight mt-0.5 pl-5">
-                                -{pendingDays}d
-                              </span>
+                            {(pendingDays > 0 || (isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0)) && (
+                              <div className="flex items-center gap-1 mt-1 pl-5">
+                                {pendingDays > 0 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-[9px] font-bold text-red-600">
+                                    {pendingDays}d overdue
+                                  </span>
+                                )}
+                                {isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-[9px] font-bold text-amber-700">
+                                    {m.customPlanDates!.length} extra
+                                  </span>
+                                )}
+                              </div>
                             )}
-                            {isCustomTrend(trendM) && (m.customPlanDates?.length || 0) > 0 ? (
-                              <span className="block text-[10px] font-medium text-amber-600 leading-tight pl-5">
-                                +{m.customPlanDates!.length} dt
-                              </span>
-                            ) : null}
                           </td>
                           <td className="px-4 py-4">
                             <span
@@ -1326,7 +1339,7 @@ export default function MaintenancePage() {
                                   <MoreVertical size={16} />
                                 </button>
                                 {machineMenuId === m.id && (
-                                  <div className="absolute right-0 top-full mt-1 min-w-[160px] bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 whitespace-nowrap">
+                                  <div className={`absolute right-0 min-w-[160px] bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 whitespace-nowrap ${menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                                     <button
                                       type="button"
                                       onClick={() => { setPrintMachines([m]); setMachineMenuId(null); }}
