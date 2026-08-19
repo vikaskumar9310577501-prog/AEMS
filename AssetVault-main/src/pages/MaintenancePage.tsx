@@ -1178,7 +1178,7 @@ export default function MaintenancePage() {
             ) : (
               <div className="overflow-auto flex-1 min-h-0 max-h-[calc(100dvh-11rem)]">
                 <table className="w-full min-w-[1060px] border-collapse text-[13px] leading-normal">
-                  <thead className="sticky top-0 z-30 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b-2 border-slate-100">
+                  <thead className="sticky top-0 z-30 bg-white text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b border-slate-200">
                     <tr>
                       <th className="px-4 py-3 w-10 text-center">
                         <input
@@ -1201,7 +1201,7 @@ export default function MaintenancePage() {
                       <th className="px-4 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-200">
                     {paginatedMachines.map((m) => {
                       const badge = statusBadge(m);
                       const pendingDays = maintenancePendingDays(m);
@@ -1210,7 +1210,7 @@ export default function MaintenancePage() {
                       return (
                         <tr
                           key={m.id}
-                          className="group border-b border-slate-100 hover:bg-blue-50/40 transition-colors cursor-pointer"
+                          className="group border-b border-slate-200 hover:bg-blue-50/40 transition-colors cursor-pointer"
                           onClick={() => setDetailMachine(m)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
