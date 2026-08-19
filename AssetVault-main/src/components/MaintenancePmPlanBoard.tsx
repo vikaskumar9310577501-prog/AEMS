@@ -134,7 +134,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
                       <th
                         key={col.label}
                         colSpan={4}
-                        className={`h-7 text-[10px] font-black uppercase tracking-wide border-b border-r border-stone-300/70 box-border ${monthHeaderClass(col, now)}`}
+                        className={`h-7 text-[10px] font-black uppercase tracking-wide border-b border-r border-stone-400/70 box-border ${monthHeaderClass(col, now)}`}
                       >
                         {col.label}
                       </th>
@@ -146,7 +146,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
                         <th
                           key={`${col.label}-W${w}`}
                           data-pm-scroll-start={idx === startMonthIndex && w === 1 ? '1' : undefined}
-                          className={`h-6 text-[9px] font-black border-b border-stone-300/70 box-border ${w === 4 ? 'border-r border-stone-300/70' : 'border-r border-stone-200/60'} ${weekHeaderClass(col, now)}`}
+                          className={`h-6 text-[9px] font-black border-b-2 border-stone-400/70 box-border ${w === 4 ? 'border-r-2 border-stone-400/80' : 'border-r border-stone-300/90'} ${weekHeaderClass(col, now)}`}
                           style={{ width: WEEK_W, minWidth: WEEK_W, maxWidth: WEEK_W }}
                         >
                           W{w}
@@ -253,10 +253,16 @@ function weekHeaderClass(col: MonthCol, now: Date) {
   return col.month % 2 === 0 ? 'bg-stone-100/90 text-stone-600' : 'bg-[#F5F0E8] text-stone-600';
 }
 
-function monthCellBg(col: MonthCol, now: Date, machineStripe: string) {
-  if (isCurrentMonth(col, now)) return 'bg-blue-50/70';
-  if (col.month % 2 === 0) return machineStripe;
-  return machineStripe === 'bg-[#FFFCF8]' ? 'bg-[#F5F0E8]/90' : 'bg-[#EDE8E0]/80';
+function monthCellBg(col: MonthCol, now: Date, machineStripe: string, week: number) {
+  const alt = week % 2 === 0;
+  if (isCurrentMonth(col, now)) {
+    return alt ? 'bg-blue-50' : 'bg-blue-100/80';
+  }
+  if (col.month % 2 === 0) {
+    if (alt) return machineStripe;
+    return machineStripe === 'bg-[#FFFCF8]' ? 'bg-[#F0EBE3]' : 'bg-[#EDE8E0]';
+  }
+  return alt ? 'bg-[#F5F0E8]' : 'bg-[#E8E2DA]';
 }
 
 function MachineRows({
@@ -305,7 +311,7 @@ function MachineRows({
       <tr className="group">
         <td
           rowSpan={2}
-          className={`border-b border-r border-stone-300/60 px-2.5 py-1.5 align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          className={`border-b border-r border-stone-400/80 px-2.5 py-1.5 align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.name, COL_NAME, false, 9)}
         >
           <p className="font-bold text-[11px] text-stone-800 leading-snug line-clamp-2">{name}</p>
@@ -315,7 +321,7 @@ function MachineRows({
         </td>
         <td
           rowSpan={2}
-          className={`border-b border-r border-stone-300/60 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          className={`border-b border-r border-stone-400/80 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.freq, COL_FREQ, false, 9)}
         >
           <span className="inline-flex px-2 py-0.5 rounded-md bg-stone-100/90 border border-stone-200/70 text-[10px] font-bold text-stone-700">
@@ -324,7 +330,7 @@ function MachineRows({
         </td>
         <td
           rowSpan={2}
-          className={`border-b border-r border-stone-300/60 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          className={`border-b border-r border-stone-400/80 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.dept, COL_DEPT, false, 9)}
         >
           {dept ? (
@@ -337,7 +343,7 @@ function MachineRows({
         </td>
         <td
           rowSpan={2}
-          className={`border-b border-r border-stone-300/60 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          className={`border-b border-r border-stone-400/80 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.resp, COL_RESP, false, 9)}
         >
           {resp ? (
@@ -349,7 +355,7 @@ function MachineRows({
           )}
         </td>
         <td
-          className="border-b border-r border-stone-300/70 text-center text-[9px] font-black uppercase text-amber-800 bg-gradient-to-r from-amber-50 to-amber-100/80 align-middle box-border"
+          className="border-b border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-amber-800 bg-gradient-to-r from-amber-50 to-amber-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(251,191,36,0.25)]"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
           Plan
@@ -367,7 +373,7 @@ function MachineRows({
       </tr>
       <tr className="group">
         <td
-          className="border-b border-r border-stone-300/70 text-center text-[9px] font-black uppercase text-emerald-800 bg-gradient-to-r from-emerald-50 to-emerald-100/80 align-middle box-border"
+          className="border-b-2 border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-emerald-800 bg-gradient-to-r from-emerald-50 to-emerald-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(52,211,153,0.25)]"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
           Actual
@@ -414,10 +420,10 @@ function WeekCells({
           const hit = keys.has(key);
           const overdue = overdueKeys.has(key);
           const isToday = key === todayKey;
-          const monthEdge = w === 4 ? 'border-r border-stone-300/70' : 'border-r border-stone-200/50';
-          const bottom = mark === 'A' ? 'border-b border-stone-300/60' : 'border-b border-stone-200/50';
-          let cell = `text-center align-middle box-border ${bottom} ${monthEdge} ${monthCellBg(col, now, stripe)}`;
-          if (isToday) cell += ' bg-blue-100/80 ring-1 ring-inset ring-blue-300/40';
+          const monthEdge = w === 4 ? 'border-r-2 border-stone-400/80' : 'border-r border-stone-300/90';
+          const bottom = mark === 'A' ? 'border-b-2 border-stone-400/80' : 'border-b border-stone-300/90';
+          let cell = `text-center align-middle box-border ${bottom} ${monthEdge} ${monthCellBg(col, now, stripe, w)} shadow-[inset_0_0_0_1px_rgba(168,152,136,0.32)]`;
+          if (isToday) cell += ' !bg-blue-200/70 ring-2 ring-inset ring-blue-400/55';
           let chip =
             'inline-flex w-[22px] h-[22px] rounded-lg items-center justify-center shadow-sm transition-transform hover:scale-105';
           if (hit && mark === 'P' && overdue) chip += ' bg-gradient-to-br from-rose-500 to-rose-600 text-white ring-1 ring-rose-300/60 shadow-rose-200/50';
