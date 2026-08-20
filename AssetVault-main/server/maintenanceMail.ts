@@ -267,6 +267,8 @@ ${APP_NAME}`;
 export function buildComplaintNotifyEmail(c: MachineMailIdentity & {
   complaintText: string;
   remark?: string;
+  reporterName?: string;
+  reporterPhone?: string;
   downtimeLabel?: string;
   photoUrl?: string;
   reportedAt: string;
@@ -274,20 +276,22 @@ export function buildComplaintNotifyEmail(c: MachineMailIdentity & {
   const extraText = [
     identityText(c),
     `Reported At: ${c.reportedAt}`,
+    c.reporterName ? `Reported By: ${c.reporterName}` : "",
+    c.reporterPhone ? `Reporter Phone: ${c.reporterPhone}` : "",
     c.downtimeLabel ? `Downtime: ${c.downtimeLabel}` : "",
     c.remark ? `Remark:\n${c.remark}` : "",
     c.photoUrl ? `Photo: ${c.photoUrl}` : "",
   ]
     .filter(Boolean)
     .join("\n");
-  const subject = `Downtime Complaint Registered — ${c.assetCode} (${c.machineNumber})`;
+  const subject = `Breakdown Complaint Registered — ${c.assetCode} (${c.machineNumber})`;
   const text = `Dear Sir / Madam,
 
-A downtime complaint has been registered for the machine below. Please review the details and arrange for resolution.
+A breakdown complaint has been registered for the machine below. Please review the details and arrange for resolution.
 
 ${extraText}
 
-Complaint Details:
+Breakdown Details:
 ${c.complaintText}
 
 Please mark the complaint as Done in the AEMS Maintenance module once the issue has been resolved. Daily reminders will continue until then.
@@ -297,16 +301,18 @@ ${APP_NAME}`;
   const html = professionalShell(
     subject,
     `<p>Dear Sir / Madam,</p>
-    <p>A <strong>downtime complaint</strong> has been registered for the machine below. Please review the details and arrange for resolution.</p>
+    <p>A <strong>breakdown complaint</strong> has been registered for the machine below. Please review the details and arrange for resolution.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
       ${identityHtml(c)}
       ${kvRow("Reported At", c.reportedAt)}
+      ${c.reporterName ? kvRow("Reported By", c.reporterName) : ""}
+      ${c.reporterPhone ? kvRow("Reporter Phone", c.reporterPhone) : ""}
       ${c.downtimeLabel ? kvRow("Downtime", c.downtimeLabel) : ""}
     </table>
-    <p style="margin:0 0 8px;font-weight:700;">Complaint Details</p>
+    <p style="margin:0 0 8px;font-weight:700;">Breakdown Details</p>
     <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
     ${c.remark ? `<p style="margin:16px 0 8px;font-weight:700;">Remark</p><div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.remark)}</div>` : ""}
-    ${c.photoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Photo</p><p><a href="${escapeHtml(c.photoUrl)}">View photo</a></p><p><img src="${escapeHtml(c.photoUrl)}" alt="Complaint photo" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
+    ${c.photoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Photo</p><p><a href="${escapeHtml(c.photoUrl)}">View photo</a></p><p><img src="${escapeHtml(c.photoUrl)}" alt="Breakdown photo" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
     <p style="margin-top:16px;">Please mark the complaint as <strong>Done</strong> in the AEMS Maintenance module once the issue has been resolved. Daily reminders will continue until then.</p>
     <p>Yours sincerely,<br/>${APP_NAME}</p>`
   );

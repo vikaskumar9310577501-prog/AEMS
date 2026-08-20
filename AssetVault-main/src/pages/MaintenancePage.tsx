@@ -1230,6 +1230,9 @@ export default function MaintenancePage() {
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
                         Status
                       </th>
+                      <th className="px-2 py-2.5 text-center w-14 bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                        Done
+                      </th>
                       <th className="px-3 py-2.5 text-right bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tr-lg border border-stone-200/50">Actions</th>
                     </tr>
                   </thead>
@@ -1336,6 +1339,24 @@ export default function MaintenancePage() {
                             )}
                           </MachineCell>
                           <MachineCell
+                            className="text-center shadow-sm group-hover:shadow-md"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {canMarkMaintenanceDone(m) ? (
+                              <button
+                                type="button"
+                                disabled={markingDoneId === m.id}
+                                onClick={() => setDoneMachine(m)}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all disabled:opacity-40 shadow-sm"
+                                title="Mark maintenance Done"
+                              >
+                                <CheckCircle2 size={16} />
+                              </button>
+                            ) : (
+                              <span className="text-stone-300 text-xs">—</span>
+                            )}
+                          </MachineCell>
+                          <MachineCell
                             edge="last"
                             className="text-right shadow-sm group-hover:shadow-md"
                             onClick={(e) => e.stopPropagation()}
@@ -1382,16 +1403,6 @@ export default function MaintenancePage() {
                                     >
                                       <QrCode size={15} className="shrink-0" /> Print QR
                                     </button>
-                                    {canMarkMaintenanceDone(m) && (
-                                      <button
-                                        type="button"
-                                        disabled={markingDoneId === m.id}
-                                        onClick={() => { setDoneMachine(m); setMachineMenuId(null); }}
-                                        className="w-full text-left px-4 py-2 text-[13px] hover:bg-stone-50 flex items-center gap-3 text-emerald-700 disabled:opacity-40"
-                                      >
-                                        <CheckCircle2 size={15} className="shrink-0" /> Mark Done
-                                      </button>
-                                    )}
                                     {canDeleteMachine && (
                                       <button
                                         type="button"

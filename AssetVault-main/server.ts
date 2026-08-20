@@ -4140,6 +4140,8 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
         ...pickMailIdentity(saved),
         complaintText: saved.complaintText,
         remark: saved.remark,
+        reporterName: saved.reporterName,
+        reporterPhone: saved.reporterPhone,
         downtimeLabel: formatDowntimeLabel(saved.downtimeMinutes),
         photoUrl: saved.photoUrl,
         reportedAt: saved.reportedAt,
