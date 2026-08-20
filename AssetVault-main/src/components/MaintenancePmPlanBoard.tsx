@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { MaintenanceComplaint, MaintenanceMachine } from '../types/maintenance';
 import { isCustomTrend } from '../types/maintenance';
 import {
@@ -611,48 +611,90 @@ function formatChipDate(d: Date) {
 }
 
 export function PmPlanLegend() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const items = [
+    {
+      id: 'plan',
+      swatch: 'bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-200/80 ring-1 ring-amber-300/60',
+      label: 'Plan',
+      icon: <CalendarDays size={11} />,
+    },
+    {
+      id: 'actual',
+      swatch: 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-200/80 ring-1 ring-emerald-300/60',
+      label: 'Actual',
+      icon: <Check size={11} />,
+    },
+    {
+      id: 'overdue',
+      swatch: 'bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60',
+      label: 'Overdue',
+      icon: <AlertTriangle size={11} />,
+    },
+    {
+      id: 'issue',
+      swatch: 'bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60',
+      label: 'Issue',
+      icon: <MessageSquareWarning size={11} />,
+    },
+    {
+      id: 'resolved',
+      swatch: 'bg-gradient-to-br from-violet-500 to-violet-600 shadow-sm shadow-violet-200/80 ring-1 ring-violet-300/60',
+      label: 'Resolved',
+      icon: <Check size={11} />,
+    },
+    {
+      id: 'this-week',
+      swatch: 'bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50',
+      label: 'This week',
+    },
+  ] as const;
+
   return (
-    <div className="inline-flex flex-wrap items-center gap-1.5">
-      <Legend
-        swatch="bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-200/80 ring-1 ring-amber-300/60"
-        label="Plan"
-        icon={<CalendarDays size={11} />}
-      />
-      <Legend
-        swatch="bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-200/80 ring-1 ring-emerald-300/60"
-        label="Actual"
-        icon={<Check size={11} />}
-      />
-      <Legend
-        swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60"
-        label="Overdue"
-        icon={<AlertTriangle size={11} />}
-      />
-      <Legend
-        swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60"
-        label="Issue"
-        icon={<MessageSquareWarning size={11} />}
-      />
-      <Legend
-        swatch="bg-gradient-to-br from-violet-500 to-violet-600 shadow-sm shadow-violet-200/80 ring-1 ring-violet-300/60"
-        label="Resolved"
-        icon={<Check size={11} />}
-      />
-      <Legend
-        swatch="bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50"
-        label="This week"
-      />
+    <div className="inline-flex items-center gap-0.5">
+      {items.map((item) => (
+        <Legend
+          key={item.id}
+          swatch={item.swatch}
+          label={item.label}
+          icon={'icon' in item ? item.icon : undefined}
+          expanded={expanded === item.id}
+          onToggle={() => setExpanded((prev) => (prev === item.id ? null : item.id))}
+        />
+      ))}
     </div>
   );
 }
 
-function Legend({ swatch, label, icon }: { swatch: string; label: string; icon?: ReactNode }) {
+function Legend({
+  swatch,
+  label,
+  icon,
+  expanded,
+  onToggle,
+}: {
+  swatch: string;
+  label: string;
+  icon?: ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-stone-200/70 shadow-sm text-[9px] font-black uppercase tracking-wide text-stone-700">
-      <span className={`w-4 h-4 rounded-md ${swatch} inline-flex items-center justify-center text-white`}>
+    <button
+      type="button"
+      onClick={onToggle}
+      title={label}
+      aria-label={label}
+      aria-expanded={expanded}
+      className={`inline-flex items-center gap-1 rounded-lg bg-white border border-stone-200/70 shadow-sm text-[9px] font-black uppercase tracking-wide text-stone-700 transition-all ${
+        expanded ? 'px-2 py-1' : 'p-1'
+      }`}
+    >
+      <span className={`w-4 h-4 rounded-md ${swatch} inline-flex items-center justify-center text-white shrink-0`}>
         {icon}
       </span>
-      {label}
-    </span>
+      {expanded ? <span className="whitespace-nowrap pr-0.5">{label}</span> : null}
+    </button>
   );
 }
