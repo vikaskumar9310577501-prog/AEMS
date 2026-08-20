@@ -18,6 +18,8 @@ export interface MaintenancePmLog {
   technicianNames?: string[];
   /** Logged-in user who marked Done. */
   doneBy?: string;
+  /** Close-out remark for this PM cycle. */
+  doneRemarks?: string;
 }
 
 /** 0 = Custom — dashboard uses only manually entered dates (no auto interval). */

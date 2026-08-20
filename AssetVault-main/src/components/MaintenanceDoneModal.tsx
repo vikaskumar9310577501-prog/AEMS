@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CheckCircle2, X } from 'lucide-react';
 import type { MaintenanceMachine } from '../types/maintenance';
@@ -8,9 +8,11 @@ import { plantShortName } from '../lib/plantDisplay';
 import type { MaintenanceTechnicianPayload } from '../lib/maintenanceTechnicians';
 import { buildTechnicianNameSlots, validateTechnicians } from '../lib/maintenanceTechnicians';
 import MaintenanceTechnicianFields from './MaintenanceTechnicianFields';
+import { countWords, MIN_RESOLUTION_WORDS } from './MaintenanceResolveModal';
 
 export type MaintenanceDonePayload = {
   nextMaintenanceDate: string;
+  remarks: string;
 } & MaintenanceTechnicianPayload;
 
 interface MaintenanceDoneModalProps {
@@ -29,6 +31,7 @@ export default function MaintenanceDoneModal({
   onConfirm,
 }: MaintenanceDoneModalProps) {
   const [nextDate, setNextDate] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
   const [technicianCount, setTechnicianCount] = useState(1);
   const [technicianNames, setTechnicianNames] = useState<string[]>(['']);
@@ -51,8 +54,12 @@ export default function MaintenanceDoneModal({
       setError('');
       setTechnicianCount(1);
       setTechnicianNames(['']);
+      setRemarks(machine.remarks || '');
     }
   }, [machine]);
+
+  const words = useMemo(() => countWords(remarks), [remarks]);
+  const remarksOk = words >= MIN_RESOLUTION_WORDS;
 
   const onCountChange = (count: number) => {
     setTechnicianCount(count);
@@ -60,8 +67,14 @@ export default function MaintenanceDoneModal({
   };
 
   const techniciansOk = !validateTechnicians(technicianCount, technicianNames);
+  const canSubmit = techniciansOk && remarksOk && !saving;
 
   const submit = () => {
+    const trimmedRemarks = remarks.trim();
+    if (!remarksOk) {
+      setError(`Close-out remark must be at least ${MIN_RESOLUTION_WORDS} words`);
+      return;
+    }
     const trimmed = nextDate.trim();
     const pending = machine ? pendingPlanDates(machine) : [];
     const canAutoAdvance = custom && pending.length > 1;
@@ -73,6 +86,7 @@ export default function MaintenanceDoneModal({
         }
         void onConfirm({
           nextMaintenanceDate: '',
+          remarks: trimmedRemarks,
           technicianCount,
           technicianNames: technicianNames.map((n) => n.trim()),
         });
@@ -100,6 +114,7 @@ export default function MaintenanceDoneModal({
     }
     void onConfirm({
       nextMaintenanceDate: trimmed,
+      remarks: trimmedRemarks,
       technicianCount,
       technicianNames: technicianNames.map((n) => n.trim()),
     });
@@ -167,6 +182,38 @@ export default function MaintenanceDoneModal({
               onNamesChange={setTechnicianNames}
             />
 
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Close-out remark <span className="text-rose-600">min {MIN_RESOLUTION_WORDS} words</span>
+              </label>
+              <span
+                className={`text-[10px] font-black tabular-nums ${
+                  remarksOk ? 'text-emerald-700' : 'text-slate-500'
+                }`}
+              >
+                {words} / {MIN_RESOLUTION_WORDS}
+              </span>
+            </div>
+            <textarea
+              value={remarks}
+              onChange={(e) => {
+                setRemarks(e.target.value);
+                setError('');
+              }}
+              rows={5}
+              disabled={saving}
+              placeholder="Describe the PM work done, parts checked/replaced, and confirmation that the machine is running…"
+              className="w-full input-geometric text-sm mb-2 resize-y min-h-[120px]"
+            />
+            {!remarksOk ? (
+              <p className="text-[11px] text-slate-500 mb-4">
+                Add a proper close-out note ({MIN_RESOLUTION_WORDS - words} more word
+                {MIN_RESOLUTION_WORDS - words === 1 ? '' : 's'}).
+              </p>
+            ) : (
+              <p className="text-[11px] text-emerald-700 mb-4">Remark length met.</p>
+            )}
+
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
               Next maintenance date
             </label>
@@ -199,7 +246,7 @@ export default function MaintenanceDoneModal({
               <button
                 type="button"
                 onClick={submit}
-                disabled={saving || !techniciansOk}
+                disabled={!canSubmit}
                 className="px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving…' : 'Confirm Done'}

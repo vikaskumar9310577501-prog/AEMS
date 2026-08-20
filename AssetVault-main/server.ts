@@ -3931,6 +3931,11 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
     if ("error" in technicians) {
       return res.status(400).json({ error: technicians.error });
     }
+    const remarks = String(body.remarks || "").trim();
+    const wordCount = remarks.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 50) {
+      return res.status(400).json({ error: "Close-out remark must be at least 50 words" });
+    }
     const actor = String(req.authUser?.email || "System");
     const doneOn = todayKey();
     const custom = isCustomTrend(machineTrendMonths(current));
@@ -3980,7 +3985,7 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
       nextMaintenanceDate: resolvedNext,
       customPlanDates,
       status: "Active",
-      remarks: body.remarks !== undefined ? String(body.remarks || "").trim() || undefined : current.remarks,
+      remarks,
       pmLogs: [
         ...(current.pmLogs || []),
         {
@@ -3989,6 +3994,7 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
           technicianCount: technicians.technicianCount,
           technicianNames: technicians.technicianNames,
           doneBy: actor,
+          doneRemarks: remarks,
         },
       ],
       lastReminderEmailOn: undefined,
@@ -4012,6 +4018,7 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
         resolvedBy: actor,
         technicianCount: technicians.technicianCount,
         technicianNames: technicians.technicianNames,
+        remarks,
       });
       await sendMaintenanceMail({ to, ...payload });
     }

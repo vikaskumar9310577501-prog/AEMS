@@ -615,6 +615,7 @@ export default function MaintenancePage() {
 
   const confirmMachineDone = async (payload: {
     nextMaintenanceDate: string;
+    remarks: string;
     technicianCount: number;
     technicianNames: string[];
   }) => {

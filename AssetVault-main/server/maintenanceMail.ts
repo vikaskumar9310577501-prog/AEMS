@@ -221,6 +221,7 @@ export function buildPreventiveSolvedEmail(m: MachineMailIdentity & {
   resolvedBy: string;
   technicianCount?: number;
   technicianNames?: string[];
+  remarks?: string;
 }): { subject: string; html: string; text: string } {
   const peopleWorked = formatTechnicianNames(m.technicianNames);
   const subject = `Maintenance Completed — ${m.assetCode} (${m.machineNumber})`;
@@ -241,6 +242,7 @@ Preventive maintenance for the machine below has been completed and marked as Do
 
 ${extra}
 
+${m.remarks ? `Close-out remark:\n${m.remarks}\n` : ""}
 No further reminders will be issued for this maintenance cycle.
 
 Yours sincerely,
@@ -258,7 +260,8 @@ ${APP_NAME}`;
       ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
       ${reminderHtml(m.reminderCount)}
     </table>
-    <p>No further reminders will be issued for this maintenance cycle.</p>
+    ${m.remarks ? `<p style="margin:0 0 8px;font-weight:700;">Close-out remark</p><div style="padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(m.remarks)}</div>` : ""}
+    <p style="margin-top:16px;">No further reminders will be issued for this maintenance cycle.</p>
     <p>Yours sincerely,<br/>${APP_NAME}</p>`
   );
   return { subject, html, text };
