@@ -95,7 +95,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden font-sans bg-white">
-      <header className="bg-[#113355] border-b border-[#0b2744] h-16 flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
+      <header className="bg-[#113355] border-b border-[#0b2744] h-[68px] flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -108,23 +108,27 @@ export default function AppLayout() {
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="bg-white rounded-md px-2.5 py-1 h-9 shadow-sm shrink-0 flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-white rounded-md px-2.5 py-1.5 h-10 shadow-sm shrink-0 flex items-center justify-center">
               <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
-            <div className="min-w-0 flex items-center gap-2.5 sm:gap-3">
+            <div className="min-w-0 flex items-center gap-3">
               <div className="min-w-0 flex flex-col justify-center">
-                <h1 className="font-black text-white whitespace-nowrap text-sm sm:text-base md:text-lg leading-none tracking-wide">
+                <h1 className="font-black text-white text-[15px] sm:text-base md:text-[17px] leading-none tracking-[0.06em]">
                   A.E.M.S
                 </h1>
-                <p className="mt-1 text-[8px] sm:text-[9px] font-semibold text-slate-200/95 leading-[1.25]">
-                  <span className="block">Asset Entry</span>
-                  <span className="block">Management System</span>
-                </p>
+                <div className="mt-1.5 border-l-2 border-sky-300/70 pl-2">
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-sky-50/90 leading-[1.15]">
+                    Asset Entry
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-sky-50/90 leading-[1.15]">
+                    Management System
+                  </p>
+                </div>
               </div>
               {isMaintenance ? (
-                <div className="flex items-center gap-2.5 shrink-0 border-l border-white/25 pl-2.5 sm:pl-3 self-center">
-                  <span className="font-bold text-sky-100 text-[11px] sm:text-sm whitespace-nowrap tracking-wide">
+                <div className="flex items-center shrink-0 border-l border-white/20 pl-3 self-center">
+                  <span className="font-bold text-sky-100 text-xs sm:text-sm whitespace-nowrap tracking-wide">
                     Preventive Set-up
                   </span>
                 </div>
