@@ -110,7 +110,7 @@ function MachineCell({
         : '';
   return (
     <td
-      className={`px-3 py-3.5 align-middle border-y border-stone-200/70 bg-white group-hover:bg-[#FFFDF9] group-hover:border-stone-300/80 transition-colors ${edgeClass} ${className}`}
+      className={`px-3 py-2.5 align-middle border-y border-stone-200/70 bg-white group-hover:bg-[#FFFDF9] group-hover:border-stone-300/80 transition-colors ${edgeClass} ${className}`}
       title={title}
       onClick={onClick}
     >
@@ -1169,8 +1169,8 @@ export default function MaintenancePage() {
                 )}
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-auto bg-[#F7F3EE]/60 px-3 py-3">
-                <table className="w-full min-w-[1060px] border-separate border-spacing-y-2.5 text-[13px] leading-normal">
+              <div className="flex-1 min-h-0 overflow-auto bg-[#F7F3EE]/60 px-3 py-2">
+                <table className="w-full min-w-[1060px] border-separate border-spacing-y-1 text-[13px] leading-normal">
                   <thead className="sticky top-0 z-30">
                     <tr className="text-[10px] font-black uppercase tracking-wider text-stone-500">
                       <th className="px-3 py-2.5 w-10 text-center bg-[#F0EBE3]/95 backdrop-blur-sm rounded-tl-lg border border-stone-200/50">
@@ -1756,7 +1756,7 @@ function DashboardKpiOverlay({
             <p className="text-sm text-stone-500">No machines in this category.</p>
           </div>
         ) : (
-          <table className="w-full min-w-[980px] border-separate border-spacing-y-2.5 text-[13px] leading-normal">
+          <table className="w-full min-w-[980px] border-separate border-spacing-y-1 text-[13px] leading-normal">
             <thead className="sticky top-0 z-20">
               <tr className="text-[10px] font-black uppercase tracking-wider text-stone-500">
                 <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm rounded-l-lg border border-stone-200/50">
