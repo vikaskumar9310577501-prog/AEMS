@@ -1443,7 +1443,6 @@ export default function MaintenancePage() {
             onPreviewPhoto={(c) =>
               c.photoUrl ? setComplaintPhotoPreview({ url: c.photoUrl, name: c.photoName }) : undefined
             }
-            onResolve={setResolveComplaintTarget}
           />
         )}
 
@@ -2248,17 +2247,16 @@ function ComplaintDetailPopup({
 
   const popup = (
     <div
-      className="fixed inset-0 z-[200] bg-stone-900/50 backdrop-blur-[2px] p-2 sm:p-4 md:p-5 overflow-y-auto overscroll-contain no-scrollbar"
+      className="fixed inset-0 z-[200] bg-stone-900/50 backdrop-blur-[2px] p-3 sm:p-4 flex items-center justify-center"
       onClick={onClose}
       role="presentation"
     >
-      <div className="min-h-[min(100%,100dvh)] flex items-start sm:items-center justify-center py-2 sm:py-4">
-        <div
-          className="w-full max-w-[920px] rounded-2xl bg-[#FFFCF8] border border-stone-200/80 shadow-[0_24px_64px_-12px_rgba(80,60,40,0.28)] flex flex-col my-auto"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-        >
+      <div
+        className="w-full max-w-[920px] max-h-[calc(100dvh-1.5rem)] rounded-2xl bg-[#FFFCF8] border border-stone-200/80 shadow-[0_24px_64px_-12px_rgba(80,60,40,0.28)] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
           <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-stone-200/60 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA]">
             <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
               <div className="min-w-0">
@@ -2289,7 +2287,7 @@ function ComplaintDetailPopup({
             </button>
           </div>
 
-          <div className="p-5 space-y-5">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar p-4 sm:p-5 space-y-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Machine Information</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
@@ -2356,7 +2354,7 @@ function ComplaintDetailPopup({
                 <img
                   src={c.resolutionPhotoUrl}
                   alt={c.resolutionPhotoName || 'Resolution evidence'}
-                  className="max-h-52 w-full rounded-xl border border-stone-200/80 object-contain bg-stone-50"
+                  className="max-h-40 w-full rounded-xl border border-stone-200/80 object-contain bg-stone-50"
                 />
               </div>
             ) : null}
@@ -2376,7 +2374,7 @@ function ComplaintDetailPopup({
                 <img
                   src={c.photoUrl}
                   alt={c.photoName || 'Complaint photo'}
-                  className="max-h-52 w-full rounded-xl border border-stone-200/80 object-contain bg-stone-50"
+                  className="max-h-40 w-full rounded-xl border border-stone-200/80 object-contain bg-stone-50"
                 />
               </div>
             ) : (
@@ -2385,21 +2383,20 @@ function ComplaintDetailPopup({
                 No photo attached
               </div>
             )}
-
-            {isOpen ? (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={onResolve}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase shadow-md shadow-emerald-500/25"
-                >
-                  <CheckCircle2 size={14} /> Mark Done
-                </button>
-              </div>
-            ) : null}
           </div>
+
+          {isOpen ? (
+            <div className="shrink-0 flex justify-end px-4 sm:px-5 py-3 border-t border-stone-200/70 bg-[#FFF7EE]">
+              <button
+                type="button"
+                onClick={onResolve}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase shadow-md shadow-emerald-500/25"
+              >
+                <CheckCircle2 size={14} /> Mark Done
+              </button>
+            </div>
+          ) : null}
         </div>
-      </div>
     </div>
   );
 

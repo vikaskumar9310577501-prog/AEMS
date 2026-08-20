@@ -69,9 +69,9 @@ export function canAccessMaintenance(
   return hasPreventionModuleCategory(categories);
 }
 
-/** PM prevention dashboard — Admin + IT Admin. */
+/** PM prevention dashboard — Admin, IT Admin, and User. */
 export function canViewMaintenanceDashboard(role: string | undefined | null): boolean {
-  return isAdminRole(role);
+  return isAdminRole(role) || isUserRole(role);
 }
 
 export function canViewMaintenanceMachines(role: string | undefined | null): boolean {

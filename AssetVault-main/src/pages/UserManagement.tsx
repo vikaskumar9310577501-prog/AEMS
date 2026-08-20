@@ -594,7 +594,7 @@ export default function UserManagement() {
                       Prevention (PM) module
                     </label>
                     <p className="text-[11px] text-teal-800/80 mb-2">
-                      Separate from asset categories. Grants access to PM machines &amp; QR complaints when combined with User role.
+                      Separate from asset categories. User role gets Prevention Dashboard, Machines, and Complaints.
                     </p>
                     <label
                       className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer border ${

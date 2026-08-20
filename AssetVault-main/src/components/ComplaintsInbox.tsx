@@ -13,27 +13,16 @@ import {
 
 export type ComplaintsViewFilter = 'all' | 'pending' | 'resolved';
 
-function formatDateShort(iso?: string) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  const day = String(d.getDate()).padStart(2, '0');
-  const mon = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}/${mon}/${d.getFullYear()}`;
-}
-
 function InboxRow({
   complaint: c,
   plants,
   onOpen,
   onPreviewPhoto,
-  onResolve,
 }: {
   complaint: MaintenanceComplaint;
   plants: PlantLike[];
   onOpen: () => void;
   onPreviewPhoto?: () => void;
-  onResolve: () => void;
 }) {
   const isOpen = c.status === 'Open';
   const pending = complaintPendingDays(c.reportedAt);
@@ -45,7 +34,7 @@ function InboxRow({
 
   return (
     <li
-      className="group rounded-2xl border border-stone-200/80 bg-white px-4 py-3.5 cursor-pointer shadow-[0_8px_20px_-12px_rgba(120,90,60,0.18)] hover:-translate-y-px hover:shadow-[0_12px_24px_-12px_rgba(120,90,60,0.22)] transition-all"
+      className="group rounded-xl border border-stone-200/80 bg-white px-3 py-2 cursor-pointer shadow-[0_6px_16px_-12px_rgba(120,90,60,0.16)] hover:bg-[#FFFDF9] hover:border-stone-300/80 transition-colors"
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -56,7 +45,7 @@ function InboxRow({
       tabIndex={0}
       role="button"
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-3">
         {c.photoUrl ? (
           <button
             type="button"
@@ -64,23 +53,23 @@ function InboxRow({
               e.stopPropagation();
               onPreviewPhoto?.();
             }}
-            className="shrink-0 w-[68px] h-[68px] rounded-xl overflow-hidden border border-stone-200/80 bg-stone-50 shadow-sm hover:ring-2 hover:ring-blue-400/40"
+            className="shrink-0 w-11 h-11 rounded-lg overflow-hidden border border-stone-200/80 bg-stone-50 hover:ring-2 hover:ring-blue-400/40"
           >
             <img src={c.photoUrl} alt={c.photoName || 'Complaint photo'} className="w-full h-full object-cover" />
           </button>
         ) : (
-          <div className="shrink-0 w-[68px] h-[68px] rounded-xl border border-dashed border-stone-200 bg-stone-50 flex items-center justify-center">
-            <MessageSquareWarning size={20} className="text-stone-300" />
+          <div className="shrink-0 w-11 h-11 rounded-lg border border-dashed border-stone-200 bg-stone-50 flex items-center justify-center">
+            <MessageSquareWarning size={16} className="text-stone-300" />
           </div>
         )}
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+            <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
               {c.assetCode}
             </span>
             <span
-              className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+              className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
                 isOpen
                   ? 'bg-orange-50 text-orange-800 border border-orange-200/80'
                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
@@ -89,76 +78,41 @@ function InboxRow({
               {isOpen ? 'Pending' : 'Done'}
             </span>
             {isOpen && overWeek ? (
-              <span className="inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-red-500/10 text-red-700 border border-red-200/80">
+              <span className="inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-red-500/10 text-red-700 border border-red-200/80">
                 Over 1 week
               </span>
             ) : null}
             {withinWeek ? (
-              <span className="inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-violet-50 text-violet-700 border border-violet-200/80">
+              <span className="inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-violet-50 text-violet-700 border border-violet-200/80">
                 Within 1 week
               </span>
             ) : null}
+            {downtime ? (
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-stone-600 bg-stone-100 px-1.5 py-0.5 rounded-md">
+                <Zap size={9} /> {downtime}
+              </span>
+            ) : null}
           </div>
-
-          <p className="text-[11px] font-semibold text-stone-500 mt-1 truncate">
+          <p className="text-[11px] font-semibold text-stone-500 mt-0.5 truncate">
             {c.machineType} · {c.machineNumber}
             {c.department ? ` · ${c.department}` : ''}
-            {c.responsibility ? ` · ${c.responsibility}` : ''}
             {' · '}
             {c.location} · {plantShortName(c.plantCode, plants)}
           </p>
-
-          <p className="text-sm font-black text-stone-900 mt-1 leading-snug">{c.complaintText}</p>
-
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            {downtime ? (
-              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-lg border border-stone-200/60">
-                <Zap size={10} /> {downtime}
-              </span>
-            ) : null}
-            {c.remark ? (
-              <span className="text-[10px] text-stone-500 truncate max-w-[min(100%,360px)]">Remark: {c.remark}</span>
-            ) : null}
-            <span className="text-[10px] text-stone-400">Reported {formatDateShort(c.reportedAt)}</span>
-          </div>
+          <p className="text-[13px] font-bold text-stone-900 truncate">{c.complaintText}</p>
         </div>
 
-        <div className="shrink-0 flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
-          {isOpen ? (
-            <div
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-black tabular-nums ${
-                overWeek
-                  ? 'bg-red-500/10 text-red-700 border border-red-200/70'
-                  : 'bg-orange-50 text-orange-800 border border-orange-200/60'
-              }`}
-            >
-              <Clock size={13} />
-              {pending}d
-            </div>
-          ) : resolvedDays != null ? (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-black tabular-nums">
-              <CheckCircle2 size={13} />
-              {resolvedDays}d
-            </div>
-          ) : null}
-
-          {isOpen ? (
-            <button
-              type="button"
-              onClick={onResolve}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase shadow-sm"
-            >
-              <CheckCircle2 size={13} /> Mark Done
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpen}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 text-[10px] font-black uppercase hover:bg-stone-50"
-            >
-              View detail
-            </button>
-          )}
+        <div
+          className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black tabular-nums ${
+            isOpen
+              ? overWeek
+                ? 'bg-red-500/10 text-red-700 border border-red-200/70'
+                : 'bg-orange-50 text-orange-800 border border-orange-200/60'
+              : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+          }`}
+        >
+          {isOpen ? <Clock size={12} /> : <CheckCircle2 size={12} />}
+          {isOpen ? `${pending}d` : resolvedDays != null ? `${resolvedDays}d` : 'Done'}
         </div>
       </div>
     </li>
@@ -195,7 +149,7 @@ function Lane({
           {title} ({count})
         </h3>
       </div>
-      <ul className="space-y-2.5">{children}</ul>
+      <ul className="space-y-1.5">{children}</ul>
     </section>
   );
 }
@@ -208,7 +162,6 @@ export default function ComplaintsInbox({
   onViewFilterChange,
   onOpenDetail,
   onPreviewPhoto,
-  onResolve,
 }: {
   complaints: MaintenanceComplaint[];
   plants: PlantLike[];
@@ -218,7 +171,6 @@ export default function ComplaintsInbox({
   stats?: { total: number; pending: number; done: number };
   onOpenDetail: (c: MaintenanceComplaint) => void;
   onPreviewPhoto: (c: MaintenanceComplaint) => void;
-  onResolve: (c: MaintenanceComplaint) => void;
 }) {
   const pending = complaints.filter((c) => c.status === 'Open');
   const critical = pending.filter((c) => isComplaintOverOneWeek(c));
@@ -230,7 +182,6 @@ export default function ComplaintsInbox({
     plants,
     onOpen: () => onOpenDetail(c),
     onPreviewPhoto: c.photoUrl ? () => onPreviewPhoto(c) : undefined,
-    onResolve: () => onResolve(c),
   });
 
   const filterBtn = (id: ComplaintsViewFilter, label: string) => (
