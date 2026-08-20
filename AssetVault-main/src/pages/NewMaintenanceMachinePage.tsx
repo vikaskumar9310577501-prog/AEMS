@@ -11,6 +11,7 @@ import { buildScopedLocationOptions, buildScopedPlantOptions, sameScopeOption } 
 import { normalizeMachineNumber } from '../lib/maintenanceCodes';
 import { plantShortName } from '../lib/plantDisplay';
 import {
+  CUSTOM_TREND_MONTHS,
   DEFAULT_MACHINE_TYPES,
   DEFAULT_TREND_MONTHS,
   TREND_SELECT_OPTIONS,
@@ -265,8 +266,14 @@ export default function NewMaintenanceMachinePage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setForm((prev) => ({ ...prev, warrantyStatus: 'in_warranty' }))}
-                className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    warrantyStatus: 'in_warranty',
+                    trendMonths: CUSTOM_TREND_MONTHS,
+                  }))
+                }
+                className={`rounded-xl border px-4 py-3.5 text-left transition-all ${
                   form.warrantyStatus === 'in_warranty'
                     ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400/40 shadow-sm'
                     : 'border-slate-200 bg-white hover:border-emerald-300'
@@ -279,14 +286,17 @@ export default function NewMaintenanceMachinePage() {
                   />
                   <span className="text-sm font-black text-slate-900">In Warranty</span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
-                  Machine is under warranty — plan PM with OEM / warranty coverage in mind.
-                </p>
               </button>
               <button
                 type="button"
-                onClick={() => setForm((prev) => ({ ...prev, warrantyStatus: 'out_of_warranty' }))}
-                className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    warrantyStatus: 'out_of_warranty',
+                    trendMonths: DEFAULT_TREND_MONTHS,
+                  }))
+                }
+                className={`rounded-xl border px-4 py-3.5 text-left transition-all ${
                   form.warrantyStatus === 'out_of_warranty'
                     ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-400/40 shadow-sm'
                     : 'border-slate-200 bg-white hover:border-amber-300'
@@ -299,9 +309,6 @@ export default function NewMaintenanceMachinePage() {
                   />
                   <span className="text-sm font-black text-slate-900">Out of Warranty</span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
-                  Warranty expired — plan plant preventive maintenance on your own schedule.
-                </p>
               </button>
             </div>
           </div>
