@@ -2124,6 +2124,16 @@ function MachineDetailPopup({
                   <DetailField label="Responsibility" value={machine.responsibility || '—'} />
                   <DetailField label="Location" value={machine.location || '—'} />
                   <DetailField label="Plant" value={plantShortName(machine.plantCode, plants)} />
+                  <DetailField
+                    label="Warranty"
+                    value={
+                      machine.warrantyStatus === 'in_warranty'
+                        ? 'In Warranty'
+                        : machine.warrantyStatus === 'out_of_warranty'
+                          ? 'Out of Warranty'
+                          : '—'
+                    }
+                  />
                 </div>
               </div>
 

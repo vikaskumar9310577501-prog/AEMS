@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Wrench } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useApp } from '../context/AppProvider';
 import { parseJsonResponse } from '../lib/apiFetch';
 import SmartSelect from '../components/SmartSelect';
@@ -16,6 +16,7 @@ import {
   TREND_SELECT_OPTIONS,
   isCustomTrend,
   trendMonthsLabel,
+  type WarrantyStatus,
 } from '../types/maintenance';
 import { canAddMaintenanceMachine } from '../lib/userPermissions';
 import { CustomPlanDatesField } from '../components/MaintenanceMachineEditModal';
@@ -35,6 +36,7 @@ export default function NewMaintenanceMachinePage() {
     responsibility: '',
     location: '',
     plantCode: '',
+    warrantyStatus: '' as '' | WarrantyStatus,
     trendMonths: DEFAULT_TREND_MONTHS as number,
     nextMaintenanceDate: '',
     remarks: '',
@@ -103,6 +105,7 @@ export default function NewMaintenanceMachinePage() {
     if (!form.machineType.trim()) return toast.error('Select machine type');
     if (!form.machineNumber.trim()) return toast.error('Enter machine number');
     if (!form.location.trim() || !form.plantCode.trim()) return toast.error('Location and plant are required');
+    if (!form.warrantyStatus) return toast.error('Select In Warranty or Out of Warranty');
     if (!form.nextMaintenanceDate.trim()) return toast.error('Maintenance date is required');
 
     setSaving(true);
@@ -118,6 +121,7 @@ export default function NewMaintenanceMachinePage() {
           responsibility: form.responsibility.trim(),
           location: form.location.trim(),
           plantCode: form.plantCode.trim(),
+          warrantyStatus: form.warrantyStatus,
           trendMonths: form.trendMonths,
           customPlanDates: isCustomTrend(form.trendMonths) ? customPlanDates : [],
           nextMaintenanceDate: form.nextMaintenanceDate,
@@ -147,23 +151,16 @@ export default function NewMaintenanceMachinePage() {
           >
             <ArrowLeft size={20} />
           </button>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Maintenance</p>
-            <h1 className="text-2xl font-black text-slate-900">Register Machine</h1>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="text-2xl font-black text-slate-900">Register Machine</h1>
+              <span className="text-sm font-mono font-bold text-blue-700">{previewCode}</span>
+            </div>
           </div>
         </div>
 
         <form onSubmit={onSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 lg:p-8 space-y-6 shadow-sm">
-          <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Wrench className="text-blue-700" size={18} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Auto asset code</p>
-              <p className="text-lg font-mono font-black text-blue-700">{previewCode}</p>
-            </div>
-          </div>
-
           <SmartSelect
             label="Machine Type"
             required
@@ -256,48 +253,111 @@ export default function NewMaintenanceMachinePage() {
             )}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="label-caps">
-                Maintenance Trend <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={form.trendMonths}
-                onChange={(e) => setForm((prev) => ({ ...prev, trendMonths: Number(e.target.value) }))}
-                className="w-full input-geometric bg-white font-bold"
-              >
-                {TREND_SELECT_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {trendMonthsLabel(n)}
-                    </option>
-                  ))}
-              </select>
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+            <div>
+              <p className="label-caps mb-1">
+                Warranty Status <span className="text-red-500">*</span>
+              </p>
               <p className="text-[11px] text-slate-500">
-                {isCustomTrend(form.trendMonths)
-                  ? 'Custom — add your first date below, then any additional dates. All dates are kept and shown on the dashboard.'
-                  : `After each Done, next date auto-suggests +${form.trendMonths} month${form.trendMonths === 1 ? '' : 's'} (${trendMonthsLabel(form.trendMonths)}). Change anytime from Machines list.`}
+                Select warranty first, then plan preventive maintenance for this machine.
               </p>
             </div>
-            <div className="space-y-1.5">
-              <label className="label-caps">
-                Next Maintenance Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={form.nextMaintenanceDate}
-                onChange={(e) => setForm((prev) => ({ ...prev, nextMaintenanceDate: e.target.value }))}
-                className="w-full input-geometric"
-              />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, warrantyStatus: 'in_warranty' }))}
+                className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                  form.warrantyStatus === 'in_warranty'
+                    ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400/40 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-emerald-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldCheck
+                    size={18}
+                    className={form.warrantyStatus === 'in_warranty' ? 'text-emerald-700' : 'text-slate-400'}
+                  />
+                  <span className="text-sm font-black text-slate-900">In Warranty</span>
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
+                  Machine is under warranty — plan PM with OEM / warranty coverage in mind.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, warrantyStatus: 'out_of_warranty' }))}
+                className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                  form.warrantyStatus === 'out_of_warranty'
+                    ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-400/40 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-amber-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldOff
+                    size={18}
+                    className={form.warrantyStatus === 'out_of_warranty' ? 'text-amber-700' : 'text-slate-400'}
+                  />
+                  <span className="text-sm font-black text-slate-900">Out of Warranty</span>
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
+                  Warranty expired — plan plant preventive maintenance on your own schedule.
+                </p>
+              </button>
             </div>
           </div>
 
-          {isCustomTrend(form.trendMonths) ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <CustomPlanDatesField dates={customPlanDates} onChange={setCustomPlanDates} />
+          {form.warrantyStatus ? (
+            <>
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="label-caps">
+                    Maintenance Trend <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={form.trendMonths}
+                    onChange={(e) => setForm((prev) => ({ ...prev, trendMonths: Number(e.target.value) }))}
+                    className="w-full input-geometric bg-white font-bold"
+                  >
+                    {TREND_SELECT_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {trendMonthsLabel(n)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    {isCustomTrend(form.trendMonths)
+                      ? 'Custom — add your first date below, then any additional dates. All dates are kept and shown on the dashboard.'
+                      : `After each Done, next date auto-suggests +${form.trendMonths} month${form.trendMonths === 1 ? '' : 's'} (${trendMonthsLabel(form.trendMonths)}). Change anytime from Machines list.`}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="label-caps">
+                    Next Maintenance Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={form.nextMaintenanceDate}
+                    onChange={(e) => setForm((prev) => ({ ...prev, nextMaintenanceDate: e.target.value }))}
+                    className="w-full input-geometric"
+                  />
+                </div>
+              </div>
+
+              {isCustomTrend(form.trendMonths) ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <CustomPlanDatesField dates={customPlanDates} onChange={setCustomPlanDates} />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center">
+              <p className="text-sm font-semibold text-slate-500">
+                Select warranty status above to continue with the maintenance plan.
+              </p>
             </div>
-          ) : null}
+          )}
 
           <div className="space-y-1.5">
             <label className="label-caps">Remarks (optional)</label>
@@ -319,7 +379,7 @@ export default function NewMaintenanceMachinePage() {
             >
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="btn-primary-geometric disabled:opacity-50">
+            <button type="submit" disabled={saving || !form.warrantyStatus} className="btn-primary-geometric disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Machine'}
             </button>
           </div>

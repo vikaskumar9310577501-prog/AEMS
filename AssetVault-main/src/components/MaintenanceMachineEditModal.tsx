@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
-import type { MaintenanceMachine } from '../types/maintenance';
+import type { MaintenanceMachine, WarrantyStatus } from '../types/maintenance';
 import {
   CUSTOM_TREND_MONTHS,
   DEFAULT_MACHINE_TYPES,
   TREND_SELECT_OPTIONS,
   isCustomTrend,
   trendMonthsLabel,
+  warrantyStatusLabel,
 } from '../types/maintenance';
 import { normalizeCustomPlanDates, normalizeMachineNumber, allCustomPlanDateStrings, mergeCustomPlan } from '../lib/maintenanceCodes';
 import { plantShortName } from '../lib/plantDisplay';
@@ -105,6 +106,7 @@ export default function MaintenanceMachineEditModal({
   const [responsibility, setResponsibility] = useState('');
   const [location, setLocation] = useState('');
   const [plantCode, setPlantCode] = useState('');
+  const [warrantyStatus, setWarrantyStatus] = useState<WarrantyStatus>('out_of_warranty');
   const [trendMonths, setTrendMonths] = useState(2);
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState('');
   const [status, setStatus] = useState<MaintenanceMachine['status']>('Active');
@@ -120,6 +122,7 @@ export default function MaintenanceMachineEditModal({
     setResponsibility(machine.responsibility || '');
     setLocation(machine.location || '');
     setPlantCode(machine.plantCode || '');
+    setWarrantyStatus(machine.warrantyStatus === 'in_warranty' ? 'in_warranty' : 'out_of_warranty');
     setTrendMonths(Number(machine.trendMonths) === CUSTOM_TREND_MONTHS ? CUSTOM_TREND_MONTHS : Number(machine.trendMonths) || 2);
     setNextMaintenanceDate(toDateInputValue(machine.nextMaintenanceDate));
     setStatus(machine.status || 'Active');
@@ -156,6 +159,7 @@ export default function MaintenanceMachineEditModal({
       responsibility: responsibility.trim(),
       location: location.trim(),
       plantCode: plantCode.trim(),
+      warrantyStatus,
       trendMonths,
       nextMaintenanceDate: custom ? merged!.nextMaintenanceDate : nextMaintenanceDate,
       status,
@@ -278,6 +282,17 @@ export default function MaintenanceMachineEditModal({
                   {plantCode && !plantsForLocation.some((p) => p.code === plantCode) ? (
                     <option value={plantCode}>{plantShortName(plantCode, plants)}</option>
                   ) : null}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">Warranty Status</label>
+                <select
+                  value={warrantyStatus}
+                  onChange={(e) => setWarrantyStatus(e.target.value as WarrantyStatus)}
+                  className="w-full input-geometric bg-white font-bold"
+                >
+                  <option value="in_warranty">{warrantyStatusLabel('in_warranty')}</option>
+                  <option value="out_of_warranty">{warrantyStatusLabel('out_of_warranty')}</option>
                 </select>
               </div>
               <div className="space-y-1.5">

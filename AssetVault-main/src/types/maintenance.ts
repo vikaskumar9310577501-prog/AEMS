@@ -35,6 +35,24 @@ export function isCustomTrend(months?: number): boolean {
   return Number(months) === CUSTOM_TREND_MONTHS;
 }
 
+export type WarrantyStatus = 'in_warranty' | 'out_of_warranty';
+
+export function warrantyStatusLabel(status?: WarrantyStatus | string): string {
+  if (status === 'in_warranty') return 'In Warranty';
+  if (status === 'out_of_warranty') return 'Out of Warranty';
+  return '—';
+}
+
+export function normalizeWarrantyStatus(raw: unknown): WarrantyStatus | undefined {
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+  if (v === 'in_warranty' || v === 'in-warranty' || v === 'warranty') return 'in_warranty';
+  if (v === 'out_of_warranty' || v === 'out-of-warranty' || v === 'out_warranty') return 'out_of_warranty';
+  return undefined;
+}
+
 export function trendMonthsLabel(months: number): string {
   switch (months) {
     case CUSTOM_TREND_MONTHS:
@@ -69,6 +87,8 @@ export interface MaintenanceMachine {
   responsibility?: string;
   location: string;
   plantCode: string;
+  /** Machine warranty status used before PM planning. */
+  warrantyStatus?: 'in_warranty' | 'out_of_warranty';
   /** Preventive cycle in months. 0 = Custom (manual dates only). */
   trendMonths?: number;
   /** Extra planned dates when trend is Custom — shown on the dashboard as-is. */
