@@ -754,7 +754,8 @@ export default function MaintenancePage() {
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF8F5]">
       <div className="shrink-0 px-3 lg:px-4 pt-1 pb-0.5 border-b border-stone-200/40">
-        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar min-h-[34px]">
+        <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar min-h-[38px]">
+          <div className="inline-flex items-center gap-1 shrink-0 py-0.5">
           {canDash && (
             <button type="button" onClick={() => goTab('dashboard')} className={navBtn(tab === 'dashboard')}>
               <LayoutDashboard size={14} />
@@ -782,7 +783,7 @@ export default function MaintenancePage() {
             </button>
           )}
           {tab === 'complaints' && canComplaintsInbox ? (
-            <div className="inline-flex items-center gap-1 ml-1 shrink-0">
+            <div className="inline-flex items-center gap-1 ml-0.5 shrink-0">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-700">
                 Total <span className="tabular-nums">{scopedComplaints.length}</span>
               </span>
@@ -795,7 +796,7 @@ export default function MaintenancePage() {
             </div>
           ) : null}
 
-          <div className="inline-flex items-center gap-1.5 shrink-0">
+          <div className="inline-flex items-center gap-1 shrink-0 ml-0.5 pl-1 border-l border-stone-200/60">
             {(tab === 'complaint-dashboard' || tab === 'complaints') &&
               (canComplaintDash || canComplaintsInbox) && (
               <div className="relative w-[170px] shrink-0">
@@ -927,10 +928,10 @@ export default function MaintenancePage() {
               )}
             </div>
           </div>
-        </div>
+          </div>
 
-        {tab === 'dashboard' && canDash && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
+          {tab === 'dashboard' && canDash && (
+            <div className="flex-1 min-w-[420px] grid grid-cols-6 gap-1 items-stretch py-0.5">
             <DashboardKpi
               label="Machines"
               value={dashboardKpis.total}
@@ -975,11 +976,11 @@ export default function MaintenancePage() {
               active={kpiOverlay === 'overdue'}
               onClick={() => setKpiOverlay('overdue')}
             />
-          </div>
-        )}
+            </div>
+          )}
 
-        {tab === 'complaint-dashboard' && canComplaintDash && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
+          {tab === 'complaint-dashboard' && canComplaintDash && (
+            <div className="flex-1 min-w-[420px] grid grid-cols-6 gap-1 items-stretch py-0.5">
             <ComplaintKpi
               label="Total complaints"
               hint="All complaints"
@@ -1035,8 +1036,9 @@ export default function MaintenancePage() {
               active={complaintFilter === 'over_week'}
               onClick={() => pickComplaintFilter('over_week')}
             />
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div
@@ -1688,12 +1690,12 @@ function DashboardKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-3 py-1.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 ${toneStyles[tone]} ${alertClass} ${
+      className={`rounded-xl border px-2 py-1 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 ${toneStyles[tone]} ${alertClass} ${
         active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
-      <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0 leading-none ${valueTone}`}>{value}</p>
+      <p className={`text-[8px] font-black uppercase tracking-wider leading-tight ${labelTone}`}>{label}</p>
+      <p className={`text-lg font-black tabular-nums mt-0 leading-none ${valueTone}`}>{value}</p>
     </button>
   );
 }
