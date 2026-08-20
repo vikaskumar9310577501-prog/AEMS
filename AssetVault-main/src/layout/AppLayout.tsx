@@ -95,11 +95,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden font-sans bg-white">
-      <header
-        className={`bg-[#113355] border-b border-[#0b2744] flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40 ${
-          isMaintenance ? 'h-10' : 'h-16'
-        }`}
-      >
+      <header className="bg-[#113355] border-b border-[#0b2744] h-16 flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -109,22 +105,14 @@ export default function AppLayout() {
             aria-label="Toggle sidebar"
             aria-expanded={sidebarOpen}
           >
-            {sidebarOpen ? <X size={isMaintenance ? 18 : 20} /> : <Menu size={isMaintenance ? 18 : 20} />}
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
           <div className="flex items-center gap-2.5">
-            <div
-              className={`bg-white rounded-md px-2 shadow-sm shrink-0 flex items-center justify-center ${
-                isMaintenance ? 'h-6 py-0.5' : 'h-8 px-2.5 py-1'
-              }`}
-            >
-              <img src={LOGO_SRC} alt={APP_NAME} className={isMaintenance ? 'h-4 object-contain' : 'h-6 object-contain'} />
+            <div className="bg-white rounded-md px-2.5 py-1 h-8 shadow-sm shrink-0 flex items-center justify-center">
+              <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
-            <h1
-              className={`font-black text-white leading-none whitespace-nowrap ${
-                isMaintenance ? 'text-sm' : 'text-sm sm:text-base md:text-lg'
-              }`}
-            >
+            <h1 className="font-black text-white leading-none whitespace-nowrap text-sm sm:text-base md:text-lg">
               A.E.M.S
               {isMaintenance ? (
                 <span className="font-bold text-sky-200">
@@ -268,8 +256,14 @@ export default function AppLayout() {
           </div>
         </aside>
 
-        <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <Outlet context={{ headerPortalNode }} />
+        <main className={`flex-1 flex flex-col overflow-hidden min-w-0 ${isMaintenance ? 'maintenance-compact-shell' : ''}`}>
+          {isMaintenance ? (
+            <div className="maintenance-compact-view flex flex-col flex-1 min-h-0 min-w-0">
+              <Outlet context={{ headerPortalNode }} />
+            </div>
+          ) : (
+            <Outlet context={{ headerPortalNode }} />
+          )}
         </main>
       </div>
     </div>
