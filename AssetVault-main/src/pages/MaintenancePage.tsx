@@ -1708,45 +1708,68 @@ function DashboardKpiOverlay({
   onOpenMachine: (machine: MaintenanceMachine) => void;
 }) {
   return (
-    <div className="absolute inset-0 z-20 bg-white rounded-2xl border-2 border-stone-200 shadow-sm flex flex-col min-h-0 overflow-hidden">
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
+    <div className="absolute inset-0 z-20 bg-[#FFFCF8] rounded-xl border border-stone-200/80 flex flex-col min-h-0 overflow-hidden">
+      <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-stone-200/60 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA]">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 text-white text-[10px] font-black uppercase tracking-wider hover:bg-stone-700"
         >
           <ArrowLeft size={14} /> Back
         </button>
         <div className="min-w-0">
-          <h2 className="text-sm font-black text-slate-900">{title}</h2>
-          <p className="text-[11px] font-semibold text-slate-500">{machines.length} machine{machines.length === 1 ? '' : 's'}</p>
+          <h2 className="text-sm font-black text-stone-800 leading-none">{title}</h2>
+          <p className="text-[10px] font-semibold text-stone-500 mt-0.5">
+            {machines.length} machine{machines.length === 1 ? '' : 's'}
+          </p>
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto no-scrollbar">
+      <div className="flex-1 min-h-0 overflow-auto no-scrollbar bg-[#F7F3EE]/60 px-3 py-3">
         {machines.length === 0 ? (
-          <p className="p-10 text-sm text-slate-500 text-center">No machines in this category.</p>
+          <div className="p-12 text-center">
+            <Factory size={28} className="mx-auto text-stone-300 mb-2" />
+            <p className="text-sm text-stone-500">No machines in this category.</p>
+          </div>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-600">
-              <tr>
-                <th className="px-4 py-3">Machine Name</th>
-                <th className="px-4 py-3">Asset Code</th>
-                <th className="px-4 py-3">Frequency</th>
-                <th className="px-4 py-3">Department</th>
-                <th className="px-4 py-3">Responsibility</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Next Date</th>
+          <table className="w-full min-w-[980px] border-separate border-spacing-y-2.5 text-[13px] leading-normal">
+            <thead className="sticky top-0 z-20">
+              <tr className="text-[10px] font-black uppercase tracking-wider text-stone-500">
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm rounded-l-lg border border-stone-200/50">
+                  Machine ID
+                </th>
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                  Machine Name
+                </th>
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                  Frequency
+                </th>
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                  Department
+                </th>
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                  Plant
+                </th>
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                  Next PM
+                </th>
+                <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                  Status
+                </th>
+                <th className="px-3 py-2.5 text-right bg-[#F0EBE3]/95 backdrop-blur-sm rounded-r-lg border border-stone-200/50">
+                  Detail
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {machines.map((m) => {
-                const name = m.equipmentName?.trim() || `${m.machineType} ${m.machineNumber}`.trim();
+                const name = m.equipmentName?.trim() || machineTypeShort(m.machineType);
                 const freq = machineTrendMonths(m);
                 const badge = statusBadge(m);
+                const plant = plantTableLabel(m.plantCode, plants);
                 return (
                   <tr
                     key={m.id}
-                    className="hover:bg-blue-50 cursor-pointer"
+                    className="group cursor-pointer transition-all duration-200 hover:-translate-y-px hover:drop-shadow-[0_8px_16px_rgba(120,90,60,0.10)]"
                     onClick={() => onOpenMachine(m)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -1757,42 +1780,59 @@ function DashboardKpiOverlay({
                     tabIndex={0}
                     role="button"
                   >
-                    <td className="px-4 py-2.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenMachine(m);
-                        }}
-                        className="text-left font-bold text-stone-900 hover:text-blue-700 underline-offset-2 hover:underline"
-                      >
-                        {name}
-                      </button>
-                      <p className="text-[11px] text-stone-500">{m.machineType}</p>
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-xs font-bold text-blue-700">{m.assetCode}</td>
-                    <td className="px-4 py-2.5 font-semibold text-slate-700">
-                      {isCustomTrend(freq) ? 'Custom' : freq === 1 ? '1 month' : `${freq} months`}
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-700">{m.department || '—'}</td>
-                    <td className="px-4 py-2.5 text-slate-700">{m.responsibility || '—'}</td>
-                    <td className="px-4 py-2.5">
+                    <MachineCell edge="first" className="shadow-sm group-hover:shadow-md">
+                      <span className="inline-flex px-2.5 py-1 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/80 font-mono text-[12px] font-bold text-blue-700 shadow-sm">
+                        {m.assetCode}
+                      </span>
+                    </MachineCell>
+                    <MachineCell title={`${name} ${m.machineNumber}`} className="shadow-sm group-hover:shadow-md">
+                      <p className="font-bold text-stone-800 leading-tight">{name}</p>
+                      <p className="text-[10px] font-semibold text-stone-400 mt-0.5 font-mono">{m.machineNumber}</p>
+                    </MachineCell>
+                    <MachineCell className="shadow-sm group-hover:shadow-md">
+                      <span className="inline-flex px-2.5 py-1 rounded-lg bg-stone-100/90 border border-stone-200/70 text-[11px] font-bold text-stone-700">
+                        {isCustomTrend(freq) ? 'Custom' : trendCompactLabel(freq)}
+                      </span>
+                    </MachineCell>
+                    <MachineCell className="shadow-sm group-hover:shadow-md">
+                      <span className="inline-flex px-2 py-1 rounded-md bg-violet-50/80 border border-violet-100 text-[10px] font-black uppercase tracking-wide text-violet-700">
+                        {m.department || '—'}
+                      </span>
+                    </MachineCell>
+                    <MachineCell title={plant.full} className="shadow-sm group-hover:shadow-md">
+                      <span className="inline-flex px-2 py-1 rounded-md bg-amber-50/80 border border-amber-100 text-[10px] font-black uppercase tracking-wide text-amber-800">
+                        {plant.short}
+                      </span>
+                    </MachineCell>
+                    <MachineCell className="shadow-sm group-hover:shadow-md">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200/70 shadow-inner shadow-stone-100/80 w-fit">
+                        <CalendarRange size={14} className="text-blue-500 shrink-0" />
+                        <span className="text-[12px] font-semibold text-stone-700">
+                          {formatDate(effectiveNextMaintenanceDate(m))}
+                        </span>
+                      </div>
+                    </MachineCell>
+                    <MachineCell className="shadow-sm group-hover:shadow-md">
                       {badge ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase w-fit ${badge.className}`}>
+                        <div className="flex flex-col items-start gap-0.5">
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${badge.className}`}
+                          >
                             {badge.label}
                           </span>
                           {badge.detail ? (
-                            <span className="text-[9px] font-bold text-stone-500">{badge.detail}</span>
+                            <span className="text-[9px] font-bold text-stone-500 pl-0.5">{badge.detail}</span>
                           ) : null}
                         </div>
                       ) : (
-                        <span className="text-stone-400">—</span>
+                        <span className="text-[12px] font-medium text-stone-400">—</span>
                       )}
-                    </td>
-                    <td className="px-4 py-2.5 font-semibold text-slate-800">
-                      {formatDate(effectiveNextMaintenanceDate(m))}
-                    </td>
+                    </MachineCell>
+                    <MachineCell edge="last" className="text-right shadow-sm group-hover:shadow-md">
+                      <span className="inline-flex p-1.5 rounded-lg bg-stone-100/90 border border-stone-200/70 text-stone-500 group-hover:text-blue-600">
+                        <Eye size={15} />
+                      </span>
+                    </MachineCell>
                   </tr>
                 );
               })}
