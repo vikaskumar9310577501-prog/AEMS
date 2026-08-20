@@ -95,7 +95,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden font-sans bg-white">
-      <header className="bg-[#113355] border-b border-[#0b2744] h-16 flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
+      <header className="bg-[#113355] border-b border-[#0b2744] h-[68px] flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -109,8 +109,8 @@ export default function AppLayout() {
           </button>
 
           <div className="flex items-center gap-3 min-w-0">
-            <div className="bg-white rounded-md px-2.5 py-1.5 h-10 shadow-sm shrink-0 flex items-center justify-center">
-              <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
+            <div className="bg-white rounded-xl px-3 py-1.5 h-[52px] shadow-sm shrink-0 flex items-center justify-center">
+              <img src={`${LOGO_SRC}?v=2`} alt="PG Electroplast" className="h-10 w-auto max-w-[140px] object-contain" />
             </div>
             <div className="min-w-0 flex items-center gap-3">
               <div className="min-w-0 flex flex-col justify-center w-fit">
