@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { MaintenanceComplaint, MaintenanceMachine } from '../types/maintenance';
 import { isCustomTrend } from '../types/maintenance';
 import {
@@ -611,90 +611,75 @@ function formatChipDate(d: Date) {
 }
 
 export function PmPlanLegend() {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tip) return;
+    const close = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setTip(null);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [tip]);
 
   const items = [
     {
       id: 'plan',
-      swatch: 'bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-200/80 ring-1 ring-amber-300/60',
+      swatch: 'bg-gradient-to-br from-amber-400 to-amber-500 ring-1 ring-amber-300/60',
       label: 'Plan',
-      icon: <CalendarDays size={11} />,
+      icon: <CalendarDays size={12} strokeWidth={2.5} />,
     },
     {
       id: 'actual',
-      swatch: 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-200/80 ring-1 ring-emerald-300/60',
+      swatch: 'bg-gradient-to-br from-emerald-500 to-emerald-600 ring-1 ring-emerald-300/60',
       label: 'Actual',
-      icon: <Check size={11} />,
+      icon: <Check size={12} strokeWidth={3} />,
     },
     {
       id: 'overdue',
-      swatch: 'bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60',
+      swatch: 'bg-gradient-to-br from-rose-500 to-rose-600 ring-1 ring-rose-300/60',
       label: 'Overdue',
-      icon: <AlertTriangle size={11} />,
+      icon: <AlertTriangle size={12} strokeWidth={2.5} />,
     },
     {
       id: 'issue',
-      swatch: 'bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60',
+      swatch: 'bg-gradient-to-br from-orange-400 to-orange-500 ring-1 ring-orange-300/60',
       label: 'Issue',
-      icon: <MessageSquareWarning size={11} />,
+      icon: <MessageSquareWarning size={12} strokeWidth={2.5} />,
     },
     {
       id: 'resolved',
-      swatch: 'bg-gradient-to-br from-violet-500 to-violet-600 shadow-sm shadow-violet-200/80 ring-1 ring-violet-300/60',
+      swatch: 'bg-gradient-to-br from-violet-500 to-violet-600 ring-1 ring-violet-300/60',
       label: 'Resolved',
-      icon: <Check size={11} />,
+      icon: <Check size={12} strokeWidth={3} />,
     },
     {
       id: 'this-week',
-      swatch: 'bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50',
+      swatch: 'bg-gradient-to-br from-sky-300 to-blue-400 ring-2 ring-blue-400/50',
       label: 'This week',
     },
   ] as const;
 
   return (
-    <div className="inline-flex items-center gap-0.5">
+    <div ref={wrapRef} className="relative inline-flex items-center gap-0.5 shrink-0">
       {items.map((item) => (
-        <Legend
+        <button
           key={item.id}
-          swatch={item.swatch}
-          label={item.label}
-          icon={'icon' in item ? item.icon : undefined}
-          expanded={expanded === item.id}
-          onToggle={() => setExpanded((prev) => (prev === item.id ? null : item.id))}
-        />
+          type="button"
+          title={item.label}
+          aria-label={item.label}
+          onClick={() => setTip((prev) => (prev === item.id ? null : item.id))}
+          className={`w-[26px] h-[26px] rounded-md ${item.swatch} inline-flex items-center justify-center text-white shadow-sm hover:brightness-105 transition-transform active:scale-95`}
+        >
+          {'icon' in item ? item.icon : null}
+        </button>
       ))}
+      {tip ? (
+        <div className="absolute right-0 top-[calc(100%+4px)] z-50 px-2.5 py-1.5 rounded-lg bg-stone-900 text-white text-[10px] font-black uppercase tracking-wide shadow-lg whitespace-nowrap pointer-events-none">
+          {items.find((i) => i.id === tip)?.label}
+        </div>
+      ) : null}
     </div>
-  );
-}
-
-function Legend({
-  swatch,
-  label,
-  icon,
-  expanded,
-  onToggle,
-}: {
-  swatch: string;
-  label: string;
-  icon?: ReactNode;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      title={label}
-      aria-label={label}
-      aria-expanded={expanded}
-      className={`inline-flex items-center gap-1 rounded-lg bg-white border border-stone-200/70 shadow-sm text-[9px] font-black uppercase tracking-wide text-stone-700 transition-all ${
-        expanded ? 'px-2 py-1' : 'p-1'
-      }`}
-    >
-      <span className={`w-4 h-4 rounded-md ${swatch} inline-flex items-center justify-center text-white shrink-0`}>
-        {icon}
-      </span>
-      {expanded ? <span className="whitespace-nowrap pr-0.5">{label}</span> : null}
-    </button>
   );
 }

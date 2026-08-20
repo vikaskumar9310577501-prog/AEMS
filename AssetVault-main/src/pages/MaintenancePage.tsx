@@ -753,58 +753,57 @@ export default function MaintenancePage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF8F5]">
-      <div className="shrink-0 px-3 lg:px-4 pt-1 pb-0.5">
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-            {canDash && (
-              <button
-                type="button"
-                onClick={() => goTab('dashboard')}
-                className={navBtn(tab === 'dashboard')}
-              >
-                <LayoutDashboard size={14} />
-                Dashboard
-              </button>
-            )}
-            <button type="button" onClick={() => goTab('machines')} className={navBtn(tab === 'machines')}>
-              <Factory size={14} />
-              Machines
+      <div className="shrink-0 px-3 lg:px-4 pt-1 pb-0.5 border-b border-stone-200/40">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar min-h-[32px]">
+          {canDash && (
+            <button type="button" onClick={() => goTab('dashboard')} className={navBtn(tab === 'dashboard')}>
+              <LayoutDashboard size={14} />
+              Dashboard
             </button>
-            {canComplaintDash && (
-              <button
-                type="button"
-                onClick={() => goTab('complaint-dashboard')}
-                className={navBtn(tab === 'complaint-dashboard')}
-              >
-                <BarChart3 size={14} />
-                Complaint Dashboard
-              </button>
-            )}
-            {canComplaintsInbox && (
-              <button type="button" onClick={() => goTab('complaints')} className={navBtn(tab === 'complaints')}>
-                <AlertTriangle size={14} />
-                Complaints
-              </button>
-            )}
-            {tab === 'complaints' && canComplaintsInbox ? (
-              <div className="inline-flex items-center gap-1 ml-1">
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-700" title="All complaints">
-                  Total <span className="tabular-nums">{scopedComplaints.length}</span>
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 text-[10px] font-black uppercase text-orange-800 border border-orange-200/70" title="Complaints pending">
-                  Pending <span className="tabular-nums">{openComplaints.length}</span>
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-[10px] font-black uppercase text-emerald-800 border border-emerald-200/70" title="Resolved complaints">
-                  Done <span className="tabular-nums">{resolvedComplaints.length}</span>
-                </span>
-              </div>
-            ) : null}
-          </div>
+          )}
+          <button type="button" onClick={() => goTab('machines')} className={navBtn(tab === 'machines')}>
+            <Factory size={14} />
+            Machines
+          </button>
+          {canComplaintDash && (
+            <button
+              type="button"
+              onClick={() => goTab('complaint-dashboard')}
+              className={navBtn(tab === 'complaint-dashboard')}
+            >
+              <BarChart3 size={14} />
+              Complaint Dashboard
+            </button>
+          )}
+          {canComplaintsInbox && (
+            <button type="button" onClick={() => goTab('complaints')} className={navBtn(tab === 'complaints')}>
+              <AlertTriangle size={14} />
+              Complaints
+            </button>
+          )}
+          {tab === 'complaints' && canComplaintsInbox ? (
+            <div className="inline-flex items-center gap-1 ml-1 shrink-0">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-700">
+                Total <span className="tabular-nums">{scopedComplaints.length}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 text-[10px] font-black uppercase text-orange-800 border border-orange-200/70">
+                Pending <span className="tabular-nums">{openComplaints.length}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-[10px] font-black uppercase text-emerald-800 border border-emerald-200/70">
+                Done <span className="tabular-nums">{resolvedComplaints.length}</span>
+              </span>
+            </div>
+          ) : null}
+        </div>
 
-          <div className="flex flex-nowrap items-center gap-1 shrink-0 justify-end overflow-x-auto no-scrollbar max-w-[min(100%,62vw)]">
+        {(tab === 'dashboard' ||
+          tab === 'machines' ||
+          tab === 'complaint-dashboard' ||
+          tab === 'complaints') && (
+          <div className="flex flex-nowrap items-center justify-end gap-1.5 mt-0.5 py-1 overflow-x-auto no-scrollbar w-full">
             {(tab === 'complaint-dashboard' || tab === 'complaints') &&
               (canComplaintDash || canComplaintsInbox) && (
-              <div className="relative w-[min(200px,28vw)] shrink-0">
+              <div className="relative w-[168px] shrink-0 mr-auto">
                 <Search
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
                   size={13}
@@ -858,86 +857,82 @@ export default function MaintenancePage() {
               type="button"
               onClick={() => void load()}
               disabled={loading}
-              className="px-2 py-1.5 bg-white/90 hover:bg-white border border-stone-200/80 rounded-lg text-[10px] font-bold flex items-center gap-1 disabled:opacity-60 shadow-sm text-stone-700 shrink-0"
+              className="px-2.5 py-1.5 bg-white hover:bg-stone-50 border border-stone-200/80 rounded-lg text-[10px] font-bold flex items-center gap-1.5 disabled:opacity-60 shadow-sm text-stone-700 shrink-0"
               title="Refresh"
             >
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Refresh</span>
+              Refresh
             </button>
-            {(tab === 'dashboard' || tab === 'machines' || tab === 'complaint-dashboard' || tab === 'complaints') && (
-              <div className="relative shrink-0" ref={filterWrapRef}>
-                <button
-                  type="button"
-                  onClick={() => setFilterOpen((v) => !v)}
-                  className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                    filterOpen || filterLocation || filterPlant
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                  title="Location / Plant filter"
+            <div className="relative shrink-0" ref={filterWrapRef}>
+              <button
+                type="button"
+                onClick={() => setFilterOpen((v) => !v)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                  filterOpen || filterLocation || filterPlant
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+                title="Location / Plant filter"
+              >
+                <Filter size={12} />
+                Filter
+                {(filterLocation || filterPlant) && <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />}
+              </button>
+              {filterOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1.5 z-50 w-[min(92vw,280px)] rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2"
+                  onMouseLeave={() => setFilterOpen(false)}
                 >
-                  <Filter size={12} />
-                  <span className="hidden sm:inline">Filter</span>
-                  {(filterLocation || filterPlant) && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                  )}
-                </button>
-                {filterOpen && (
-                  <div
-                    className="absolute right-0 top-full mt-1.5 z-30 w-[min(92vw,280px)] rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2"
-                    onMouseLeave={() => setFilterOpen(false)}
-                  >
-                    <div>
-                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Location</label>
-                      <select
-                        value={filterLocation}
-                        onChange={(e) => {
-                          setFilterLocation(e.target.value);
-                          setFilterPlant('');
-                        }}
-                        className="mt-1 w-full input-geometric text-xs font-semibold py-1.5"
-                      >
-                        <option value="">All locations</option>
-                        {locationOptions.map((loc) => (
-                          <option key={loc} value={loc}>
-                            {loc}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Plant</label>
-                      <select
-                        value={filterPlant}
-                        onChange={(e) => setFilterPlant(e.target.value)}
-                        className="mt-1 w-full input-geometric text-xs font-semibold py-1.5"
-                      >
-                        <option value="">All plants</option>
-                        {plantOptions.map((code) => (
-                          <option key={code} value={code}>
-                            {plantShortName(code, plants)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {(filterLocation || filterPlant) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFilterLocation('');
-                          setFilterPlant('');
-                        }}
-                        className="w-full px-2 py-1.5 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                      >
-                        Clear
-                      </button>
-                    )}
+                  <div>
+                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Location</label>
+                    <select
+                      value={filterLocation}
+                      onChange={(e) => {
+                        setFilterLocation(e.target.value);
+                        setFilterPlant('');
+                      }}
+                      className="mt-1 w-full input-geometric text-xs font-semibold py-1.5"
+                    >
+                      <option value="">All locations</option>
+                      {locationOptions.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
-              </div>
-            )}
+                  <div>
+                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Plant</label>
+                    <select
+                      value={filterPlant}
+                      onChange={(e) => setFilterPlant(e.target.value)}
+                      className="mt-1 w-full input-geometric text-xs font-semibold py-1.5"
+                    >
+                      <option value="">All plants</option>
+                      {plantOptions.map((code) => (
+                        <option key={code} value={code}>
+                          {plantShortName(code, plants)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {(filterLocation || filterPlant) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterLocation('');
+                        setFilterPlant('');
+                      }}
+                      className="w-full px-2 py-1.5 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {tab === 'dashboard' && canDash && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
