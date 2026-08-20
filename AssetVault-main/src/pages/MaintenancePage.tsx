@@ -2295,8 +2295,18 @@ function ComplaintDetailPopup({
               </div>
             </div>
 
+            {(c.reporterName || c.reporterPhone) ? (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Reported By</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                  {c.reporterName ? <DetailField label="Name" value={c.reporterName} /> : null}
+                  {c.reporterPhone ? <DetailField label="Phone" value={c.reporterPhone} /> : null}
+                </div>
+              </div>
+            ) : null}
+
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Complaint Status</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Breakdown Status</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
                 <DetailField label="Status" value={isOpen ? 'Pending' : 'Resolved'} />
                 <DetailField label="Reported On" value={formatDate(c.reportedAt)} />

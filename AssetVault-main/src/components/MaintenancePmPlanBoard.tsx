@@ -395,7 +395,7 @@ function MachineRows({
           className="border-b-2 border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-rose-800 bg-gradient-to-r from-rose-50 to-rose-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(251,113,133,0.25)]"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
-          Issue
+          Breakdown
         </td>
         <IssueWeekCells
           monthCols={monthCols}
@@ -645,7 +645,7 @@ export function PmPlanLegend() {
     {
       id: 'issue',
       swatch: 'bg-gradient-to-br from-orange-400 to-orange-500 ring-1 ring-orange-300/60',
-      label: 'Issue',
+      label: 'Breakdown',
       icon: <MessageSquareWarning size={12} strokeWidth={2.5} />,
     },
     {

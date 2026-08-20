@@ -4042,6 +4042,8 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
       assetCode?: string;
       complaintText?: string;
       remark?: string;
+      reporterName?: string;
+      reporterPhone?: string;
       downtimeHours?: number | string;
       downtimeMinutes?: number | string;
       photoData?: string;
@@ -4050,15 +4052,26 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
     const assetCode = String(body.assetCode || "").trim();
     const complaintText = String(body.complaintText || "").trim();
     const remark = String(body.remark || "").trim();
+    const reporterName = String(body.reporterName || "").trim();
+    const reporterPhone = String(body.reporterPhone || "").trim().replace(/[\s\-+()]/g, "");
     const hours = Math.max(0, Math.floor(Number(body.downtimeHours) || 0));
     const mins = Math.max(0, Math.min(59, Math.floor(Number(body.downtimeMinutes) || 0)));
     const downtimeMinutes = hours * 60 + mins;
     if (!assetCode) return res.status(400).json({ error: "Asset code is required" });
     if (!complaintText || complaintText.length < 5) {
-      return res.status(400).json({ error: "Please describe the complaint (at least 5 characters)" });
+      return res.status(400).json({ error: "Please describe the breakdown (at least 5 characters)" });
     }
     if (!remark || remark.length < 3) {
       return res.status(400).json({ error: "Remark is required" });
+    }
+    if (!reporterName || reporterName.length < 2) {
+      return res.status(400).json({ error: "Reporter name is required (at least 2 characters)" });
+    }
+    if (!/^\d{7,15}$/.test(reporterPhone)) {
+      return res.status(400).json({ error: "Enter a valid mobile / phone number (7–15 digits)" });
+    }
+    if (!body.photoData || !String(body.photoData).trim()) {
+      return res.status(400).json({ error: "Breakdown photo is required" });
     }
 
     const machine = await getMaintenanceMachineByAssetCode(assetCode);
@@ -4102,6 +4115,8 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
       plantCode: machine.plantCode,
       complaintText,
       remark,
+      reporterName,
+      reporterPhone,
       downtimeMinutes,
       photoUrl: photoUrl || undefined,
       photoName: photoName || undefined,

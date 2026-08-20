@@ -4,21 +4,20 @@ import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { parseJsonResponse } from '../lib/apiFetch';
 import type { MaintenanceMachine } from '../types/maintenance';
 import { plantShortName, type PlantLike } from '../lib/plantDisplay';
-import { Camera, CheckCircle2, ImagePlus, Wrench, X } from 'lucide-react';
+import { Camera, CheckCircle2, User, Phone, Wrench, X } from 'lucide-react';
 
-/** Public QR landing — locked machine identity + downtime complaint form. */
+/** Public QR landing — locked machine identity + breakdown complaint form. */
 export default function MaintenanceReportPage() {
   const { assetCode = '' } = useParams<{ assetCode: string }>();
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [machine, setMachine] = useState<MaintenanceMachine | null>(null);
   const [plants, setPlants] = useState<PlantLike[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [complaintText, setComplaintText] = useState('');
   const [remark, setRemark] = useState('');
-  const [downtimeHours] = useState('');
-  const [downtimeMinutes] = useState('');
+  const [reporterName, setReporterName] = useState('');
+  const [reporterPhone, setReporterPhone] = useState('');
   const [photoData, setPhotoData] = useState('');
   const [photoName, setPhotoName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +31,8 @@ export default function MaintenanceReportPage() {
       setSubmitted(false);
       setComplaintText('');
       setRemark('');
+      setReporterName('');
+      setReporterPhone('');
       setPhotoData('');
       setPhotoName('');
       try {
@@ -54,9 +55,7 @@ export default function MaintenanceReportPage() {
         if (active) setLoading(false);
       }
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [assetCode]);
 
   const onPickPhoto = async (file: File | undefined) => {
@@ -78,16 +77,30 @@ export default function MaintenanceReportPage() {
     if (!machine || submitting) return;
     const text = complaintText.trim();
     const remarkText = remark.trim();
-    const hours = Math.max(0, Math.floor(Number(downtimeHours) || 0));
-    const mins = Math.max(0, Math.min(59, Math.floor(Number(downtimeMinutes) || 0)));
+    const nameText = reporterName.trim();
+    const phoneText = reporterPhone.trim();
+
     if (text.length < 5) {
-      setError('Please describe the issue (at least 5 characters).');
+      setError('Please describe the breakdown (at least 5 characters).');
       return;
     }
     if (remarkText.length < 3) {
       setError('Remark is required.');
       return;
     }
+    if (nameText.length < 2) {
+      setError('Your name is required (at least 2 characters).');
+      return;
+    }
+    if (!/^\d{7,15}$/.test(phoneText.replace(/[\s\-+()]/g, ''))) {
+      setError('Enter a valid mobile / phone number (7–15 digits).');
+      return;
+    }
+    if (!photoData) {
+      setError('Photo is required — please take a photo of the breakdown.');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
@@ -98,8 +111,10 @@ export default function MaintenanceReportPage() {
           assetCode: machine.assetCode,
           complaintText: text,
           remark: remarkText,
-          downtimeHours: hours,
-          downtimeMinutes: mins,
+          reporterName: nameText,
+          reporterPhone: phoneText,
+          downtimeHours: 0,
+          downtimeMinutes: 0,
           photoData: photoData || undefined,
           photoName: photoName || undefined,
         }),
@@ -126,7 +141,7 @@ export default function MaintenanceReportPage() {
           <img src={LOGO_SRC} alt={APP_NAME} className="h-8 object-contain" />
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Maintenance</p>
-            <h1 className="text-lg font-black text-slate-900">Machine complaint</h1>
+            <h1 className="text-lg font-black text-slate-900">Breakdown complaint</h1>
           </div>
         </div>
 
@@ -137,7 +152,8 @@ export default function MaintenanceReportPage() {
         ) : submitted ? (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-8 text-center space-y-3">
             <CheckCircle2 className="mx-auto text-emerald-600" size={36} />
-            <p className="text-base font-black text-emerald-900">Complaint submitted</p>
+            <p className="text-base font-black text-emerald-900">Breakdown complaint submitted</p>
+            <p className="text-sm text-emerald-700">The maintenance team has been notified.</p>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
@@ -156,20 +172,54 @@ export default function MaintenanceReportPage() {
               <Field label="Plant" value={plantShortName(machine.plantCode, plants)} />
             </div>
 
+            {/* Reporter identity */}
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-blue-800 font-black text-sm">
+                <User size={15} className="text-blue-600" />
+                Your identity <span className="text-rose-500 ml-1">required</span>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  Your name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={reporterName}
+                  onChange={(e) => setReporterName(e.target.value)}
+                  required
+                  placeholder="Enter your full name"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  <span className="inline-flex items-center gap-1"><Phone size={11} /> Mobile / phone number <span className="text-rose-500">*</span></span>
+                </label>
+                <input
+                  type="tel"
+                  value={reporterPhone}
+                  onChange={(e) => setReporterPhone(e.target.value)}
+                  required
+                  placeholder="e.g. 9876543210"
+                  inputMode="tel"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
-                Complaint / issue details
+                Breakdown details <span className="text-rose-500">*</span>
               </label>
               <textarea
                 value={complaintText}
                 onChange={(e) => setComplaintText(e.target.value)}
                 rows={4}
                 required
-                placeholder="Describe the downtime or issue clearly…"
+                placeholder="Describe the breakdown clearly…"
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
               />
             </div>
-
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
@@ -185,9 +235,10 @@ export default function MaintenanceReportPage() {
               />
             </div>
 
+            {/* Camera-only photo — mandatory */}
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
-                Photo
+                Breakdown photo <span className="text-rose-500">* required</span>
               </label>
               <input
                 ref={cameraInputRef}
@@ -200,61 +251,42 @@ export default function MaintenanceReportPage() {
                   e.target.value = '';
                 }}
               />
-              <input
-                ref={galleryInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  void onPickPhoto(e.target.files?.[0]);
-                  e.target.value = '';
-                }}
-              />
               {photoData ? (
                 <div className="relative rounded-xl overflow-hidden border border-slate-200">
-                  <img src={photoData} alt="Complaint" className="w-full h-40 object-cover" />
+                  <img src={photoData} alt="Breakdown" className="w-full h-48 object-cover" />
                   <button
                     type="button"
-                    onClick={() => {
-                      setPhotoData('');
-                      setPhotoName('');
-                    }}
+                    onClick={() => { setPhotoData(''); setPhotoName(''); }}
                     className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 text-slate-700 flex items-center justify-center shadow"
                     aria-label="Remove photo"
                   >
                     <X size={16} />
                   </button>
+                  <div className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-white text-[10px] font-black uppercase tracking-wider text-center py-1">
+                    Photo taken ✓
+                  </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                    <Camera size={16} className="text-blue-600" />
-                    Camera
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => galleryInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                    <ImagePlus size={16} className="text-blue-600" />
-                    Gallery
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-rose-300 bg-rose-50 hover:bg-rose-100 px-4 py-8 text-center transition-colors"
+                >
+                  <Camera size={28} className="text-rose-500" />
+                  <p className="text-sm font-black text-rose-700">Take photo of breakdown</p>
+                  <p className="text-[11px] text-rose-500">Opens camera — photo is mandatory</p>
+                </button>
               )}
             </div>
 
-            {error ? <p className="text-sm font-bold text-rose-600">{error}</p> : null}
+            {error ? <p className="text-sm font-bold text-rose-600 rounded-lg bg-rose-50 px-3 py-2">{error}</p> : null}
 
             <button
               type="submit"
               disabled={submitting}
               className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider disabled:opacity-60"
             >
-              {submitting ? 'Submitting…' : 'Submit complaint'}
+              {submitting ? 'Submitting…' : 'Submit breakdown complaint'}
             </button>
           </form>
         )}
@@ -275,7 +307,7 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
 function compressComplaintPhoto(file: File): Promise<{ dataUrl: string; name: string }> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
-      reject(new Error('Please choose a photo (JPEG or PNG).'));
+      reject(new Error('Please take a photo (JPEG or PNG).'));
       return;
     }
     const img = new Image();
@@ -301,7 +333,7 @@ function compressComplaintPhoto(file: File): Promise<{ dataUrl: string; name: st
       URL.revokeObjectURL(url);
       resolve({
         dataUrl: canvas.toDataURL('image/jpeg', 0.82),
-        name: `${file.name.replace(/\.[^.]+$/, '') || 'complaint-photo'}.jpg`,
+        name: `${file.name.replace(/\.[^.]+$/, '') || 'breakdown-photo'}.jpg`,
       });
     };
     img.onerror = () => {

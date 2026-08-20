@@ -107,6 +107,10 @@ export interface MaintenanceComplaint {
   complaintText: string;
   /** Shop-floor reporter remark (required on QR form). Separate from resolution remarks. */
   remark?: string;
+  /** Name of person who reported the breakdown (entered on QR form). */
+  reporterName?: string;
+  /** Mobile / phone number of reporter (entered on QR form). */
+  reporterPhone?: string;
   /** Total reported downtime in minutes. */
   downtimeMinutes?: number;
   photoUrl?: string;
