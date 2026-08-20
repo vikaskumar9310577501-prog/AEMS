@@ -960,35 +960,35 @@ export default function MaintenancePage() {
         {tab === 'dashboard' && canDash && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
             <DashboardKpi
-              label="Machines"
+              label="Total Machines"
               value={dashboardKpis.total}
               tone="slate"
               active={kpiOverlay === 'total'}
               onClick={() => setKpiOverlay('total')}
             />
             <DashboardKpi
-              label="Planned this month"
+              label="Planned Maintenance This Month"
               value={dashboardKpis.plannedThisMonth}
               tone="amber"
               active={kpiOverlay === 'plannedThisMonth'}
               onClick={() => setKpiOverlay('plannedThisMonth')}
             />
             <DashboardKpi
-              label="Done this month"
+              label="Maintenance Done This Month"
               value={dashboardKpis.doneThisMonth}
               tone="violet"
               active={kpiOverlay === 'doneThisMonth'}
               onClick={() => setKpiOverlay('doneThisMonth')}
             />
             <DashboardKpi
-              label="On time"
+              label="Maintenance Done On Time"
               value={dashboardKpis.onTime}
               tone="emerald"
               active={kpiOverlay === 'onTime'}
               onClick={() => setKpiOverlay('onTime')}
             />
             <DashboardKpi
-              label="Delayed"
+              label="Maintenance Delayed"
               value={dashboardKpis.delayed}
               tone="orange"
               alert="delayed"
@@ -996,7 +996,7 @@ export default function MaintenancePage() {
               onClick={() => setKpiOverlay('delayed')}
             />
             <DashboardKpi
-              label="Overdue"
+              label="Overdue Maintenance"
               value={dashboardKpis.overdue}
               tone="overdue"
               alert="overdue"
@@ -1009,8 +1009,8 @@ export default function MaintenancePage() {
         {tab === 'complaint-dashboard' && canComplaintDash && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
             <ComplaintKpi
-              label="Total complaints"
-              hint="All complaints"
+              label="Total Complaints"
+              hint="All registered breakdown complaints"
               value={complaintStats.total}
               className="border-slate-300 bg-slate-50"
               tone="slate"
@@ -1018,8 +1018,8 @@ export default function MaintenancePage() {
               onClick={() => pickComplaintFilter('total')}
             />
             <ComplaintKpi
-              label="Pending"
-              hint="Complaints pending"
+              label="Pending Complaints"
+              hint="Open complaints awaiting resolution"
               value={complaintStats.pending}
               className="border-amber-300 bg-amber-100"
               tone="amber"
@@ -1027,8 +1027,8 @@ export default function MaintenancePage() {
               onClick={() => pickComplaintFilter('pending')}
             />
             <ComplaintKpi
-              label="Resolved"
-              hint="Resolved complaints"
+              label="Resolved Complaints"
+              hint="Complaints marked as done"
               value={complaintStats.resolved}
               className="border-emerald-400 bg-emerald-100"
               tone="emerald"
@@ -1036,8 +1036,8 @@ export default function MaintenancePage() {
               onClick={() => pickComplaintFilter('resolved')}
             />
             <ComplaintKpi
-              label="Resolved %"
-              hint="Share of complaints resolved"
+              label="Complaint Resolution Rate"
+              hint="Percentage of complaints resolved"
               value={`${complaintStats.resolvedPct}%`}
               className="border-blue-300 bg-blue-100"
               tone="blue"
@@ -1045,8 +1045,8 @@ export default function MaintenancePage() {
               onClick={() => pickComplaintFilter('resolved')}
             />
             <ComplaintKpi
-              label="Within 1 week"
-              hint="Resolved within one week"
+              label="Complaints Resolved Within 1 Week"
+              hint="Resolved within seven days of reporting"
               value={complaintStats.resolvedWithinWeek}
               className="border-violet-400 bg-violet-200"
               tone="violet"
@@ -1054,8 +1054,8 @@ export default function MaintenancePage() {
               onClick={() => pickComplaintFilter('within_week')}
             />
             <ComplaintKpi
-              label="Over 1 week"
-              hint="Open or closed after more than one week"
+              label="Complaints Delayed Over 1 Week"
+              hint="Open breakdown complaints pending for more than one week"
               value={complaintStats.overOneWeek}
               className="border-red-700 bg-red-600"
               tone="overdue"
@@ -1767,12 +1767,12 @@ function ComplaintKpi({
       type="button"
       onClick={onClick}
       aria-label={hint}
-      className={`relative group/kpi rounded-xl border px-3 py-2 text-left w-full cursor-pointer ${className} ${alertClass} ${
+      className={`relative group/kpi rounded-xl border px-2.5 py-1.5 text-left w-full cursor-pointer min-h-[52px] ${className} ${alertClass} ${
         active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
       }`}
     >
-      <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0.5 ${valueTone}`}>{value}</p>
+      <p className={`text-[8px] font-bold leading-tight line-clamp-2 ${labelTone}`}>{label}</p>
+      <p className={`text-xl font-black tabular-nums mt-0.5 leading-none ${valueTone}`}>{value}</p>
       <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+6px)] z-50 w-max max-w-[220px] rounded-lg bg-stone-900 px-2.5 py-1.5 text-[10px] font-semibold leading-snug text-white shadow-lg opacity-0 invisible group-hover/kpi:opacity-100 group-hover/kpi:visible transition-opacity">
         {hint}
       </span>
@@ -1827,12 +1827,12 @@ function DashboardKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-3 py-1.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 ${toneStyles[tone]} ${alertClass} ${
+      className={`rounded-xl border px-2.5 py-1.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 min-h-[52px] ${toneStyles[tone]} ${alertClass} ${
         active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
-      <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0 leading-none ${valueTone}`}>{value}</p>
+      <p className={`text-[8px] font-bold leading-tight line-clamp-2 ${labelTone}`}>{label}</p>
+      <p className={`text-xl font-black tabular-nums mt-0.5 leading-none ${valueTone}`}>{value}</p>
     </button>
   );
 }

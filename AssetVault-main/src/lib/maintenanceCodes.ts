@@ -611,10 +611,10 @@ export function listMachinesForPmKpi(
 }
 
 export const PM_KPI_TITLES: Record<PmKpiId, string> = {
-  total: 'All machines',
-  plannedThisMonth: 'Planned this month',
-  doneThisMonth: 'Done this month',
-  onTime: 'On time',
-  delayed: 'Delayed',
-  overdue: 'Overdue',
+  total: 'Total Machines',
+  plannedThisMonth: 'Planned Maintenance This Month',
+  doneThisMonth: 'Maintenance Done This Month',
+  onTime: 'Maintenance Done On Time',
+  delayed: 'Maintenance Delayed',
+  overdue: 'Overdue Maintenance',
 };
