@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
-import type { MaintenanceMachine } from '../types/maintenance';
+import type { MaintenanceComplaint, MaintenanceMachine } from '../types/maintenance';
 import { isCustomTrend } from '../types/maintenance';
 import {
   actualDatesForYear,
@@ -7,11 +7,12 @@ import {
   groupDatesByCellKey,
   isPlanDateCompleted,
   machineTrendMonths,
+  parseDateOnly,
   plannedDatesForYear,
   pmCellKey,
   weekOfMonth,
 } from '../lib/maintenanceCodes';
-import { CalendarDays, Check, AlertTriangle } from 'lucide-react';
+import { CalendarDays, Check, AlertTriangle, MessageSquareWarning } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -57,11 +58,17 @@ function defaultStartMonthIndex(year: number, now: Date): number {
 
 interface MaintenancePmPlanBoardProps {
   machines: MaintenanceMachine[];
+  complaints?: MaintenanceComplaint[];
   loading?: boolean;
   year: number;
 }
 
-export default function MaintenancePmPlanBoard({ machines, loading, year }: MaintenancePmPlanBoardProps) {
+export default function MaintenancePmPlanBoard({
+  machines,
+  complaints = [],
+  loading,
+  year,
+}: MaintenancePmPlanBoardProps) {
   const now = new Date();
   const monthCols = useMemo(() => buildMonthCols(year), [year]);
   const weekCount = monthCols.length * 4;
@@ -94,7 +101,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
         ) : machines.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <CalendarDays size={32} className="mx-auto text-stone-300" />
-            <p className="text-sm text-stone-500">No machines with PM planned this month.</p>
+            <p className="text-sm text-stone-500">No machines with PM or complaints in this view.</p>
           </div>
         ) : (
           <>
@@ -165,6 +172,9 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
                       monthCols={monthCols}
                       todayKey={todayKey}
                       now={now}
+                      complaints={complaints.filter(
+                        (c) => c.machineId === machine.id || c.assetCode === machine.assetCode
+                      )}
                     />
                   ))}
                 </tbody>
@@ -260,6 +270,7 @@ function MachineRows({
   monthCols,
   todayKey,
   now,
+  complaints,
 }: {
   machine: MaintenanceMachine;
   index: number;
@@ -267,6 +278,7 @@ function MachineRows({
   monthCols: MonthCol[];
   todayKey: string;
   now: Date;
+  complaints: MaintenanceComplaint[];
 }) {
   const planned = years.flatMap((y) => plannedDatesForYear(machine, y));
   const actual = years.flatMap((y) => actualDatesForYear(machine, y));
@@ -285,6 +297,7 @@ function MachineRows({
       )
       .map(dateToPmCellKey)
   );
+  const issueTrack = buildIssueTrack(complaints, monthCols, todayKey);
 
   const name = machine.equipmentName?.trim() || `${machine.machineType.replace(/\s+Machine$/i, '')} ${machine.machineNumber}`.trim();
   const freq = machineTrendMonths(machine);
@@ -298,8 +311,8 @@ function MachineRows({
     <>
       <tr className="group">
         <td
-          rowSpan={2}
-          className={`border-b border-r border-stone-400/80 px-2.5 py-1.5 align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          rowSpan={3}
+          className={`border-b-2 border-r border-stone-400/80 px-2.5 py-1.5 align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.name, COL_NAME, false, 9)}
         >
           <p className="font-bold text-[11px] text-stone-800 leading-snug line-clamp-2">{name}</p>
@@ -308,8 +321,8 @@ function MachineRows({
           </span>
         </td>
         <td
-          rowSpan={2}
-          className={`border-b border-r border-stone-400/80 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          rowSpan={3}
+          className={`border-b-2 border-r border-stone-400/80 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.freq, COL_FREQ, false, 9)}
         >
           <span className="inline-flex px-2 py-0.5 rounded-md bg-stone-100/90 border border-stone-200/70 text-[10px] font-bold text-stone-700">
@@ -317,8 +330,8 @@ function MachineRows({
           </span>
         </td>
         <td
-          rowSpan={2}
-          className={`border-b border-r border-stone-400/80 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          rowSpan={3}
+          className={`border-b-2 border-r border-stone-400/80 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.dept, COL_DEPT, false, 9)}
         >
           {dept ? (
@@ -330,8 +343,8 @@ function MachineRows({
           )}
         </td>
         <td
-          rowSpan={2}
-          className={`border-b border-r border-stone-400/80 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
+          rowSpan={3}
+          className={`border-b-2 border-r border-stone-400/80 px-1 text-center align-middle box-border ${stripe} group-hover:bg-[#FFFDF9]`}
           style={stickyTdStyle(LEFT_OFFSETS.resp, COL_RESP, false, 9)}
         >
           {resp ? (
@@ -361,7 +374,7 @@ function MachineRows({
       </tr>
       <tr className="group">
         <td
-          className="border-b-2 border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-emerald-800 bg-gradient-to-r from-emerald-50 to-emerald-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(52,211,153,0.25)]"
+          className="border-b border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-emerald-800 bg-gradient-to-r from-emerald-50 to-emerald-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(52,211,153,0.25)]"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
           Actual
@@ -377,6 +390,148 @@ function MachineRows({
           stripe={stripe}
         />
       </tr>
+      <tr className="group">
+        <td
+          className="border-b-2 border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-rose-800 bg-gradient-to-r from-rose-50 to-rose-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(251,113,133,0.25)]"
+          style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
+        >
+          Issue
+        </td>
+        <IssueWeekCells
+          monthCols={monthCols}
+          todayKey={todayKey}
+          now={now}
+          stripe={stripe}
+          track={issueTrack}
+        />
+      </tr>
+    </>
+  );
+}
+
+function buildIssueTrack(
+  complaints: MaintenanceComplaint[],
+  monthCols: MonthCol[],
+  todayKey: string
+) {
+  const keyIndex = new Map<string, number>();
+  monthCols.forEach((col, mi) => {
+    [1, 2, 3, 4].forEach((w, wi) => {
+      keyIndex.set(pmCellKey(col.year, col.month, w), mi * 4 + wi);
+    });
+  });
+  const openKeys = new Set<string>();
+  const reportedKeys = new Set<string>();
+  const resolvedKeys = new Set<string>();
+  const spanOpen = new Set<string>();
+  const spanClosed = new Set<string>();
+  const titles = new Map<string, string[]>();
+
+  const addTitle = (key: string, line: string) => {
+    const prev = titles.get(key) || [];
+    prev.push(line);
+    titles.set(key, prev);
+  };
+
+  const fillSpan = (fromKey: string, toKey: string, open: boolean) => {
+    const a = keyIndex.get(fromKey);
+    const b = keyIndex.get(toKey);
+    if (a == null || b == null) return;
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+    for (const [key, idx] of keyIndex) {
+      if (idx > lo && idx < hi) {
+        (open ? spanOpen : spanClosed).add(key);
+      }
+    }
+  };
+
+  for (const c of complaints) {
+    const reported = parseDateOnly(c.reportedAt);
+    if (!reported) continue;
+    const reportedKey = dateToPmCellKey(reported);
+    reportedKeys.add(reportedKey);
+    const snippet = (c.complaintText || 'Complaint').trim().slice(0, 80);
+    addTitle(reportedKey, `Issue ${formatChipDate(reported)}: ${snippet}`);
+
+    const resolved = parseDateOnly(c.resolvedAt);
+    if (c.status === 'Resolved' && resolved) {
+      const resolvedKey = dateToPmCellKey(resolved);
+      resolvedKeys.add(resolvedKey);
+      addTitle(resolvedKey, `Resolved ${formatChipDate(resolved)}`);
+      fillSpan(reportedKey, resolvedKey, false);
+    } else {
+      openKeys.add(reportedKey);
+      fillSpan(reportedKey, todayKey, true);
+    }
+  }
+
+  return { openKeys, reportedKeys, resolvedKeys, spanOpen, spanClosed, titles };
+}
+
+function IssueWeekCells({
+  monthCols,
+  todayKey,
+  now,
+  stripe,
+  track,
+}: {
+  monthCols: MonthCol[];
+  todayKey: string;
+  now: Date;
+  stripe: string;
+  track: ReturnType<typeof buildIssueTrack>;
+}) {
+  return (
+    <>
+      {monthCols.flatMap((col) =>
+        [1, 2, 3, 4].map((w) => {
+          const key = pmCellKey(col.year, col.month, w);
+          const isToday = key === todayKey;
+          const monthEdge = w === 4 ? 'border-r-2 border-stone-400/80' : 'border-r border-stone-300/90';
+          const open = track.openKeys.has(key);
+          const reported = track.reportedKeys.has(key);
+          const resolved = track.resolvedKeys.has(key);
+          let cell = `text-center align-middle box-border border-b-2 border-stone-400/80 ${monthEdge} ${monthCellBg(col, now, stripe, w)} shadow-[inset_0_0_0_1px_rgba(168,152,136,0.32)]`;
+          if (track.spanOpen.has(key)) cell += ' !bg-rose-100/80';
+          else if (track.spanClosed.has(key)) cell += ' !bg-violet-100/70';
+          if (isToday) cell += ' ring-2 ring-inset ring-blue-400/55';
+          const title = (track.titles.get(key) || [`${col.label} W${w}`]).join('\n');
+          return (
+            <td
+              key={`C-${key}`}
+              className={cell}
+              title={title}
+              style={{ width: WEEK_W, minWidth: WEEK_W, maxWidth: WEEK_W, height: ROW_H }}
+            >
+              {reported || resolved ? (
+                <span className="inline-flex items-center justify-center gap-0.5">
+                  {reported ? (
+                    <span
+                      className={`inline-flex w-[20px] h-[20px] rounded-lg items-center justify-center shadow-sm ${
+                        open
+                          ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white ring-1 ring-rose-300/60'
+                          : 'bg-gradient-to-br from-orange-400 to-orange-500 text-white ring-1 ring-orange-300/60'
+                      }`}
+                      title={title}
+                    >
+                      <MessageSquareWarning size={11} strokeWidth={2.5} />
+                    </span>
+                  ) : null}
+                  {resolved ? (
+                    <span
+                      className="inline-flex w-[20px] h-[20px] rounded-lg items-center justify-center shadow-sm bg-gradient-to-br from-violet-500 to-violet-600 text-white ring-1 ring-violet-300/60"
+                      title={title}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                    </span>
+                  ) : null}
+                </span>
+              ) : null}
+            </td>
+          );
+        })
+      )}
     </>
   );
 }
@@ -409,7 +564,7 @@ function WeekCells({
           const overdue = overdueKeys.has(key);
           const isToday = key === todayKey;
           const monthEdge = w === 4 ? 'border-r-2 border-stone-400/80' : 'border-r border-stone-300/90';
-          const bottom = mark === 'A' ? 'border-b-2 border-stone-400/80' : 'border-b border-stone-300/90';
+          const bottom = 'border-b border-stone-300/90';
           let cell = `text-center align-middle box-border ${bottom} ${monthEdge} ${monthCellBg(col, now, stripe, w)} shadow-[inset_0_0_0_1px_rgba(168,152,136,0.32)]`;
           if (isToday) cell += ' !bg-blue-200/70 ring-2 ring-inset ring-blue-400/55';
           let chip =
@@ -472,6 +627,16 @@ export function PmPlanLegend() {
         swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60"
         label="Overdue"
         icon={<AlertTriangle size={11} />}
+      />
+      <Legend
+        swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60"
+        label="Issue"
+        icon={<MessageSquareWarning size={11} />}
+      />
+      <Legend
+        swatch="bg-gradient-to-br from-violet-500 to-violet-600 shadow-sm shadow-violet-200/80 ring-1 ring-violet-300/60"
+        label="Resolved"
+        icon={<Check size={11} />}
       />
       <Legend
         swatch="bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50"
