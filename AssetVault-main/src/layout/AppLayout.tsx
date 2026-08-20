@@ -108,19 +108,27 @@ export default function AppLayout() {
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="bg-white rounded-md px-2.5 py-1 h-8 shadow-sm shrink-0 flex items-center justify-center">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="bg-white rounded-md px-2.5 py-1 h-9 shadow-sm shrink-0 flex items-center justify-center">
               <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
-            <h1 className="font-black text-white leading-none whitespace-nowrap text-sm sm:text-base md:text-lg">
-              A.E.M.S
+            <div className="min-w-0 flex items-center gap-2.5 sm:gap-3">
+              <div className="min-w-0 leading-tight">
+                <h1 className="font-black text-white whitespace-nowrap text-sm sm:text-base md:text-lg tracking-wide">
+                  A.E.M.S
+                </h1>
+                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-300 tracking-[0.04em] whitespace-nowrap truncate">
+                  Asset Entry Management System
+                </p>
+              </div>
               {isMaintenance ? (
-                <span className="font-bold text-sky-200">
-                  {' '}
-                  <span className="text-white/40 font-light">|</span> Prevention
-                </span>
+                <div className="flex items-center gap-2.5 shrink-0 border-l border-white/25 pl-2.5 sm:pl-3">
+                  <span className="font-bold text-sky-100 text-[11px] sm:text-sm whitespace-nowrap tracking-wide">
+                    Preventive Set-up
+                  </span>
+                </div>
               ) : null}
-            </h1>
+            </div>
           </div>
         </div>
 
@@ -216,9 +224,9 @@ export default function AppLayout() {
               </NavLink>
             )}
             {canAccessMaintenance(user.role, user.categories) && (
-              <NavLink to="/maintenance" className={navClass} title="Prevention (PM)" onClick={closeSidebar}>
+              <NavLink to="/maintenance" className={navClass} title="Preventive Set-up (PM)" onClick={closeSidebar}>
                 <Wrench size={18} className="text-slate-600 shrink-0" />
-                <span>Prevention</span>
+                <span>Preventive Set-up</span>
               </NavLink>
             )}
             {isAdminRole && !isHr && (
