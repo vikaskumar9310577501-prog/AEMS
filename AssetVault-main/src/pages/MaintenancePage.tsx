@@ -1771,7 +1771,7 @@ function ComplaintKpi({
         active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
       }`}
     >
-      <p className={`text-[10px] font-black leading-snug line-clamp-2 ${labelTone}`}>{label}</p>
+      <p className={`text-xs font-black leading-snug line-clamp-2 ${labelTone}`}>{label}</p>
       <p className={`text-2xl font-black tabular-nums mt-1 leading-none ${valueTone}`}>{value}</p>
       <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+6px)] z-50 w-max max-w-[220px] rounded-lg bg-stone-900 px-2.5 py-1.5 text-[10px] font-semibold leading-snug text-white shadow-lg opacity-0 invisible group-hover/kpi:opacity-100 group-hover/kpi:visible transition-opacity">
         {hint}
@@ -1831,7 +1831,7 @@ function DashboardKpi({
         active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
-      <p className={`text-[10px] font-black leading-snug line-clamp-2 ${labelTone}`}>{label}</p>
+      <p className={`text-xs font-black leading-snug line-clamp-2 ${labelTone}`}>{label}</p>
       <p className={`text-2xl font-black tabular-nums mt-1 leading-none ${valueTone}`}>{value}</p>
     </button>
   );
