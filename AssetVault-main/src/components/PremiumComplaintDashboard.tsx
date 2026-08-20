@@ -82,7 +82,7 @@ export default function PremiumComplaintDashboard({
   });
 
   const cardGrid = (items: MaintenanceComplaint[]) => (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {items.map((c) => (
         <ComplaintProCard key={c.id} {...cardProps(c)} />
       ))}
@@ -90,10 +90,10 @@ export default function PremiumComplaintDashboard({
   );
 
   return (
-    <div className="space-y-5 pb-4">
+    <div className="space-y-4 pb-3">
       {showCritical ? (
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className="text-red-600" />
             <h3 className="text-[11px] font-black uppercase tracking-wider text-red-700">
               Critical — open over 1 week ({criticalOpen.length})
@@ -105,7 +105,7 @@ export default function PremiumComplaintDashboard({
 
       {showActive ? (
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <Clock size={16} className="text-red-500" />
             <h3 className="text-[11px] font-black uppercase tracking-wider text-red-700">
               Active — pending within 1 week ({activeOpen.length})
@@ -117,7 +117,7 @@ export default function PremiumComplaintDashboard({
 
       {showResolved ? (
         <section>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 size={16} className="text-emerald-600" />
             <h3 className="text-[11px] font-black uppercase tracking-wider text-emerald-800">
               {filter === 'within_week' ? 'Resolved within 1 week' : 'Resolved'} ({resolvedList.length})

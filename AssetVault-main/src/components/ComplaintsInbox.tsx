@@ -31,13 +31,13 @@ function Lane({
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3 px-0.5">
+      <div className="flex items-center gap-2 mb-2 px-0.5">
         {icon}
         <h3 className={`text-[11px] font-black uppercase tracking-wider ${label}`}>
           {title} ({count})
         </h3>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{children}</div>
     </section>
   );
 }
