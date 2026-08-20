@@ -1767,7 +1767,7 @@ function ComplaintKpi({
       type="button"
       onClick={onClick}
       aria-label={hint}
-      className={`relative group/kpi rounded-xl border px-2.5 py-2 text-left w-full cursor-pointer min-h-[56px] ${className} ${alertClass} ${
+      className={`relative group/kpi rounded-xl border px-2.5 py-2 text-center w-full cursor-pointer min-h-[56px] flex flex-col items-center justify-center ${className} ${alertClass} ${
         active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
       }`}
     >
@@ -1827,7 +1827,7 @@ function DashboardKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-2.5 py-2 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 min-h-[56px] ${toneStyles[tone]} ${alertClass} ${
+      className={`rounded-xl border px-2.5 py-2 text-center w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 min-h-[56px] flex flex-col items-center justify-center ${toneStyles[tone]} ${alertClass} ${
         active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
