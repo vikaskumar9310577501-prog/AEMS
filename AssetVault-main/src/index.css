@@ -32,6 +32,16 @@
   @apply px-6 py-2.5 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition-all active:scale-[0.98];
 }
 
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 @keyframes splash-logo {
   0%, 100% { transform: scale(1) rotate(0deg); }
   50% { transform: scale(1.06) rotate(2deg); }

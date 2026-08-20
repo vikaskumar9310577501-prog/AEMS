@@ -64,12 +64,8 @@ function ComplaintCard({
 
   return (
     <article
-      className={`group rounded-2xl border p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer bg-white ${
-        critical
-          ? 'border-stone-200/90 border-l-[4px] border-l-rose-500 shadow-sm shadow-stone-200/40'
-          : open
-            ? 'border-stone-200/90 border-l-[4px] border-l-orange-500 shadow-sm shadow-stone-200/40'
-            : 'border-stone-200/90 border-l-[4px] border-l-emerald-500 shadow-sm shadow-stone-200/30'
+      className={`group rounded-2xl border border-stone-200/80 p-3.5 bg-white cursor-pointer shadow-[0_8px_20px_-12px_rgba(120,90,60,0.18)] hover:-translate-y-px hover:shadow-[0_12px_24px_-12px_rgba(120,90,60,0.22)] transition-all ${
+        critical ? 'ring-1 ring-rose-200/80' : open ? '' : 'ring-1 ring-emerald-100/80'
       }`}
       onClick={onOpen}
       onKeyDown={(e) => {

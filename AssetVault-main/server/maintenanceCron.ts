@@ -20,6 +20,7 @@ import {
   istCalendarDaysSince,
   istMailSlotKey,
   COMPLAINT_RESOLVE_SLA_DAYS,
+  effectiveNextMaintenanceDate,
 } from "../src/lib/maintenanceCodes.js";
 import type { MaintenanceComplaint, MaintenanceMachine } from "../src/types/maintenance.js";
 
@@ -67,9 +68,11 @@ export async function runMaintenanceCron(): Promise<MaintenanceCronResult> {
   const machines = await listMaintenanceMachines();
 
   for (const machine of machines) {
-    if (machine.status === "Done") continue;
-    const days = daysUntilDateIst(machine.nextMaintenanceDate);
+    const dueDate = effectiveNextMaintenanceDate(machine);
+    const days = daysUntilDateIst(dueDate);
     if (days == null) continue;
+    // Skip only if PM is not in the reminder window and not overdue.
+    if (days > 7) continue;
     const recipients = getPlantMaintenanceEmails(plantContacts, machine.plantCode);
     if (recipients.length === 0) continue;
 
@@ -92,7 +95,7 @@ export async function runMaintenanceCron(): Promise<MaintenanceCronResult> {
       if (alreadySentToday(machine.lastReminderEmailOn, date)) continue;
       const mail = buildPreventiveReminderEmail({
         ...identity,
-        nextMaintenanceDate: machine.nextMaintenanceDate,
+        nextMaintenanceDate: dueDate,
         reminderCount: nextCount,
         daysRemaining: days,
       });
@@ -113,7 +116,7 @@ export async function runMaintenanceCron(): Promise<MaintenanceCronResult> {
       if (alreadySentSlot(machine.lastMailSlot, slotKey, date, machine.lastDailyEmailOn)) continue;
       const mail = buildPreventiveOverdueEmail({
         ...identity,
-        nextMaintenanceDate: machine.nextMaintenanceDate,
+        nextMaintenanceDate: dueDate,
         pendingDays: Math.abs(days),
         reminderCount: nextCount,
       });

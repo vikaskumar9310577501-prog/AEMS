@@ -4263,11 +4263,11 @@ function authorizeMaintenanceCron(req: { headers: Record<string, unknown>; query
   const fromHeader = String(req.headers["x-cron-secret"] || "").trim();
   const vercelCron = String(req.headers["x-vercel-cron"] || "") === "1";
 
+  // Vercel scheduled jobs only send x-vercel-cron — they do not send CRON_SECRET.
+  if (vercelCron) return true;
   if (secret) {
     return bearer === secret || fromQuery === secret || fromHeader === secret;
   }
-  // No secret configured: allow Vercel cron header, or non-production local runs
-  if (vercelCron) return true;
   return getEnv("NODE_ENV") !== "production" && getEnv("VERCEL_ENV") !== "production";
 }
 
