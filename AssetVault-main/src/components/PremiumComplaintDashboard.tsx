@@ -64,8 +64,10 @@ function ComplaintCard({
 
   return (
     <article
-      className={`group rounded-2xl border border-stone-200/80 p-3.5 bg-white cursor-pointer shadow-[0_8px_20px_-12px_rgba(120,90,60,0.18)] hover:-translate-y-px hover:shadow-[0_12px_24px_-12px_rgba(120,90,60,0.22)] transition-all ${
-        critical ? 'ring-1 ring-rose-200/80' : open ? '' : 'ring-1 ring-emerald-100/80'
+      className={`group rounded-2xl border p-3.5 bg-white cursor-pointer shadow-[0_8px_20px_-12px_rgba(120,90,60,0.18)] hover:-translate-y-px hover:shadow-[0_12px_24px_-12px_rgba(120,90,60,0.22)] transition-all ${
+        open
+          ? 'complaint-card-pending-beat border-rose-200/80 bg-gradient-to-br from-white to-rose-50/40'
+          : 'border-stone-200/80 ring-1 ring-emerald-100/80'
       }`}
       onClick={onOpen}
       onKeyDown={(e) => {

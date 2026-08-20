@@ -120,3 +120,22 @@
 .complaint-heartbeat {
   animation: complaint-heartbeat 1.6s ease-in-out infinite;
 }
+
+@keyframes complaint-card-heartbeat {
+  0%, 100% {
+    box-shadow: 0 8px 20px -12px rgba(120, 90, 60, 0.18), 0 0 0 0 rgba(244, 63, 94, 0);
+    border-color: rgba(251, 113, 133, 0.45);
+  }
+  14% {
+    box-shadow: 0 8px 20px -12px rgba(120, 90, 60, 0.18), 0 0 0 4px rgba(254, 205, 211, 0.55);
+    border-color: rgba(244, 63, 94, 0.7);
+  }
+  28% {
+    box-shadow: 0 8px 20px -12px rgba(120, 90, 60, 0.18), 0 0 0 0 rgba(244, 63, 94, 0);
+    border-color: rgba(251, 113, 133, 0.45);
+  }
+}
+
+.complaint-card-pending-beat {
+  animation: complaint-card-heartbeat 1.6s ease-in-out infinite;
+}

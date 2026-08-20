@@ -12,7 +12,7 @@ import {
   pmCellKey,
   weekOfMonth,
 } from '../lib/maintenanceCodes';
-import { CalendarDays, Check, AlertTriangle, Heart } from 'lucide-react';
+import { CalendarDays, Check, AlertTriangle, MessageSquareWarning } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -510,12 +510,12 @@ function IssueWeekCells({
                     <span
                       className={`inline-flex w-[20px] h-[20px] rounded-lg items-center justify-center shadow-sm ${
                         open
-                          ? 'bg-rose-200/90 text-rose-500 ring-1 ring-rose-300/50 complaint-heartbeat'
+                          ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white ring-1 ring-rose-300/60'
                           : 'bg-gradient-to-br from-orange-400 to-orange-500 text-white ring-1 ring-orange-300/60'
                       }`}
                       title={title}
                     >
-                      <Heart size={11} strokeWidth={2.5} className={open ? 'fill-rose-400/80' : ''} />
+                      <MessageSquareWarning size={11} strokeWidth={2.5} />
                     </span>
                   ) : null}
                   {resolved ? (
@@ -644,9 +644,9 @@ export function PmPlanLegend() {
     },
     {
       id: 'issue',
-      swatch: 'bg-rose-200/90 ring-1 ring-rose-300/50',
+      swatch: 'bg-gradient-to-br from-orange-400 to-orange-500 ring-1 ring-orange-300/60',
       label: 'Breakdown',
-      icon: <Heart size={12} strokeWidth={2.5} className="text-rose-500 fill-rose-400/80" />,
+      icon: <MessageSquareWarning size={12} strokeWidth={2.5} />,
     },
     {
       id: 'resolved',

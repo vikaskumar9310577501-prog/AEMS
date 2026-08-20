@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CheckCircle2, Clock, Heart, MessageSquareWarning, ShieldAlert, Zap } from 'lucide-react';
+import { CheckCircle2, Clock, MessageSquareWarning, ShieldAlert, Zap } from 'lucide-react';
 import type { MaintenanceComplaint } from '../types/maintenance';
 import type { PlantLike } from '../lib/plantDisplay';
 import { plantShortName } from '../lib/plantDisplay';
@@ -69,13 +69,12 @@ function InboxRow({
               {c.assetCode}
             </span>
             <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
+              className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
                 isOpen
-                  ? 'bg-rose-100/90 text-rose-500 border border-rose-200/80 complaint-heartbeat'
+                  ? 'bg-orange-50 text-orange-800 border border-orange-200/80'
                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
               }`}
             >
-              {isOpen ? <Heart size={9} className="fill-rose-400/80" /> : null}
               {isOpen ? 'Pending' : 'Done'}
             </span>
             {isOpen && overWeek ? (
