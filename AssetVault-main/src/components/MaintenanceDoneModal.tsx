@@ -5,13 +5,20 @@ import type { MaintenanceMachine } from '../types/maintenance';
 import { isCustomTrend, trendMonthsLabel } from '../types/maintenance';
 import { suggestNextMaintenanceDate, machineTrendMonths, pendingPlanDates } from '../lib/maintenanceCodes';
 import { plantShortName } from '../lib/plantDisplay';
+import type { MaintenanceTechnicianPayload } from '../lib/maintenanceTechnicians';
+import { buildTechnicianNameSlots, validateTechnicians } from '../lib/maintenanceTechnicians';
+import MaintenanceTechnicianFields from './MaintenanceTechnicianFields';
+
+export type MaintenanceDonePayload = {
+  nextMaintenanceDate: string;
+} & MaintenanceTechnicianPayload;
 
 interface MaintenanceDoneModalProps {
   machine: MaintenanceMachine | null;
   plants?: { code: string; name: string; location?: string }[];
   saving?: boolean;
   onClose: () => void;
-  onConfirm: (nextMaintenanceDate: string) => void | Promise<void>;
+  onConfirm: (payload: MaintenanceDonePayload) => void | Promise<void>;
 }
 
 export default function MaintenanceDoneModal({
@@ -23,6 +30,8 @@ export default function MaintenanceDoneModal({
 }: MaintenanceDoneModalProps) {
   const [nextDate, setNextDate] = useState('');
   const [error, setError] = useState('');
+  const [technicianCount, setTechnicianCount] = useState(1);
+  const [technicianNames, setTechnicianNames] = useState<string[]>(['']);
   const custom = machine ? isCustomTrend(machineTrendMonths(machine)) : false;
 
   useEffect(() => {
@@ -40,8 +49,17 @@ export default function MaintenanceDoneModal({
         setNextDate(suggestNextMaintenanceDate(new Date(), trend));
       }
       setError('');
+      setTechnicianCount(1);
+      setTechnicianNames(['']);
     }
   }, [machine]);
+
+  const onCountChange = (count: number) => {
+    setTechnicianCount(count);
+    setTechnicianNames(buildTechnicianNameSlots(count, technicianNames));
+  };
+
+  const techniciansOk = !validateTechnicians(technicianCount, technicianNames);
 
   const submit = () => {
     const trimmed = nextDate.trim();
@@ -49,7 +67,15 @@ export default function MaintenanceDoneModal({
     const canAutoAdvance = custom && pending.length > 1;
     if (!trimmed) {
       if (canAutoAdvance) {
-        void onConfirm('');
+        if (!techniciansOk) {
+          setError(validateTechnicians(technicianCount, technicianNames) || 'Enter all technician names');
+          return;
+        }
+        void onConfirm({
+          nextMaintenanceDate: '',
+          technicianCount,
+          technicianNames: technicianNames.map((n) => n.trim()),
+        });
         return;
       }
       setError('Next maintenance date is required');
@@ -68,7 +94,15 @@ export default function MaintenanceDoneModal({
       setError('Date must be more than 7 days from today');
       return;
     }
-    void onConfirm(trimmed);
+    if (!techniciansOk) {
+      setError(validateTechnicians(technicianCount, technicianNames) || 'Enter all technician names');
+      return;
+    }
+    void onConfirm({
+      nextMaintenanceDate: trimmed,
+      technicianCount,
+      technicianNames: technicianNames.map((n) => n.trim()),
+    });
   };
 
   return (
@@ -85,7 +119,7 @@ export default function MaintenanceDoneModal({
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full"
+            className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full max-h-[min(92vh,760px)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 mb-4">
@@ -125,6 +159,14 @@ export default function MaintenanceDoneModal({
               )}
             </p>
 
+            <MaintenanceTechnicianFields
+              count={technicianCount}
+              names={technicianNames}
+              disabled={saving}
+              onCountChange={onCountChange}
+              onNamesChange={setTechnicianNames}
+            />
+
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
               Next maintenance date
             </label>
@@ -157,8 +199,8 @@ export default function MaintenanceDoneModal({
               <button
                 type="button"
                 onClick={submit}
-                disabled={saving}
-                className="px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                disabled={saving || !techniciansOk}
+                className="px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving…' : 'Confirm Done'}
               </button>

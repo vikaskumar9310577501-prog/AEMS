@@ -80,6 +80,10 @@ import {
   todayKey,
 } from "./server/maintenanceMail.js";
 import {
+  formatTechnicianNames,
+  parseTechnicianPayload,
+} from "./server/maintenanceTechnicians.js";
+import {
   clearAllCaches,
   isCacheForDifferentSpreadsheet,
   touchCacheSpreadsheetId,
@@ -3917,7 +3921,16 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
       });
     }
 
-    const body = (req.body || {}) as { nextMaintenanceDate?: string; remarks?: string };
+    const body = (req.body || {}) as {
+      nextMaintenanceDate?: string;
+      remarks?: string;
+      technicianCount?: number;
+      technicianNames?: string[];
+    };
+    const technicians = parseTechnicianPayload(body);
+    if ("error" in technicians) {
+      return res.status(400).json({ error: technicians.error });
+    }
     const actor = String(req.authUser?.email || "System");
     const doneOn = todayKey();
     const custom = isCustomTrend(machineTrendMonths(current));
@@ -3970,7 +3983,13 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
       remarks: body.remarks !== undefined ? String(body.remarks || "").trim() || undefined : current.remarks,
       pmLogs: [
         ...(current.pmLogs || []),
-        { plannedDate, doneOn },
+        {
+          plannedDate,
+          doneOn,
+          technicianCount: technicians.technicianCount,
+          technicianNames: technicians.technicianNames,
+          doneBy: actor,
+        },
       ],
       lastReminderEmailOn: undefined,
       lastEscalationEmailOn: undefined,
@@ -3991,6 +4010,8 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
         plannedDate,
         reminderCount,
         resolvedBy: actor,
+        technicianCount: technicians.technicianCount,
+        technicianNames: technicians.technicianNames,
       });
       await sendMaintenanceMail({ to, ...payload });
     }
@@ -4142,6 +4163,11 @@ app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
       return res.status(400).json({ error: "Resolution remark must be at least 50 words" });
     }
 
+    const technicians = parseTechnicianPayload(req.body || {});
+    if ("error" in technicians) {
+      return res.status(400).json({ error: technicians.error });
+    }
+
     const photoData = String((req.body || {}).photoData || "").trim();
     if (!photoData) {
       return res.status(400).json({ error: "Close-out evidence photo is required" });
@@ -4175,6 +4201,8 @@ app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
       resolutionPhotoName: savedPhoto.fileName,
       resolvedAt: new Date().toISOString(),
       resolvedBy: actor,
+      resolvedTechnicianCount: technicians.technicianCount,
+      resolvedTechnicianNames: technicians.technicianNames,
       lastDailyEmailOn: undefined,
       lastMailSlot: undefined,
     };
@@ -4207,6 +4235,8 @@ app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
         resolvedAt: saved.resolvedAt || new Date().toISOString(),
         resolvedBy: actor,
         reminderCount,
+        technicianCount: technicians.technicianCount,
+        technicianNames: technicians.technicianNames,
       });
       await sendMaintenanceMail({ to, ...payload });
     }

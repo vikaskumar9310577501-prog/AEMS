@@ -12,6 +12,12 @@ export type MaintenanceComplaintStatus = 'Open' | 'Resolved';
 export interface MaintenancePmLog {
   plannedDate?: string;
   doneOn: string;
+  /** Number of technicians who performed this PM. */
+  technicianCount?: number;
+  /** Names of technicians who performed this PM. */
+  technicianNames?: string[];
+  /** Logged-in user who marked Done. */
+  doneBy?: string;
 }
 
 /** 0 = Custom — dashboard uses only manually entered dates (no auto interval). */
@@ -113,6 +119,10 @@ export interface MaintenanceComplaint {
   reportedAt: string;
   resolvedAt?: string;
   resolvedBy?: string;
+  /** Number of people who resolved this breakdown complaint. */
+  resolvedTechnicianCount?: number;
+  /** Names of people who resolved this breakdown complaint. */
+  resolvedTechnicianNames?: string[];
   lastDailyEmailOn?: string;
   /** Last IST mail slot sent, e.g. 2026-08-18-am or 2026-08-18-pm */
   lastMailSlot?: string;

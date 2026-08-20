@@ -71,6 +71,7 @@ import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal, { type ResolveComplaintPayload } from '../components/MaintenanceResolveModal';
 import MaintenanceMachineEditModal from '../components/MaintenanceMachineEditModal';
 import { plantShortName, plantTableLabel } from '../lib/plantDisplay';
+import { formatTechnicianNames } from '../lib/maintenanceTechnicians';
 
 type Tab = MaintenanceTabId;
 
@@ -592,7 +593,11 @@ export default function MaintenancePage() {
     });
   };
 
-  const confirmMachineDone = async (nextMaintenanceDate: string) => {
+  const confirmMachineDone = async (payload: {
+    nextMaintenanceDate: string;
+    technicianCount: number;
+    technicianNames: string[];
+  }) => {
     if (!doneMachine || markingDoneId) return;
     setMarkingDoneId(doneMachine.id);
     try {
@@ -602,7 +607,7 @@ export default function MaintenancePage() {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nextMaintenanceDate }),
+          body: JSON.stringify(payload),
         }
       );
       const data = await parseJsonResponse<{ error?: string }>(res);
@@ -1929,6 +1934,7 @@ function MachineDetailPopup({
   const badge = statusBadge(machine);
   const openCount = complaints.filter((c) => c.status === 'Open').length;
   const resolvedCount = complaints.filter((c) => c.status === 'Resolved').length;
+  const lastPmLog = (machine.pmLogs || [])[(machine.pmLogs || []).length - 1];
 
   const popup = (
     <div
@@ -1996,6 +2002,15 @@ function MachineDetailPopup({
                   <DetailField label="Next PM Date" value={formatDate(effectiveNextMaintenanceDate(machine))} />
                   <DetailField label="Open Complaints" value={String(openCount)} />
                   <DetailField label="Resolved Complaints" value={String(resolvedCount)} />
+                  {lastPmLog?.doneOn ? (
+                    <DetailField label="Last PM Done" value={formatDate(lastPmLog.doneOn)} />
+                  ) : null}
+                  {lastPmLog?.technicianNames?.length ? (
+                    <DetailField
+                      label="Last PM By"
+                      value={formatTechnicianNames(lastPmLog.technicianNames)}
+                    />
+                  ) : null}
                 </div>
               </div>
 
@@ -2286,6 +2301,12 @@ function ComplaintDetailPopup({
                 <DetailField label="Status" value={isOpen ? 'Pending' : 'Resolved'} />
                 <DetailField label="Reported On" value={formatDate(c.reportedAt)} />
                 {c.resolvedAt ? <DetailField label="Resolved On" value={formatDate(c.resolvedAt)} /> : null}
+                {c.resolvedTechnicianNames?.length ? (
+                  <DetailField
+                    label="Resolved By (team)"
+                    value={formatTechnicianNames(c.resolvedTechnicianNames)}
+                  />
+                ) : null}
                 <DetailField
                   label={isOpen ? 'Open Age' : 'Resolution'}
                   value={

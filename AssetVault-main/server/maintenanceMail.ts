@@ -5,6 +5,7 @@ import type { MaintenancePlantContact } from "../src/types/maintenance.js";
 import { trendMonthsLabel } from "../src/types/maintenance.js";
 import { istTodayKey } from "../src/lib/maintenanceCodes.js";
 import { plantShortName } from "../src/lib/plantDisplay.js";
+import { formatTechnicianNames } from "./maintenanceTechnicians.js";
 
 export type MachineMailIdentity = {
   assetCode: string;
@@ -218,13 +219,18 @@ export function buildPreventiveSolvedEmail(m: MachineMailIdentity & {
   plannedDate: string;
   reminderCount?: number;
   resolvedBy: string;
+  technicianCount?: number;
+  technicianNames?: string[];
 }): { subject: string; html: string; text: string } {
+  const peopleWorked = formatTechnicianNames(m.technicianNames);
   const subject = `Maintenance Completed — ${m.assetCode} (${m.machineNumber})`;
   const extra = [
     identityText(m),
     `Planned Date: ${m.plannedDate}`,
     `Completed On: ${m.completedOn}`,
     `Closed By: ${m.resolvedBy}`,
+    m.technicianCount ? `People Worked: ${m.technicianCount}` : "",
+    peopleWorked !== "-" ? `Names: ${peopleWorked}` : "",
     reminderText(m.reminderCount),
   ]
     .filter(Boolean)
@@ -248,6 +254,8 @@ ${APP_NAME}`;
       ${kvRow("Planned Date", m.plannedDate)}
       ${kvRow("Completed On", m.completedOn)}
       ${kvRow("Closed By", m.resolvedBy)}
+      ${m.technicianCount ? kvRow("People Worked", String(m.technicianCount)) : ""}
+      ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
       ${reminderHtml(m.reminderCount)}
     </table>
     <p>No further reminders will be issued for this maintenance cycle.</p>
@@ -400,13 +408,18 @@ export function buildComplaintSolvedEmail(c: MachineMailIdentity & {
   resolvedAt: string;
   resolvedBy: string;
   reminderCount?: number;
+  technicianCount?: number;
+  technicianNames?: string[];
 }): { subject: string; html: string; text: string } {
+  const peopleWorked = formatTechnicianNames(c.technicianNames);
   const subject = `Complaint Resolved — ${c.assetCode} (${c.machineNumber})`;
   const extra = [
     identityText(c),
     `Reported At: ${c.reportedAt}`,
     `Resolved At: ${c.resolvedAt}`,
     `Resolved By: ${c.resolvedBy}`,
+    c.technicianCount ? `People Worked: ${c.technicianCount}` : "",
+    peopleWorked !== "-" ? `Names: ${peopleWorked}` : "",
     reminderText(c.reminderCount),
   ]
     .filter(Boolean)
@@ -438,6 +451,8 @@ ${APP_NAME}`;
       ${kvRow("Reported At", c.reportedAt)}
       ${kvRow("Resolved At", c.resolvedAt)}
       ${kvRow("Resolved By", c.resolvedBy)}
+      ${c.technicianCount ? kvRow("People Worked", String(c.technicianCount)) : ""}
+      ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
       ${reminderHtml(c.reminderCount)}
     </table>
     <p style="margin:0 0 8px;font-weight:700;">Complaint</p>

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Camera, CheckCircle2, ImagePlus, X } from 'lucide-react';
 import type { MaintenanceComplaint } from '../types/maintenance';
+import type { MaintenanceTechnicianPayload } from '../lib/maintenanceTechnicians';
+import { buildTechnicianNameSlots, validateTechnicians } from '../lib/maintenanceTechnicians';
+import MaintenanceTechnicianFields from './MaintenanceTechnicianFields';
 
 export const MIN_RESOLUTION_WORDS = 50;
 
@@ -13,7 +16,7 @@ export type ResolveComplaintPayload = {
   remarks: string;
   photoData: string;
   photoName: string;
-};
+} & MaintenanceTechnicianPayload;
 
 interface MaintenanceResolveModalProps {
   complaint: MaintenanceComplaint | null;
@@ -32,6 +35,8 @@ export default function MaintenanceResolveModal({
   const [photoData, setPhotoData] = useState('');
   const [photoName, setPhotoName] = useState('');
   const [photoError, setPhotoError] = useState('');
+  const [technicianCount, setTechnicianCount] = useState(1);
+  const [technicianNames, setTechnicianNames] = useState<string[]>(['']);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,13 +45,21 @@ export default function MaintenanceResolveModal({
     setPhotoData('');
     setPhotoName('');
     setPhotoError('');
+    setTechnicianCount(1);
+    setTechnicianNames(['']);
     if (fileRef.current) fileRef.current.value = '';
   }, [complaint]);
 
   const words = useMemo(() => countWords(remarks), [remarks]);
   const remarksOk = words >= MIN_RESOLUTION_WORDS;
   const photoOk = Boolean(photoData);
-  const canSubmit = remarksOk && photoOk && !saving;
+  const techniciansOk = !validateTechnicians(technicianCount, technicianNames);
+  const canSubmit = remarksOk && photoOk && techniciansOk && !saving;
+
+  const onCountChange = (count: number) => {
+    setTechnicianCount(count);
+    setTechnicianNames(buildTechnicianNameSlots(count, technicianNames));
+  };
 
   const onPickPhoto = async (file?: File) => {
     setPhotoError('');
@@ -76,7 +89,7 @@ export default function MaintenanceResolveModal({
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-[#FFFCF8] rounded-2xl shadow-2xl p-6 sm:p-7 max-w-lg w-full border border-stone-200/80 max-h-[min(92vh,720px)] overflow-y-auto"
+            className="bg-[#FFFCF8] rounded-2xl shadow-2xl p-6 sm:p-7 max-w-lg w-full border border-stone-200/80 max-h-[min(92vh,820px)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 mb-4">
@@ -100,6 +113,14 @@ export default function MaintenanceResolveModal({
             </div>
 
             <p className="text-sm text-stone-600 mb-4 whitespace-pre-wrap line-clamp-3">{complaint.complaintText}</p>
+
+            <MaintenanceTechnicianFields
+              count={technicianCount}
+              names={technicianNames}
+              disabled={saving}
+              onCountChange={onCountChange}
+              onNamesChange={setTechnicianNames}
+            />
 
             <label className="block text-[10px] font-black uppercase tracking-wider text-stone-500 mb-1.5">
               Evidence photo <span className="text-rose-600">required</span>
@@ -189,7 +210,13 @@ export default function MaintenanceResolveModal({
               <button
                 type="button"
                 onClick={() =>
-                  void onConfirm({ remarks: remarks.trim(), photoData, photoName })
+                  void onConfirm({
+                    remarks: remarks.trim(),
+                    photoData,
+                    photoName,
+                    technicianCount,
+                    technicianNames: technicianNames.map((n) => n.trim()),
+                  })
                 }
                 disabled={!canSubmit}
                 className="px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
