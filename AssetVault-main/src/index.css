@@ -100,24 +100,3 @@
 .kpi-alert-delayed {
   animation: kpi-delayed-shake 1.8s ease-in-out infinite !important;
 }
-
-/* Prevention: ~80% default density; A.E.M.S top bar stays full size outside this shell */
-.maintenance-compact-shell {
-  overflow: hidden;
-}
-
-.maintenance-compact-view {
-  zoom: 0.8;
-  width: 100%;
-  height: 125%;
-}
-
-@supports not (zoom: 1) {
-  .maintenance-compact-view {
-    zoom: unset;
-    transform: scale(0.8);
-    transform-origin: top left;
-    width: 125%;
-    min-height: 125%;
-  }
-}
