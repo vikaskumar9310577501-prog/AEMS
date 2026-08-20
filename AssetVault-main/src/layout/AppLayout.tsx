@@ -113,19 +113,17 @@ export default function AppLayout() {
               <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
             <div className="min-w-0 flex items-center gap-3">
-              <div className="w-fit flex flex-col items-stretch gap-1">
-                <h1 className="font-black text-white text-[15px] sm:text-base md:text-[17px] leading-none tracking-[0.08em] whitespace-nowrap">
+              <div className="min-w-0 flex flex-col justify-center leading-tight">
+                <h1 className="font-bold text-white text-base sm:text-lg md:text-xl tracking-tight whitespace-nowrap">
                   A.E.M.S
                 </h1>
-                <p className="w-full text-center text-[7.5px] sm:text-[8px] md:text-[8.5px] font-semibold text-sky-100/85 leading-[1.15]">
-                  Asset Entry
-                  <br />
-                  Management System
+                <p className="mt-0.5 text-[11px] sm:text-xs font-medium text-slate-300 whitespace-nowrap">
+                  Asset Entry Management System
                 </p>
               </div>
               {isMaintenance ? (
                 <div className="flex items-center shrink-0 border-l border-white/20 pl-3 self-center">
-                  <span className="font-bold text-sky-100 text-xs sm:text-sm whitespace-nowrap tracking-wide">
+                  <span className="font-semibold text-sky-100 text-xs sm:text-sm whitespace-nowrap">
                     Preventive Set-up
                   </span>
                 </div>
