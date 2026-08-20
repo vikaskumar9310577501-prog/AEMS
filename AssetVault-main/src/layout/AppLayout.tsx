@@ -109,8 +109,8 @@ export default function AppLayout() {
           </button>
 
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="bg-white rounded-xl px-3 py-1 h-[54px] shadow-md shrink-0 flex items-center justify-center border border-white/20 overflow-hidden">
-              <img src={`${LOGO_SRC}?v=2`} alt="PG Electroplast" className="h-11 sm:h-12 w-auto max-w-[160px] object-contain scale-105" />
+            <div className="bg-white rounded-xl px-3 py-0.5 h-[56px] shadow-md shrink-0 flex items-center justify-center border border-white/20 overflow-hidden">
+              <img src={`${LOGO_SRC}?v=3`} alt="PG Electroplast" className="h-12 sm:h-[50px] w-auto max-w-[170px] object-contain" />
             </div>
             <div className="min-w-0 flex items-center gap-3.5">
               <div className="min-w-0 flex flex-col justify-center w-fit">
