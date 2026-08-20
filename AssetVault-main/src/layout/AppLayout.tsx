@@ -95,7 +95,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden font-sans bg-white">
-      <header className="bg-[#113355] border-b border-[#0b2744] h-[68px] flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
+      <header className="bg-[#113355] border-b border-[#0b2744] h-16 flex items-center px-3 sm:px-4 justify-between shrink-0 shadow-sm z-40">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -113,18 +113,13 @@ export default function AppLayout() {
               <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
             <div className="min-w-0 flex items-center gap-3">
-              <div className="min-w-0 flex flex-col justify-center">
-                <h1 className="font-black text-white text-[15px] sm:text-base md:text-[17px] leading-none tracking-[0.06em]">
+              <div className="min-w-0 flex flex-col justify-center gap-1">
+                <h1 className="font-black text-white text-[15px] sm:text-base md:text-[17px] leading-none tracking-[0.08em]">
                   A.E.M.S
                 </h1>
-                <div className="mt-1.5 border-l-2 border-sky-300/70 pl-2">
-                  <p className="text-[10px] sm:text-[11px] font-semibold text-sky-50/90 leading-[1.15]">
-                    Asset Entry
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] font-semibold text-sky-50/90 leading-[1.15]">
-                    Management System
-                  </p>
-                </div>
+                <p className="text-[10px] sm:text-[11px] md:text-xs font-medium text-sky-100/90 leading-none tracking-[0.02em] whitespace-nowrap">
+                  Asset Entry Management System
+                </p>
               </div>
               {isMaintenance ? (
                 <div className="flex items-center shrink-0 border-l border-white/20 pl-3 self-center">
