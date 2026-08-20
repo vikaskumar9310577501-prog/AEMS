@@ -113,11 +113,11 @@ export default function AppLayout() {
               <img src={LOGO_SRC} alt={APP_NAME} className="h-6 object-contain" />
             </div>
             <div className="min-w-0 flex items-center gap-2.5 sm:gap-3">
-              <div className="min-w-0 leading-tight">
-                <h1 className="font-black text-white whitespace-nowrap text-sm sm:text-base md:text-lg tracking-wide">
+              <div className="min-w-0 flex flex-col justify-center gap-0.5">
+                <h1 className="font-black text-white whitespace-nowrap text-sm sm:text-base md:text-[17px] tracking-[0.08em] leading-none">
                   A.E.M.S
                 </h1>
-                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-300 tracking-[0.04em] whitespace-nowrap truncate">
+                <p className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-sky-100/85 tracking-[0.12em] uppercase whitespace-nowrap leading-none truncate">
                   Asset Entry Management System
                 </p>
               </div>
