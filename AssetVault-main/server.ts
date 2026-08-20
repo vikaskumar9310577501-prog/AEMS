@@ -4036,9 +4036,6 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
     if (!complaintText || complaintText.length < 5) {
       return res.status(400).json({ error: "Please describe the complaint (at least 5 characters)" });
     }
-    if (downtimeMinutes <= 0) {
-      return res.status(400).json({ error: "Downtime is required" });
-    }
     if (!remark || remark.length < 3) {
       return res.status(400).json({ error: "Remark is required" });
     }

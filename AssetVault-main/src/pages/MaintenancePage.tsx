@@ -754,7 +754,7 @@ export default function MaintenancePage() {
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF8F5]">
       <div className="shrink-0 px-3 lg:px-4 pt-1 pb-0.5 border-b border-stone-200/40">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar min-h-[32px]">
+        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar min-h-[34px]">
           {canDash && (
             <button type="button" onClick={() => goTab('dashboard')} className={navBtn(tab === 'dashboard')}>
               <LayoutDashboard size={14} />
@@ -794,16 +794,11 @@ export default function MaintenancePage() {
               </span>
             </div>
           ) : null}
-        </div>
 
-        {(tab === 'dashboard' ||
-          tab === 'machines' ||
-          tab === 'complaint-dashboard' ||
-          tab === 'complaints') && (
-          <div className="flex flex-nowrap items-center justify-end gap-1.5 mt-0.5 py-1 overflow-x-auto no-scrollbar w-full">
+          <div className="inline-flex items-center gap-1.5 shrink-0">
             {(tab === 'complaint-dashboard' || tab === 'complaints') &&
               (canComplaintDash || canComplaintsInbox) && (
-              <div className="relative w-[168px] shrink-0 mr-auto">
+              <div className="relative w-[170px] shrink-0">
                 <Search
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
                   size={13}
@@ -932,7 +927,7 @@ export default function MaintenancePage() {
               )}
             </div>
           </div>
-        )}
+        </div>
 
         {tab === 'dashboard' && canDash && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
