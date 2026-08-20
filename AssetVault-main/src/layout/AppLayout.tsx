@@ -117,8 +117,9 @@ export default function AppLayout() {
                 <h1 className="font-black text-white whitespace-nowrap text-sm sm:text-base md:text-lg leading-none tracking-wide">
                   A.E.M.S
                 </h1>
-                <p className="mt-0.5 max-w-[118px] sm:max-w-[132px] text-[8px] sm:text-[9px] font-semibold text-slate-200/90 leading-[1.2] tracking-normal">
-                  Asset Entry Management System
+                <p className="mt-1 text-[8px] sm:text-[9px] font-semibold text-slate-200/95 leading-[1.25]">
+                  <span className="block">Asset Entry</span>
+                  <span className="block">Management System</span>
                 </p>
               </div>
               {isMaintenance ? (

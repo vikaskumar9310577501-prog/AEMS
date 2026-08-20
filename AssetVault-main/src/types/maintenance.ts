@@ -111,6 +111,8 @@ export interface MaintenanceComplaint {
   remark?: string;
   /** Name of person who reported the breakdown (entered on QR form). */
   reporterName?: string;
+  /** Employee code of reporter (entered on QR form). */
+  reporterEmployeeCode?: string;
   /** Mobile / phone number of reporter (entered on QR form). */
   reporterPhone?: string;
   /** Total reported downtime in minutes. */

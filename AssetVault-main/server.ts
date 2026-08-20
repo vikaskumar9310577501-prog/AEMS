@@ -4050,6 +4050,7 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
       complaintText?: string;
       remark?: string;
       reporterName?: string;
+      reporterEmployeeCode?: string;
       reporterPhone?: string;
       downtimeHours?: number | string;
       downtimeMinutes?: number | string;
@@ -4060,6 +4061,9 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
     const complaintText = String(body.complaintText || "").trim();
     const remark = String(body.remark || "").trim();
     const reporterName = String(body.reporterName || "").trim();
+    const reporterEmployeeCode = String(body.reporterEmployeeCode || "")
+      .trim()
+      .toUpperCase();
     const reporterPhone = String(body.reporterPhone || "").trim().replace(/[\s\-+()]/g, "");
     const hours = Math.max(0, Math.floor(Number(body.downtimeHours) || 0));
     const mins = Math.max(0, Math.min(59, Math.floor(Number(body.downtimeMinutes) || 0)));
@@ -4073,6 +4077,12 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
     }
     if (!reporterName || reporterName.length < 2) {
       return res.status(400).json({ error: "Reporter name is required (at least 2 characters)" });
+    }
+    if (!reporterEmployeeCode || reporterEmployeeCode.length < 2) {
+      return res.status(400).json({ error: "Employee code is required" });
+    }
+    if (!/^[A-Z0-9][A-Z0-9\-_/]{1,24}$/i.test(reporterEmployeeCode)) {
+      return res.status(400).json({ error: "Enter a valid employee code (letters / numbers)" });
     }
     if (!/^\d{7,15}$/.test(reporterPhone)) {
       return res.status(400).json({ error: "Enter a valid mobile / phone number (7–15 digits)" });
@@ -4123,6 +4133,7 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
       complaintText,
       remark,
       reporterName,
+      reporterEmployeeCode,
       reporterPhone,
       downtimeMinutes,
       photoUrl: photoUrl || undefined,
@@ -4148,6 +4159,7 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
         complaintText: saved.complaintText,
         remark: saved.remark,
         reporterName: saved.reporterName,
+        reporterEmployeeCode: saved.reporterEmployeeCode,
         reporterPhone: saved.reporterPhone,
         downtimeLabel: formatDowntimeLabel(saved.downtimeMinutes),
         photoUrl: saved.photoUrl,

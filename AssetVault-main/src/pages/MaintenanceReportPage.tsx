@@ -4,7 +4,7 @@ import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { parseJsonResponse } from '../lib/apiFetch';
 import type { MaintenanceMachine } from '../types/maintenance';
 import { plantShortName, type PlantLike } from '../lib/plantDisplay';
-import { Camera, CheckCircle2, User, Phone, Wrench, X } from 'lucide-react';
+import { Camera, CheckCircle2, User, Phone, Wrench, X, BadgeCheck } from 'lucide-react';
 
 /** Public QR landing — locked machine identity + breakdown complaint form. */
 export default function MaintenanceReportPage() {
@@ -17,6 +17,7 @@ export default function MaintenanceReportPage() {
   const [complaintText, setComplaintText] = useState('');
   const [remark, setRemark] = useState('');
   const [reporterName, setReporterName] = useState('');
+  const [reporterEmployeeCode, setReporterEmployeeCode] = useState('');
   const [reporterPhone, setReporterPhone] = useState('');
   const [photoData, setPhotoData] = useState('');
   const [photoName, setPhotoName] = useState('');
@@ -32,6 +33,7 @@ export default function MaintenanceReportPage() {
       setComplaintText('');
       setRemark('');
       setReporterName('');
+      setReporterEmployeeCode('');
       setReporterPhone('');
       setPhotoData('');
       setPhotoName('');
@@ -78,6 +80,7 @@ export default function MaintenanceReportPage() {
     const text = complaintText.trim();
     const remarkText = remark.trim();
     const nameText = reporterName.trim();
+    const empCodeText = reporterEmployeeCode.trim().toUpperCase();
     const phoneText = reporterPhone.trim();
 
     if (text.length < 5) {
@@ -90,6 +93,14 @@ export default function MaintenanceReportPage() {
     }
     if (nameText.length < 2) {
       setError('Your name is required (at least 2 characters).');
+      return;
+    }
+    if (empCodeText.length < 2) {
+      setError('Employee code is required.');
+      return;
+    }
+    if (!/^[A-Z0-9][A-Z0-9\-_/]{1,24}$/i.test(empCodeText)) {
+      setError('Enter a valid employee code (letters / numbers).');
       return;
     }
     if (!/^\d{7,15}$/.test(phoneText.replace(/[\s\-+()]/g, ''))) {
@@ -112,6 +123,7 @@ export default function MaintenanceReportPage() {
           complaintText: text,
           remark: remarkText,
           reporterName: nameText,
+          reporterEmployeeCode: empCodeText,
           reporterPhone: phoneText,
           downtimeHours: 0,
           downtimeMinutes: 0,
@@ -189,6 +201,20 @@ export default function MaintenanceReportPage() {
                   required
                   placeholder="Enter your full name"
                   className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  <span className="inline-flex items-center gap-1"><BadgeCheck size={11} /> Employee code <span className="text-rose-500">*</span></span>
+                </label>
+                <input
+                  type="text"
+                  value={reporterEmployeeCode}
+                  onChange={(e) => setReporterEmployeeCode(e.target.value.toUpperCase())}
+                  required
+                  placeholder="e.g. EMP12345"
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-mono font-semibold uppercase text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
                 />
               </div>
               <div>

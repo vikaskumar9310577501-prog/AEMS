@@ -271,6 +271,7 @@ export function buildComplaintNotifyEmail(c: MachineMailIdentity & {
   complaintText: string;
   remark?: string;
   reporterName?: string;
+  reporterEmployeeCode?: string;
   reporterPhone?: string;
   downtimeLabel?: string;
   photoUrl?: string;
@@ -280,6 +281,7 @@ export function buildComplaintNotifyEmail(c: MachineMailIdentity & {
     identityText(c),
     `Reported At: ${c.reportedAt}`,
     c.reporterName ? `Reported By: ${c.reporterName}` : "",
+    c.reporterEmployeeCode ? `Employee Code: ${c.reporterEmployeeCode}` : "",
     c.reporterPhone ? `Reporter Phone: ${c.reporterPhone}` : "",
     c.downtimeLabel ? `Downtime: ${c.downtimeLabel}` : "",
     c.remark ? `Remark:\n${c.remark}` : "",
@@ -309,6 +311,7 @@ ${APP_NAME}`;
       ${identityHtml(c)}
       ${kvRow("Reported At", c.reportedAt)}
       ${c.reporterName ? kvRow("Reported By", c.reporterName) : ""}
+      ${c.reporterEmployeeCode ? kvRow("Employee Code", c.reporterEmployeeCode) : ""}
       ${c.reporterPhone ? kvRow("Reporter Phone", c.reporterPhone) : ""}
       ${c.downtimeLabel ? kvRow("Downtime", c.downtimeLabel) : ""}
     </table>

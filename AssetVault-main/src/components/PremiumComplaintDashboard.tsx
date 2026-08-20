@@ -24,7 +24,7 @@ export function filterComplaintsByLane(
   const q = search.trim().toLowerCase();
   if (q) {
     list = list.filter((c) =>
-      `${c.assetCode} ${c.machineType} ${c.machineNumber} ${c.complaintText} ${c.location} ${c.plantCode} ${c.reporterName || ''} ${c.reporterPhone || ''}`
+      `${c.assetCode} ${c.machineType} ${c.machineNumber} ${c.complaintText} ${c.location} ${c.plantCode} ${c.reporterName || ''} ${c.reporterEmployeeCode || ''} ${c.reporterPhone || ''}`
         .toLowerCase()
         .includes(q)
     );

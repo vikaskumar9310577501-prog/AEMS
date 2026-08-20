@@ -170,7 +170,9 @@ export default function ComplaintProCard({
           ) : (
             <MetricTile label="M/C No." value={c.machineNumber} />
           )}
-          {c.reporterPhone ? (
+          {c.reporterEmployeeCode ? (
+            <MetricTile label="Emp Code" value={c.reporterEmployeeCode} tone="blue" />
+          ) : c.reporterPhone ? (
             <MetricTile label="Phone" value={c.reporterPhone} tone="blue" />
           ) : downtime ? (
             <MetricTile label="Down" value={downtime} tone="orange" />
