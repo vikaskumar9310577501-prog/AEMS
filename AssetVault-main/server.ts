@@ -4140,12 +4140,42 @@ app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
     if (current.status === "Resolved") return res.json({ success: true, complaint: current });
 
     const remarks = String((req.body || {}).remarks || "").trim();
+    const wordCount = remarks.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 50) {
+      return res.status(400).json({ error: "Resolution remark must be at least 50 words" });
+    }
+
+    const photoData = String((req.body || {}).photoData || "").trim();
+    if (!photoData) {
+      return res.status(400).json({ error: "Close-out evidence photo is required" });
+    }
+    const matches = photoData.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i);
+    if (!matches) {
+      return res.status(400).json({ error: "Evidence photo must be JPEG, PNG, or WebP" });
+    }
+    const mimeType = matches[1].toLowerCase();
+    const base64Data = matches[2];
+    const bytes = Buffer.from(base64Data, "base64");
+    if (bytes.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ error: "Evidence photo too large (max 8 MB)" });
+    }
+    const { saveLocalUpload } = await import("./server/sqlFiles.js");
+    const savedPhoto = await saveLocalUpload({
+      filename: String((req.body || {}).photoName || "resolution-evidence.jpg")
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .slice(0, 120),
+      mimeType,
+      base64Data,
+    });
+
     const actor = String(req.authUser?.email || "System");
     const reminderCount = current.reminderCount || 0;
     const updated: MaintenanceComplaint = {
       ...current,
       status: "Resolved",
-      remarks: remarks || current.remarks,
+      remarks,
+      resolutionPhotoUrl: savedPhoto.viewUrl || savedPhoto.url,
+      resolutionPhotoName: savedPhoto.fileName,
       resolvedAt: new Date().toISOString(),
       resolvedBy: actor,
       lastDailyEmailOn: undefined,
@@ -4174,6 +4204,8 @@ app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
       const payload = buildComplaintSolvedEmail({
         ...pickMailIdentity(saved),
         complaintText: saved.complaintText,
+        remarks: saved.remarks,
+        resolutionPhotoUrl: saved.resolutionPhotoUrl,
         reportedAt: saved.reportedAt,
         resolvedAt: saved.resolvedAt || new Date().toISOString(),
         resolvedBy: actor,

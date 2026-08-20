@@ -210,7 +210,7 @@ export default function PremiumComplaintDashboard({
           <div className="flex items-center gap-2 mb-2.5">
             <AlertTriangle size={16} className="text-rose-600" />
             <h3 className="text-[11px] font-black uppercase tracking-wider text-rose-700">
-              Critical — open over 7 days ({criticalOpen.length})
+              Critical — open over 1 week ({criticalOpen.length})
             </h3>
           </div>
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
@@ -226,7 +226,7 @@ export default function PremiumComplaintDashboard({
           <div className="flex items-center gap-2 mb-2.5">
             <Clock size={16} className="text-amber-600" />
             <h3 className="text-[11px] font-black uppercase tracking-wider text-amber-800">
-              Active — open within 7 days ({activeOpen.length})
+              Active — pending within 1 week ({activeOpen.length})
             </h3>
           </div>
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">

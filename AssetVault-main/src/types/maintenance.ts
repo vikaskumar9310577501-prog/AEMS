@@ -107,6 +107,9 @@ export interface MaintenanceComplaint {
   photoName?: string;
   status: MaintenanceComplaintStatus;
   remarks?: string;
+  /** Close-out evidence photo after Mark Done. */
+  resolutionPhotoUrl?: string;
+  resolutionPhotoName?: string;
   reportedAt: string;
   resolvedAt?: string;
   resolvedBy?: string;

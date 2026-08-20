@@ -394,6 +394,8 @@ ${APP_NAME}`;
 
 export function buildComplaintSolvedEmail(c: MachineMailIdentity & {
   complaintText: string;
+  remarks?: string;
+  resolutionPhotoUrl?: string;
   reportedAt: string;
   resolvedAt: string;
   resolvedBy: string;
@@ -418,6 +420,11 @@ ${extra}
 Complaint:
 ${c.complaintText}
 
+Resolution remarks:
+${c.remarks || "-"}
+
+${c.resolutionPhotoUrl ? `Evidence photo: ${c.resolutionPhotoUrl}` : ""}
+
 No further reminders will be issued for this complaint.
 
 Yours sincerely,
@@ -435,6 +442,8 @@ ${APP_NAME}`;
     </table>
     <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
     <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
+    ${c.remarks ? `<p style="margin:16px 0 8px;font-weight:700;">Resolution remarks</p><div style="padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.remarks)}</div>` : ""}
+    ${c.resolutionPhotoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Close-out evidence</p><p><a href="${escapeHtml(c.resolutionPhotoUrl)}">View evidence photo</a></p><p><img src="${escapeHtml(c.resolutionPhotoUrl)}" alt="Resolution evidence" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
     <p style="margin-top:16px;">No further reminders will be issued for this complaint.</p>
     <p>Yours sincerely,<br/>${APP_NAME}</p>`
   );

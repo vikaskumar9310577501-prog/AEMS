@@ -68,7 +68,7 @@ import PremiumComplaintDashboard from '../components/PremiumComplaintDashboard';
 import ComplaintsInbox, { type ComplaintsViewFilter } from '../components/ComplaintsInbox';
 import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
-import MaintenanceResolveModal from '../components/MaintenanceResolveModal';
+import MaintenanceResolveModal, { type ResolveComplaintPayload } from '../components/MaintenanceResolveModal';
 import MaintenanceMachineEditModal from '../components/MaintenanceMachineEditModal';
 import { plantShortName, plantTableLabel } from '../lib/plantDisplay';
 
@@ -646,7 +646,7 @@ export default function MaintenancePage() {
     }
   };
 
-  const confirmResolveComplaint = async (remarks: string) => {
+  const confirmResolveComplaint = async (payload: ResolveComplaintPayload) => {
     if (!resolveComplaintTarget || resolvingComplaint) return;
     setResolvingComplaint(true);
     try {
@@ -656,7 +656,7 @@ export default function MaintenancePage() {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ remarks }),
+          body: JSON.stringify(payload),
         }
       );
       const data = await parseJsonResponse<{ error?: string }>(res);
@@ -816,13 +816,13 @@ export default function MaintenancePage() {
                   </button>
                   {tab === 'complaints' && canComplaintsInbox ? (
                     <div className="inline-flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-700">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-700" title="All complaints">
                         Total <span className="tabular-nums">{scopedComplaints.length}</span>
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-orange-50 text-[10px] font-black uppercase text-orange-800 border border-orange-200/70">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-orange-50 text-[10px] font-black uppercase text-orange-800 border border-orange-200/70" title="Complaints pending">
                         Pending <span className="tabular-nums">{openComplaints.length}</span>
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-[10px] font-black uppercase text-emerald-800 border border-emerald-200/70">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-[10px] font-black uppercase text-emerald-800 border border-emerald-200/70" title="Resolved complaints">
                         Done <span className="tabular-nums">{resolvedComplaints.length}</span>
                       </span>
                     </div>
@@ -1002,6 +1002,7 @@ export default function MaintenancePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
             <ComplaintKpi
               label="Total complaints"
+              hint="All complaints"
               value={complaintStats.total}
               className="border-slate-300 bg-slate-50"
               tone="slate"
@@ -1010,6 +1011,7 @@ export default function MaintenancePage() {
             />
             <ComplaintKpi
               label="Pending"
+              hint="Complaints pending"
               value={complaintStats.pending}
               className="border-amber-300 bg-amber-100"
               tone="amber"
@@ -1018,6 +1020,7 @@ export default function MaintenancePage() {
             />
             <ComplaintKpi
               label="Resolved"
+              hint="Resolved complaints"
               value={complaintStats.resolved}
               className="border-emerald-400 bg-emerald-100"
               tone="emerald"
@@ -1026,6 +1029,7 @@ export default function MaintenancePage() {
             />
             <ComplaintKpi
               label="Resolved %"
+              hint="Share of complaints resolved"
               value={`${complaintStats.resolvedPct}%`}
               className="border-blue-300 bg-blue-100"
               tone="blue"
@@ -1034,6 +1038,7 @@ export default function MaintenancePage() {
             />
             <ComplaintKpi
               label="Within 1 week"
+              hint="Resolved within one week"
               value={complaintStats.resolvedWithinWeek}
               className="border-violet-400 bg-violet-200"
               tone="violet"
@@ -1042,6 +1047,7 @@ export default function MaintenancePage() {
             />
             <ComplaintKpi
               label="Over 1 week"
+              hint="Open or closed after more than one week"
               value={complaintStats.overOneWeek}
               className="border-red-700 bg-red-600"
               tone="overdue"
@@ -1603,6 +1609,7 @@ export default function MaintenancePage() {
 
 function ComplaintKpi({
   label,
+  hint,
   value,
   className,
   tone,
@@ -1611,6 +1618,7 @@ function ComplaintKpi({
   onClick,
 }: {
   label: string;
+  hint: string;
   value: number | string;
   className: string;
   tone: 'slate' | 'amber' | 'emerald' | 'blue' | 'violet' | 'overdue';
@@ -1640,12 +1648,16 @@ function ComplaintKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-3 py-2 text-left w-full cursor-pointer ${className} ${alertClass} ${
+      aria-label={hint}
+      className={`relative group/kpi rounded-xl border px-3 py-2 text-left w-full cursor-pointer ${className} ${alertClass} ${
         active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
       }`}
     >
       <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
       <p className={`text-xl font-black tabular-nums mt-0.5 ${valueTone}`}>{value}</p>
+      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+6px)] z-50 w-max max-w-[220px] rounded-lg bg-stone-900 px-2.5 py-1.5 text-[10px] font-semibold leading-snug text-white shadow-lg opacity-0 invisible group-hover/kpi:opacity-100 group-hover/kpi:visible transition-opacity">
+        {hint}
+      </span>
     </button>
   );
 }
@@ -2326,6 +2338,26 @@ function ComplaintDetailPopup({
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <p className="text-[9px] font-black uppercase tracking-wider text-emerald-700 mb-1">Resolution notes</p>
                 <p className="text-sm font-semibold text-slate-900 whitespace-pre-wrap break-words">{c.remarks}</p>
+              </div>
+            ) : null}
+
+            {c.resolutionPhotoUrl ? (
+              <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-emerald-700">Close-out evidence</p>
+                  <button
+                    type="button"
+                    onClick={() => onPreviewPhoto(c.resolutionPhotoUrl!, c.resolutionPhotoName)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase"
+                  >
+                    <Eye size={12} /> Preview evidence
+                  </button>
+                </div>
+                <img
+                  src={c.resolutionPhotoUrl}
+                  alt={c.resolutionPhotoName || 'Resolution evidence'}
+                  className="max-h-52 w-full rounded-xl border border-stone-200/80 object-contain bg-stone-50"
+                />
               </div>
             ) : null}
 
