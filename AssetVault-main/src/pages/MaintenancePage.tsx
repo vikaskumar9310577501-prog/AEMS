@@ -1746,19 +1746,19 @@ function ComplaintKpi({
 }) {
   const labelTone =
     tone === 'overdue'
-      ? 'text-red-50'
+      ? 'text-white'
       : tone === 'slate'
-        ? 'text-slate-700'
+        ? 'text-slate-900'
         : tone === 'amber'
-          ? 'text-amber-900'
+          ? 'text-amber-950'
           : tone === 'emerald'
-            ? 'text-emerald-900'
+            ? 'text-emerald-950'
             : tone === 'blue'
-              ? 'text-blue-900'
+              ? 'text-blue-950'
               : tone === 'violet'
-                ? 'text-violet-900'
-                : 'text-orange-900';
-  const valueTone = tone === 'overdue' ? 'text-white' : 'text-slate-900';
+                ? 'text-violet-950'
+                : 'text-orange-950';
+  const valueTone = tone === 'overdue' ? 'text-white' : 'text-slate-950';
   const numeric = typeof value === 'number' ? value : parseInt(String(value), 10);
   const alertClass = alert === 'overdue' && Number.isFinite(numeric) && numeric > 0 ? 'kpi-alert-overdue' : '';
 
@@ -1767,12 +1767,12 @@ function ComplaintKpi({
       type="button"
       onClick={onClick}
       aria-label={hint}
-      className={`relative group/kpi rounded-xl border px-2.5 py-1.5 text-left w-full cursor-pointer min-h-[52px] ${className} ${alertClass} ${
+      className={`relative group/kpi rounded-xl border px-2.5 py-2 text-left w-full cursor-pointer min-h-[56px] ${className} ${alertClass} ${
         active ? 'ring-2 ring-blue-600 ring-offset-1 shadow-sm' : ''
       }`}
     >
-      <p className={`text-[8px] font-bold leading-tight line-clamp-2 ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0.5 leading-none ${valueTone}`}>{value}</p>
+      <p className={`text-[10px] font-black leading-snug line-clamp-2 ${labelTone}`}>{label}</p>
+      <p className={`text-2xl font-black tabular-nums mt-1 leading-none ${valueTone}`}>{value}</p>
       <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+6px)] z-50 w-max max-w-[220px] rounded-lg bg-stone-900 px-2.5 py-1.5 text-[10px] font-semibold leading-snug text-white shadow-lg opacity-0 invisible group-hover/kpi:opacity-100 group-hover/kpi:visible transition-opacity">
         {hint}
       </span>
@@ -1805,17 +1805,17 @@ function DashboardKpi({
   };
   const labelTone =
     tone === 'overdue'
-      ? 'text-red-100'
+      ? 'text-white'
       : tone === 'slate'
-        ? 'text-stone-600'
+        ? 'text-stone-900'
         : tone === 'amber'
-          ? 'text-amber-800'
+          ? 'text-amber-950'
           : tone === 'violet'
-            ? 'text-violet-800'
+            ? 'text-violet-950'
             : tone === 'emerald'
-              ? 'text-emerald-800'
-              : 'text-orange-800';
-  const valueTone = tone === 'overdue' ? 'text-white' : 'text-stone-900';
+              ? 'text-emerald-950'
+              : 'text-orange-950';
+  const valueTone = tone === 'overdue' ? 'text-white' : 'text-stone-950';
   const alertClass =
     value > 0 && alert === 'overdue'
       ? 'kpi-alert-overdue'
@@ -1827,12 +1827,12 @@ function DashboardKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-2.5 py-1.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 min-h-[52px] ${toneStyles[tone]} ${alertClass} ${
+      className={`rounded-xl border px-2.5 py-2 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 min-h-[56px] ${toneStyles[tone]} ${alertClass} ${
         active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
-      <p className={`text-[8px] font-bold leading-tight line-clamp-2 ${labelTone}`}>{label}</p>
-      <p className={`text-xl font-black tabular-nums mt-0.5 leading-none ${valueTone}`}>{value}</p>
+      <p className={`text-[10px] font-black leading-snug line-clamp-2 ${labelTone}`}>{label}</p>
+      <p className={`text-2xl font-black tabular-nums mt-1 leading-none ${valueTone}`}>{value}</p>
     </button>
   );
 }
