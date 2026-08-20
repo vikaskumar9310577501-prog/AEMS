@@ -108,20 +108,20 @@ export default function AppLayout() {
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="bg-white rounded-xl px-3 py-1.5 h-[52px] shadow-sm shrink-0 flex items-center justify-center">
-              <img src={`${LOGO_SRC}?v=2`} alt="PG Electroplast" className="h-10 w-auto max-w-[140px] object-contain" />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="bg-white rounded-xl px-3 py-1 h-[54px] shadow-md shrink-0 flex items-center justify-center border border-white/20 overflow-hidden">
+              <img src={`${LOGO_SRC}?v=2`} alt="PG Electroplast" className="h-11 sm:h-12 w-auto max-w-[160px] object-contain scale-105" />
             </div>
-            <div className="min-w-0 flex items-center gap-3">
+            <div className="min-w-0 flex items-center gap-3.5">
               <div className="min-w-0 flex flex-col justify-center w-fit">
-                <h1 className="font-bold text-white text-sm sm:text-base md:text-lg tracking-tight whitespace-nowrap leading-none">
+                <h1 className="font-extrabold text-white text-base sm:text-lg md:text-xl tracking-tight whitespace-nowrap leading-none">
                   A.E.M.S
                 </h1>
                 <div className="w-full flex flex-col gap-[2px] my-1">
-                  <div className="w-full h-[1px] bg-white/40" />
-                  <div className="w-full h-[1px] bg-white/40" />
+                  <div className="w-full h-[1.5px] bg-white/50 rounded-full" />
+                  <div className="w-full h-[1px] bg-white/30 rounded-full" />
                 </div>
-                <p className="text-[10px] sm:text-[11px] md:text-xs font-medium text-slate-300 whitespace-nowrap leading-none">
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-200 whitespace-nowrap leading-none tracking-tight">
                   Asset Entry Management System
                 </p>
               </div>
