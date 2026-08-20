@@ -100,3 +100,23 @@
 .kpi-alert-delayed {
   animation: kpi-delayed-shake 1.8s ease-in-out infinite !important;
 }
+
+/* Single soft heartbeat for pending breakdown complaints */
+@keyframes complaint-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  14% {
+    transform: scale(1.18);
+    opacity: 0.85;
+  }
+  28% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.complaint-heartbeat {
+  animation: complaint-heartbeat 1.6s ease-in-out infinite;
+}

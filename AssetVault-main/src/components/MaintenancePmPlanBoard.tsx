@@ -12,7 +12,7 @@ import {
   pmCellKey,
   weekOfMonth,
 } from '../lib/maintenanceCodes';
-import { CalendarDays, Check, AlertTriangle, MessageSquareWarning } from 'lucide-react';
+import { CalendarDays, Check, AlertTriangle, Heart } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -20,7 +20,7 @@ const COL_NAME = 176;
 const COL_FREQ = 92;
 const COL_DEPT = 112;
 const COL_RESP = 112;
-const COL_TRACK = 58;
+const COL_TRACK = 74;
 const WEEK_W = 42;
 const ROW_H = 34;
 const LEFT_W = COL_NAME + COL_FREQ + COL_DEPT + COL_RESP + COL_TRACK;
@@ -392,7 +392,7 @@ function MachineRows({
       </tr>
       <tr className="group">
         <td
-          className="border-b-2 border-r-2 border-stone-400/80 text-center text-[9px] font-black uppercase text-rose-800 bg-gradient-to-r from-rose-50 to-rose-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(251,113,133,0.25)]"
+          className="border-b-2 border-r-2 border-stone-400/80 text-center text-[8px] font-black uppercase leading-tight tracking-tight text-rose-800 bg-gradient-to-r from-rose-50 to-rose-100/80 align-middle box-border shadow-[inset_0_0_0_1px_rgba(251,113,133,0.25)] px-0.5 overflow-hidden"
           style={{ ...stickyTdStyle(LEFT_OFFSETS.track, COL_TRACK, true, 9), ...cellH }}
         >
           Breakdown
@@ -510,12 +510,12 @@ function IssueWeekCells({
                     <span
                       className={`inline-flex w-[20px] h-[20px] rounded-lg items-center justify-center shadow-sm ${
                         open
-                          ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white ring-1 ring-rose-300/60'
+                          ? 'bg-rose-200/90 text-rose-500 ring-1 ring-rose-300/50 complaint-heartbeat'
                           : 'bg-gradient-to-br from-orange-400 to-orange-500 text-white ring-1 ring-orange-300/60'
                       }`}
                       title={title}
                     >
-                      <MessageSquareWarning size={11} strokeWidth={2.5} />
+                      <Heart size={11} strokeWidth={2.5} className={open ? 'fill-rose-400/80' : ''} />
                     </span>
                   ) : null}
                   {resolved ? (
@@ -644,9 +644,9 @@ export function PmPlanLegend() {
     },
     {
       id: 'issue',
-      swatch: 'bg-gradient-to-br from-orange-400 to-orange-500 ring-1 ring-orange-300/60',
+      swatch: 'bg-rose-200/90 ring-1 ring-rose-300/50',
       label: 'Breakdown',
-      icon: <MessageSquareWarning size={12} strokeWidth={2.5} />,
+      icon: <Heart size={12} strokeWidth={2.5} className="text-rose-500 fill-rose-400/80" />,
     },
     {
       id: 'resolved',

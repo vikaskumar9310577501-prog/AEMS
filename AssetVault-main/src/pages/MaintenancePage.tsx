@@ -180,10 +180,15 @@ export default function MaintenancePage() {
   const [filterLocation, setFilterLocation] = useState('');
   const [filterPlant, setFilterPlant] = useState('');
   const [filterMachineType, setFilterMachineType] = useState('');
+  const [filterMachineStatus, setFilterMachineStatus] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  const [plantHeaderFilterOpen, setPlantHeaderFilterOpen] = useState(false);
+  const [statusHeaderFilterOpen, setStatusHeaderFilterOpen] = useState(false);
   const filterWrapRef = React.useRef<HTMLDivElement | null>(null);
   const typeFilterRef = React.useRef<HTMLDivElement | null>(null);
+  const plantHeaderFilterRef = React.useRef<HTMLDivElement | null>(null);
+  const statusHeaderFilterRef = React.useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -335,15 +340,25 @@ export default function MaintenancePage() {
   }, [machineMenuId]);
 
   useEffect(() => {
-    if (!typeFilterOpen) return;
+    if (!typeFilterOpen && !plantHeaderFilterOpen && !statusHeaderFilterOpen) return;
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
-      const el = typeFilterRef.current;
-      if (!el) return;
-      if (e.target instanceof Node && !el.contains(e.target)) {
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+      if (typeFilterOpen && typeFilterRef.current && !typeFilterRef.current.contains(target)) {
         setTypeFilterOpen(false);
       }
+      if (plantHeaderFilterOpen && plantHeaderFilterRef.current && !plantHeaderFilterRef.current.contains(target)) {
+        setPlantHeaderFilterOpen(false);
+      }
+      if (statusHeaderFilterOpen && statusHeaderFilterRef.current && !statusHeaderFilterRef.current.contains(target)) {
+        setStatusHeaderFilterOpen(false);
+      }
     };
-    const onScroll = () => setTypeFilterOpen(false);
+    const onScroll = () => {
+      setTypeFilterOpen(false);
+      setPlantHeaderFilterOpen(false);
+      setStatusHeaderFilterOpen(false);
+    };
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('touchstart', onPointerDown);
     window.addEventListener('scroll', onScroll, true);
@@ -352,7 +367,7 @@ export default function MaintenancePage() {
       document.removeEventListener('touchstart', onPointerDown);
       window.removeEventListener('scroll', onScroll, true);
     };
-  }, [typeFilterOpen]);
+  }, [typeFilterOpen, plantHeaderFilterOpen, statusHeaderFilterOpen]);
 
   useEffect(() => {
     if (!user || !canAccessMaintenance(user.role, user.categories)) return;
@@ -467,9 +482,14 @@ export default function MaintenancePage() {
       if (filterLocation && !sameLoc(m.location, filterLocation)) return false;
       if (filterPlant && String(m.plantCode || '').toLowerCase() !== filterPlant.toLowerCase()) return false;
       if (filterMachineType && m.machineType !== filterMachineType) return false;
+      if (filterMachineStatus) {
+        const badge = statusBadge(m);
+        const key = badge?.label || 'OK';
+        if (key !== filterMachineStatus) return false;
+      }
       return true;
     });
-  }, [machines, filterLocation, filterPlant, filterMachineType]);
+  }, [machines, filterLocation, filterPlant, filterMachineType, filterMachineStatus]);
 
   const scopedComplaints = useMemo(() => {
     return complaints.filter((c) => {
@@ -760,6 +780,7 @@ export default function MaintenancePage() {
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF8F5]">
       <div className="shrink-0 px-3 lg:px-4 pt-1 pb-0.5 border-b border-stone-200/40">
         <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar min-h-[34px]">
+          <div className="inline-flex items-center gap-1 shrink-0">
           {canDash && (
             <button type="button" onClick={() => goTab('dashboard')} className={navBtn(tab === 'dashboard')}>
               <LayoutDashboard size={14} />
@@ -799,8 +820,9 @@ export default function MaintenancePage() {
               </span>
             </div>
           ) : null}
+          </div>
 
-          <div className="inline-flex items-center gap-1.5 shrink-0">
+          <div className="inline-flex items-center gap-1.5 shrink-0 ml-auto">
             {(tab === 'complaint-dashboard' || tab === 'complaints') &&
               (canComplaintDash || canComplaintsInbox) && (
               <div className="relative w-[170px] shrink-0">
@@ -1177,6 +1199,8 @@ export default function MaintenancePage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setTypeFilterOpen((v) => !v);
+                              setPlantHeaderFilterOpen(false);
+                              setStatusHeaderFilterOpen(false);
                             }}
                             className={`inline-flex items-center justify-center w-5 h-5 rounded-md border transition-colors ${
                               filterMachineType
@@ -1224,11 +1248,109 @@ export default function MaintenancePage() {
                       </th>
                       <th className="px-3 py-2.5 text-left w-16 bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">No.</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Department</th>
-                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Plant</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                        <div ref={plantHeaderFilterRef} className="relative inline-flex items-center gap-1">
+                          <span>Plant</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPlantHeaderFilterOpen((v) => !v);
+                              setTypeFilterOpen(false);
+                              setStatusHeaderFilterOpen(false);
+                            }}
+                            className={`inline-flex items-center justify-center w-5 h-5 rounded-md border transition-colors ${
+                              filterPlant
+                                ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                : 'bg-white/80 border-stone-200/80 text-stone-500 hover:bg-white hover:text-stone-800'
+                            }`}
+                            title="Filter by plant"
+                            aria-label="Filter by plant"
+                          >
+                            <ChevronDown size={12} className={plantHeaderFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                          </button>
+                          {plantHeaderFilterOpen ? (
+                            <div className="absolute left-0 top-full mt-1.5 min-w-[160px] max-h-[280px] overflow-y-auto bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[60] text-left normal-case font-semibold tracking-normal">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFilterPlant('');
+                                  setPlantHeaderFilterOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 ${
+                                  !filterPlant ? 'bg-blue-50 text-blue-800 font-bold' : 'text-stone-700'
+                                }`}
+                              >
+                                All plants
+                              </button>
+                              {plantOptions.map((code) => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => {
+                                    setFilterPlant(code);
+                                    setPlantHeaderFilterOpen(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 truncate ${
+                                    filterPlant === code ? 'bg-blue-50 text-blue-800 font-bold' : 'text-stone-700'
+                                  }`}
+                                  title={plantShortName(code, plants)}
+                                >
+                                  {plantShortName(code, plants)}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Frequency</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Next PM</th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
-                        Status
+                        <div ref={statusHeaderFilterRef} className="relative inline-flex items-center gap-1">
+                          <span>Status</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusHeaderFilterOpen((v) => !v);
+                              setTypeFilterOpen(false);
+                              setPlantHeaderFilterOpen(false);
+                            }}
+                            className={`inline-flex items-center justify-center w-5 h-5 rounded-md border transition-colors ${
+                              filterMachineStatus
+                                ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                : 'bg-white/80 border-stone-200/80 text-stone-500 hover:bg-white hover:text-stone-800'
+                            }`}
+                            title="Filter by status"
+                            aria-label="Filter by status"
+                          >
+                            <ChevronDown size={12} className={statusHeaderFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                          </button>
+                          {statusHeaderFilterOpen ? (
+                            <div className="absolute left-0 top-full mt-1.5 min-w-[150px] bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[60] text-left normal-case font-semibold tracking-normal">
+                              {[
+                                { value: '', label: 'All status' },
+                                { value: 'OVERDUE', label: 'Overdue' },
+                                { value: 'DELAYED', label: 'Delayed' },
+                                { value: 'OK', label: 'No alert' },
+                              ].map((opt) => (
+                                <button
+                                  key={opt.value || 'all'}
+                                  type="button"
+                                  onClick={() => {
+                                    setFilterMachineStatus(opt.value);
+                                    setStatusHeaderFilterOpen(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 ${
+                                    filterMachineStatus === opt.value ? 'bg-blue-50 text-blue-800 font-bold' : 'text-stone-700'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
                       </th>
                       <th className="px-2 py-2.5 text-center w-14 bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
                         Done
