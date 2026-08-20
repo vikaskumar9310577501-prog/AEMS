@@ -170,18 +170,6 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
                 </tbody>
               </table>
             </div>
-
-            <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-stone-200/80 bg-gradient-to-r from-[#FFF7EE] via-[#FFFCF8] to-[#F6F1EA]">
-              <p className="normal-case font-semibold text-stone-500 text-[11px] tracking-normal">
-                Starts one month before current · scroll left for earlier months
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <Legend swatch="bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-200/80 ring-1 ring-amber-300/60" label="Plan" icon={<CalendarDays size={11} />} />
-                <Legend swatch="bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-200/80 ring-1 ring-emerald-300/60" label="Actual" icon={<Check size={11} />} />
-                <Legend swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60" label="Overdue" icon={<AlertTriangle size={11} />} />
-                <Legend swatch="bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50" label="This week" />
-              </div>
-            </div>
           </>
         )}
       </div>
@@ -467,10 +455,36 @@ function formatChipDate(d: Date) {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
+export function PmPlanLegend() {
+  return (
+    <div className="inline-flex flex-wrap items-center gap-1.5">
+      <Legend
+        swatch="bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-200/80 ring-1 ring-amber-300/60"
+        label="Plan"
+        icon={<CalendarDays size={11} />}
+      />
+      <Legend
+        swatch="bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-200/80 ring-1 ring-emerald-300/60"
+        label="Actual"
+        icon={<Check size={11} />}
+      />
+      <Legend
+        swatch="bg-gradient-to-br from-rose-500 to-rose-600 shadow-sm shadow-rose-200/80 ring-1 ring-rose-300/60"
+        label="Overdue"
+        icon={<AlertTriangle size={11} />}
+      />
+      <Legend
+        swatch="bg-gradient-to-br from-sky-300 to-blue-400 shadow-sm shadow-blue-200/80 ring-2 ring-blue-400/50"
+        label="This week"
+      />
+    </div>
+  );
+}
+
 function Legend({ swatch, label, icon }: { swatch: string; label: string; icon?: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/80 border border-stone-200/60 shadow-sm text-[10px] font-bold uppercase tracking-wide text-stone-700">
-      <span className={`w-5 h-5 rounded-md ${swatch} inline-flex items-center justify-center text-white`}>
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-stone-200/70 shadow-sm text-[9px] font-black uppercase tracking-wide text-stone-700">
+      <span className={`w-4 h-4 rounded-md ${swatch} inline-flex items-center justify-center text-white`}>
         {icon}
       </span>
       {label}

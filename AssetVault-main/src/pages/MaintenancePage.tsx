@@ -63,7 +63,7 @@ import {
   type MaintenanceTabId,
 } from '../lib/userPermissions';
 import { toDisplayDateInput, toDateInputValue } from '../lib/formatDisplayDate';
-import MaintenancePmPlanBoard from '../components/MaintenancePmPlanBoard';
+import MaintenancePmPlanBoard, { PmPlanLegend } from '../components/MaintenancePmPlanBoard';
 import PremiumComplaintDashboard from '../components/PremiumComplaintDashboard';
 import ComplaintsInbox, { type ComplaintsViewFilter } from '../components/ComplaintsInbox';
 import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
@@ -924,6 +924,7 @@ export default function MaintenancePage() {
                 </button>
               </div>
             )}
+            {tab === 'dashboard' && canDash && <PmPlanLegend />}
             <button
               type="button"
               onClick={() => void load()}
