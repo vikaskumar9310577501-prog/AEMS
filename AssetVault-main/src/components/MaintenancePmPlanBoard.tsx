@@ -88,7 +88,7 @@ export default function MaintenancePmPlanBoard({ machines, loading, year }: Main
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <div className="flex-1 min-h-0 bg-[#FFFCF8] rounded-2xl border border-stone-200/80 overflow-hidden flex flex-col shadow-[0_8px_32px_-8px_rgba(120,90,60,0.14)]">
+      <div className="flex-1 min-h-0 bg-[#FFFCF8] rounded-xl border border-stone-200/80 overflow-hidden flex flex-col">
         {loading ? (
           <p className="p-10 text-sm text-stone-500 text-center">Loading plan board…</p>
         ) : machines.length === 0 ? (

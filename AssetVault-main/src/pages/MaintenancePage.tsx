@@ -726,7 +726,7 @@ export default function MaintenancePage() {
   };
 
   const navBtn = (active: boolean, extra = '') =>
-    `inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+    `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
       active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
     } ${extra}`;
 
@@ -740,7 +740,7 @@ export default function MaintenancePage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF8F5]">
-      <div className="shrink-0 px-4 lg:px-6 pt-2 pb-1 space-y-1.5">
+      <div className="shrink-0 px-3 lg:px-4 pt-1 pb-0.5 space-y-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -937,7 +937,7 @@ export default function MaintenancePage() {
         </div>
 
         {tab === 'dashboard' && canDash && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-1 overflow-visible">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
             <DashboardKpi
               label="Machines"
               value={dashboardKpis.total}
@@ -986,7 +986,7 @@ export default function MaintenancePage() {
         )}
 
         {tab === 'complaint-dashboard' && canComplaintDash && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-1 overflow-visible">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 py-0.5 overflow-visible">
             <ComplaintKpi
               label="Total complaints"
               value={complaintStats.total}
@@ -1043,8 +1043,8 @@ export default function MaintenancePage() {
       <div
         className={`flex-1 min-h-0 flex flex-col ${
           tab === 'machines' || tab === 'dashboard'
-            ? 'overflow-hidden px-4 lg:px-6 pb-3'
-            : 'overflow-y-auto px-4 lg:px-6 pb-6'
+            ? 'overflow-hidden px-3 lg:px-4 pb-1'
+            : 'overflow-y-auto px-3 lg:px-4 pb-4'
         }`}
       >
         {tab === 'dashboard' && canDash && (
@@ -1683,12 +1683,12 @@ function DashboardKpi({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border px-3.5 py-2.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 ${toneStyles[tone]} ${alertClass} ${
+      className={`rounded-xl border px-3 py-1.5 text-left w-full cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200 ${toneStyles[tone]} ${alertClass} ${
         active ? 'ring-2 ring-blue-500/80 ring-offset-2 ring-offset-[#FAF8F5] shadow-md scale-[1.02]' : ''
       }`}
     >
       <p className={`text-[9px] font-black uppercase tracking-wider ${labelTone}`}>{label}</p>
-      <p className={`text-2xl font-black tabular-nums mt-0.5 leading-none ${valueTone}`}>{value}</p>
+      <p className={`text-xl font-black tabular-nums mt-0 leading-none ${valueTone}`}>{value}</p>
     </button>
   );
 }
