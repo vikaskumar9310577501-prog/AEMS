@@ -70,7 +70,7 @@ import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal, { type ResolveComplaintPayload } from '../components/MaintenanceResolveModal';
 import MaintenanceMachineEditModal from '../components/MaintenanceMachineEditModal';
-import { plantShortName, plantTableLabel } from '../lib/plantDisplay';
+import { plantShortName, plantTableLabel, plantFilterLabel } from '../lib/plantDisplay';
 import { formatTechnicianNames } from '../lib/maintenanceTechnicians';
 
 type Tab = MaintenanceTabId;
@@ -934,7 +934,7 @@ export default function MaintenancePage() {
                       <option value="">All plants</option>
                       {plantOptions.map((code) => (
                         <option key={code} value={code}>
-                          {plantShortName(code, plants)}
+                          {plantFilterLabel(code, plants)}
                         </option>
                       ))}
                     </select>
@@ -1271,7 +1271,7 @@ export default function MaintenancePage() {
                             <ChevronDown size={12} className={plantHeaderFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
                           </button>
                           {plantHeaderFilterOpen ? (
-                            <div className="absolute left-0 top-full mt-1.5 min-w-[160px] max-h-[280px] overflow-y-auto bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[60] text-left normal-case font-semibold tracking-normal">
+                            <div className="absolute left-0 top-full mt-1.5 min-w-[220px] max-h-[280px] overflow-y-auto bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[60] text-left normal-case font-semibold tracking-normal">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1295,9 +1295,9 @@ export default function MaintenancePage() {
                                   className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 truncate ${
                                     filterPlant === code ? 'bg-blue-50 text-blue-800 font-bold' : 'text-stone-700'
                                   }`}
-                                  title={plantShortName(code, plants)}
+                                  title={plantFilterLabel(code, plants)}
                                 >
-                                  {plantShortName(code, plants)}
+                                  {plantFilterLabel(code, plants)}
                                 </button>
                               ))}
                             </div>

@@ -30,6 +30,27 @@ export function plantShortName(code?: string | null, plants?: PlantLike[]): stri
   return c;
 }
 
+/** Short location tag for plant filter options (e.g. Bhiwadi / Supa). */
+export function plantLocationTag(code?: string | null, plants?: PlantLike[]): string {
+  const c = String(code || '').trim();
+  if (!c) return '';
+  const found = plants?.find((p) => samePlant(p.code, c) || samePlant(p.name, c));
+  const loc = String(found?.location || '').trim();
+  if (!loc) return '';
+  const lower = loc.toLowerCase();
+  if (lower.includes('bhiwadi')) return 'Bhiwadi';
+  if (lower.includes('supa')) return 'Supa';
+  if (lower.includes('pune')) return 'Supa';
+  return loc;
+}
+
+/** Plant name + location for filter dropdowns: "PG TECHNOPLAST · Bhiwadi". */
+export function plantFilterLabel(code?: string | null, plants?: PlantLike[]): string {
+  const name = plantShortName(code, plants);
+  const place = plantLocationTag(code, plants);
+  return place ? `${name} · ${place}` : name;
+}
+
 /** Short label for dense tables; full name on hover via title. */
 export function plantTableLabel(code?: string | null, plants?: PlantLike[]): { short: string; full: string } {
   const full = plantShortName(code, plants);
