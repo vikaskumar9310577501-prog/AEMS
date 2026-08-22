@@ -24,14 +24,11 @@ import {
   X,
   ChevronRight,
   Boxes,
-  HelpCircle,
-  Layers,
-  Bell,
 } from 'lucide-react';
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
-import { canAccessUserManagement, canAccessMaintenance, isItAdminRole, isHrRole, isAdminRole } from '../lib/userPermissions';
+import { canAccessUserManagement, canAccessMaintenance, isItAdminRole, isHrRole } from '../lib/userPermissions';
 import { SIDEBAR_CCTV_CATEGORY } from '../lib/dashboardCategories';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -81,51 +78,57 @@ export default function AppLayout() {
     !user.categories.includes('All');
 
   const closeSidebar = () => setSidebarOpen(false);
+  const openSidebar = () => setSidebarOpen(true);
 
-  // Modern Dark Sidebar Nav Item Classes
+  // Modern Light Theme Sidebar Nav Item Classes
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 group ${
       isActive
-        ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm shadow-blue-500/10'
-        : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] border border-transparent'
+        ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm shadow-blue-500/5'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 border border-transparent'
     }`;
 
   const categoryNavClass = (cat: string) => {
     const active = isDashboard && selectedCategory === cat;
     return `w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 group ${
       active
-        ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm shadow-blue-500/10'
-        : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] border border-transparent'
+        ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm shadow-blue-500/5'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 border border-transparent'
     }`;
   };
 
   const SidebarContent = (
-    <div className="flex flex-col h-full bg-[#0B132B] text-slate-300 select-none border-r border-[#1E293B]">
+    <div
+      onMouseEnter={openSidebar}
+      onMouseLeave={closeSidebar}
+      className="flex flex-col h-full bg-white text-slate-800 select-none border-r border-slate-200/90 shadow-2xl w-72"
+    >
       {/* Brand Header */}
-      <div className="p-4 sm:p-5 flex items-center gap-3.5 border-b border-[#1E293B]">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 shrink-0">
+      <div className="p-4 sm:p-5 flex items-center gap-3.5 border-b border-slate-200/80 bg-slate-50/50">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
           <Boxes size={22} className="text-white" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-black text-white text-base tracking-tight leading-none truncate">
+          <h1 className="font-black text-slate-900 text-base tracking-tight leading-none truncate">
             A.E.M.S
           </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 truncate">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1 truncate">
             Asset Management
           </p>
         </div>
-        {/* Mobile close button */}
+        {/* Close button */}
         <button
           type="button"
           onClick={closeSidebar}
-          className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          title="Close Sidebar"
         >
           <X size={18} />
         </button>
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
         {!hideAllDashboard && !isHr && (
           <NavLink
             to="/dashboard"
@@ -135,18 +138,18 @@ export default function AppLayout() {
             title="Dashboard"
           >
             <div className="flex items-center gap-3">
-              <LayoutDashboard size={18} className="shrink-0" />
+              <LayoutDashboard size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>Dashboard</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
 
         {/* Categories Section */}
         {!isHr && (
-          <div className="pt-4 pb-1.5 px-3 flex items-center justify-between text-[10px] font-black uppercase text-slate-500 tracking-[0.16em]">
+          <div className="pt-4 pb-1.5 px-3 flex items-center justify-between text-[10px] font-black uppercase text-slate-400 tracking-[0.16em]">
             <span>Asset Categories</span>
-            <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-md font-mono">
+            <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-mono font-bold">
               {visibleCategories.length}
             </span>
           </div>
@@ -168,96 +171,96 @@ export default function AppLayout() {
                 title={cat}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon size={16} className={active ? 'text-blue-400 shrink-0' : 'text-slate-500 shrink-0 group-hover:text-slate-300'} />
+                  <Icon size={16} className={active ? 'text-blue-600 shrink-0' : 'text-slate-400 shrink-0 group-hover:text-slate-700'} />
                   <span className="truncate">{cat.replace(' / ', '/')}</span>
                 </div>
-                {active && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />}
+                {active && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />}
               </button>
             );
           })}
 
         {/* Management Section */}
-        <div className="pt-4 pb-1.5 px-3 text-[10px] font-black uppercase text-slate-500 tracking-[0.16em]">
+        <div className="pt-4 pb-1.5 px-3 text-[10px] font-black uppercase text-slate-400 tracking-[0.16em]">
           Management
         </div>
 
         {(isUserAdmin || isHr) && (
           <NavLink to="/employees" className={navClass} title="Employees" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
-              <UserCircle size={18} className="shrink-0" />
+              <UserCircle size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>Employees</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
 
         {canAccessMaintenance(user.role, user.categories) && (
           <NavLink to="/maintenance" className={navClass} title="Maintenance" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
-              <Wrench size={18} className="shrink-0" />
+              <Wrench size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>Maintenance</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
 
         {!isHr && (
           <NavLink to="/damaged-scrap" className={navClass} title="Damaged / Scrap" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
-              <Trash2 size={18} className="shrink-0 text-rose-400" />
+              <Trash2 size={18} className="shrink-0 text-rose-500" />
               <span>Damaged / Scrap</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
 
         {MISSING_ITEMS_FEATURE_ENABLED && !isHr && (
           <NavLink to="/missing" className={navClass} title="Missing Items" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
-              <AlertTriangle size={18} className="shrink-0 text-amber-400" />
+              <AlertTriangle size={18} className="shrink-0 text-amber-500" />
               <span>Missing Items</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
 
         {isUserAdmin && !isHr && (
           <NavLink to="/users" className={navClass} title="User Management" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
-              <Users size={18} className="shrink-0" />
+              <Users size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>User Management</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
 
         {isItAdmin && !isHr && (
           <NavLink to="/settings" className={navClass} title="Settings" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
-              <Settings size={18} className="shrink-0" />
+              <Settings size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>Settings</span>
             </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
         )}
       </nav>
 
       {/* Bottom Profile & Sign Out */}
-      <div className="p-3.5 border-t border-[#1E293B] bg-[#080E21]/60">
-        <div className="flex items-center gap-3 mb-2.5 p-2 rounded-xl bg-white/[0.04]">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm">
+      <div className="p-3.5 border-t border-slate-200 bg-slate-50/80">
+        <div className="flex items-center gap-3 mb-2.5 p-2 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm">
             {user.email.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-100 truncate">{user.email}</p>
-            <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">{user.role}</p>
+            <p className="text-xs font-bold text-slate-900 truncate">{user.email}</p>
+            <p className="text-[10px] text-blue-600 font-black uppercase tracking-wider">{user.role}</p>
           </div>
         </div>
 
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white/[0.05] hover:bg-rose-500/15 border border-white/5 hover:border-rose-500/30 text-slate-300 hover:text-rose-400 text-xs font-bold transition-all"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-600 text-xs font-bold transition-all shadow-xs"
         >
           <LogOut size={14} />
           Sign Out
@@ -267,23 +270,31 @@ export default function AppLayout() {
   );
 
   return (
-    <div className="h-screen flex overflow-hidden font-sans bg-[#F8FAFC]">
-      {/* Desktop Fixed Dark Sidebar */}
-      <aside className="hidden lg:flex w-64 xl:w-72 h-full flex-col shrink-0 z-30">
-        {SidebarContent}
-      </aside>
+    <div className="h-screen flex overflow-hidden font-sans bg-[#F8FAFC] relative">
+      {/* Invisible Hover Trigger Zone on Left Corner / Edge */}
+      <div
+        onMouseEnter={openSidebar}
+        className="fixed left-0 top-0 bottom-0 w-3.5 z-40 cursor-pointer group"
+        title="Move cursor here to open menu"
+      >
+        <div className="h-full w-1 bg-transparent group-hover:bg-blue-500/40 transition-colors" />
+      </div>
 
-      {/* Mobile Drawer Sidebar */}
+      {/* Slide-out Hover Sidebar (Light Theme) */}
+      <div
+        className={`fixed left-0 top-0 bottom-0 z-50 transition-transform duration-300 ease-out flex ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
+      >
+        {SidebarContent}
+      </div>
+
+      {/* Backdrop when open */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
-            onClick={closeSidebar}
-          />
-          <aside className="fixed left-0 top-0 bottom-0 w-72 max-w-[85vw] shadow-2xl z-50">
-            {SidebarContent}
-          </aside>
-        </div>
+        <div
+          onClick={closeSidebar}
+          className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-40 transition-opacity"
+        />
       )}
 
       {/* Main Content Area */}
@@ -291,12 +302,13 @@ export default function AppLayout() {
         {/* Top Header Bar */}
         <header className="bg-white border-b border-slate-200/90 h-16 flex items-center px-4 sm:px-6 justify-between shrink-0 shadow-sm z-20">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Mobile Sidebar Toggle Button */}
+            {/* Sidebar Toggle / Hover Button */}
             <button
               type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors shrink-0"
-              title="Open Navigation"
+              onMouseEnter={openSidebar}
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors shrink-0 flex items-center gap-1.5"
+              title="Open Navigation Menu"
             >
               <Menu size={18} />
             </button>
