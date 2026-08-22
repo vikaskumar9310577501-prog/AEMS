@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Edit2,
   Trash2,
@@ -407,79 +407,119 @@ export default function AssetTable({
     );
   }
 
-  // ===== GRID VIEW (compact cards) =====
+  // ===== GRID VIEW (Next-Gen Cover Banner Cards matching Image 2) =====
   if (viewMode === "grid") {
     return (
       <div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {paginatedAssets.map((asset, index) => {
             const code = formatAssetCodeLabel(asset);
             const name = asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown Asset';
             const assignee = isCctvAsset(asset) ? '' : (asset.contactName || '');
+            const statusLabel = displayAssetStatus(asset.status);
+
             return (
               <div
                 key={`${asset.id}-${index}`}
                 onClick={handleCardClick(asset)}
-                className="relative bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-slate-300 transition-all flex flex-col"
+                className="group relative bg-white border border-slate-200/90 rounded-2xl shadow-sm hover:shadow-xl hover:border-blue-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
               >
-                <div className={cn("h-1 w-full", getStatusAccent(asset.status))} />
-                <div className="p-4 flex flex-col gap-3 flex-1">
-                  <div className="flex items-center gap-3">
-                    {showCheckboxes && (
-                      <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedAssetIds.includes(asset.id)}
-                          onChange={() => handleSelectOne(asset.id)}
-                          className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
-                    )}
-                    <DeviceThumb
-                      assetType={asset.assetType}
-                      mainCategory={asset.mainCategory}
-                      subCategory={asset.subCategory}
-                      imageUrl={asset.imageUrl}
-                      size="md"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-black text-slate-900 text-xs font-mono tracking-tight truncate">{code}</p>
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight truncate">{name}</p>
+                {/* Top Cover Banner */}
+                <div className="relative h-44 w-full bg-slate-100 overflow-hidden shrink-0">
+                  <DeviceThumb
+                    assetType={asset.assetType}
+                    mainCategory={asset.mainCategory}
+                    subCategory={asset.subCategory}
+                    imageUrl={asset.imageUrl}
+                    size="cover"
+                  />
+
+                  {/* Top-Left Checkbox */}
+                  {showCheckboxes && (
+                    <div
+                      className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-md p-1.5 rounded-lg shadow-sm border border-slate-200/50 flex items-center justify-center transition-transform active:scale-95"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedAssetIds.includes(asset.id)}
+                        onChange={() => handleSelectOne(asset.id)}
+                        className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                      />
                     </div>
+                  )}
+
+                  {/* Top-Right Category Tag */}
+                  <div className="absolute top-3 right-3 z-10 bg-slate-900/60 backdrop-blur-md text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    {asset.mainCategory || 'IT Assets'}
                   </div>
 
-                  <span className={cn(
-                    "text-[9px] px-2 py-0.5 rounded-full font-black border uppercase tracking-wider w-fit",
-                    getStatusBadgeClass(asset.status)
-                  )}>
-                    {displayAssetStatus(asset.status)}
-                  </span>
+                  {/* Bottom-Left Overlay Status Badge */}
+                  <div className="absolute bottom-3 left-3 z-10">
+                    <span
+                      className={cn(
+                        "text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider shadow-md backdrop-blur-md inline-block",
+                        statusLabel === "Available"
+                          ? "bg-emerald-600 text-white shadow-emerald-900/20"
+                          : statusLabel === "Assigned" || statusLabel === "In Use"
+                          ? "bg-blue-600 text-white shadow-blue-900/20"
+                          : statusLabel === "Under Maintenance"
+                          ? "bg-amber-500 text-white shadow-amber-900/20"
+                          : statusLabel === "Damaged" || statusLabel === "Lost"
+                          ? "bg-rose-600 text-white shadow-rose-900/20"
+                          : "bg-slate-700 text-white shadow-slate-900/20"
+                      )}
+                    >
+                      {statusLabel}
+                    </span>
+                  </div>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
-                      <MapPin size={12} className="text-slate-400 shrink-0" />
+                {/* Card Body */}
+                <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1">
+                  <div>
+                    <p className="font-mono text-[11px] font-bold text-slate-400 tracking-wider truncate uppercase">
+                      {code}
+                    </p>
+                    <h4 className="font-black text-slate-900 text-base leading-snug group-hover:text-blue-600 transition-colors truncate mt-0.5">
+                      {name}
+                    </h4>
+                  </div>
+
+                  <div className="space-y-2 text-xs pt-1">
+                    <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                      <MapPin size={14} className="text-slate-400 shrink-0" />
                       <span className="truncate">
                         {asset.location || '—'}
-                        {asset.plantCode ? ` Â· ${asset.plantCode}` : ''}
+                        {asset.plantCode ? ` · ${asset.plantCode}` : ''}
                       </span>
                     </div>
+
                     {!hideAssigneeColumn && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
-                        <User size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{assignee || 'Unassigned'}</span>
+                      <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                        <User size={14} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{assignee || '—'}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
-                      <CheckCircle2 size={12} className="text-slate-400 shrink-0" />
+
+                    <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                      <CheckCircle2 size={14} className="text-slate-400 shrink-0" />
                       <span className="truncate">{formatSelectedTypeLabel(asset)}</span>
                     </div>
                   </div>
 
-                  {role !== 'HR' && (
-                    <div className="flex items-center justify-end mt-auto pt-2 border-t border-slate-100">
-                      {renderActions(asset)}
+                  {/* Card Footer Actions */}
+                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
+                    <div className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
+                      {asset.serialNumber ? `#${asset.serialNumber}` : ''}
                     </div>
-                  )}
+
+                    {role !== 'HR' && (
+                      <div className="flex items-center gap-1">
+                        {renderActions(asset)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

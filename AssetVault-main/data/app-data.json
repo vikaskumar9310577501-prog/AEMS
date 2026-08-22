@@ -11,7 +11,8 @@
       ],
       "categories": [
         "All"
-      ]
+      ],
+      "allowDelete": false
     },
     {
       "email": "ankit.singh8@pgel.in",
@@ -103,13 +104,13 @@
     ],
     "plants": [
       {
-        "code": "4020",
-        "name": "NEXT GENRATION MANUFACTURES",
+        "code": "2040",
+        "name": "PG TECHNOPLAST",
         "location": "BHIWADI"
       },
       {
-        "code": "2040",
-        "name": "PG TECHNOPLAST",
+        "code": "4020",
+        "name": "NEXT GENRATION MANUFACTURES",
         "location": "BHIWADI"
       }
     ],
@@ -189,7 +190,14 @@
           "OPTIPLEX 7050",
           "OPTIPLEX 3050",
           "LATITUDE 7490",
-          "LATITUDE 3450"
+          "LATITUDE 3450",
+          "LATITUDE E 3450",
+          "LATITUDE 3440",
+          "LATITUDE E7490",
+          "LATITUDE 3410",
+          "LATITUDE 5490",
+          "LATITUDE 3050",
+          "PRO 14"
         ],
         "HP": [
           "EliteBook 840 G8",
@@ -206,7 +214,10 @@
           "ThinkPad L14",
           "IdeaPad Slim 5",
           "Legion 5",
-          "20TDS0GR00"
+          "20TDS0GR00",
+          "THIKPAD E15",
+          "THINKPAD E15",
+          "10M8S1VN00"
         ],
         "Apple": [
           "MacBook Air M2",
@@ -269,16 +280,26 @@
           "Surface Pro 9"
         ],
         "DELL": [
-          "LATITUDE E-5400"
+          "LATITUDE E-5400",
+          "LATITUDE 3440",
+          "LATITUDE 5400",
+          "MS116"
         ],
         "UD": [
           "UD"
+        ],
+        "Hikvision": [
+          "DS-2CD2043G2"
+        ],
+        "LENOVO": [
+          "TH"
         ]
       },
       "vendors": [
         "AMAZON",
         "BLUE STAR",
         "DAKSh",
+        "DELL INDIA",
         "Dell India",
         "HCL Infosystems",
         "HONEST COMPUTERS",
@@ -296,22 +317,39 @@
         "woodIndia"
       ],
       "departments": [
+        "ACCOUNT",
+        "ACCOUNT & FIN.",
         "Admin",
+        "BUSINESS DEV.",
         "DISPATCH",
+        "EHS",
         "Engineering",
         "Finance",
+        "HEADER SHOP",
         "HR",
+        "HR/ADMIN",
         "INNOVATION",
+        "IQC",
         "IT",
         "IT SAP",
+        "IT-SAP",
+        "LOC",
+        "LQC",
+        "MAINTAINCE OFFICE",
+        "MAINTANANCE",
         "MOLDING",
         "Maintenance",
+        "OPERATION",
         "PAINT SHOP",
         "PPC",
+        "PURCHASE",
         "Production",
         "Purchase",
+        "QUALITY",
         "Quality",
+        "R&D",
         "RND",
+        "SMD",
         "Sales",
         "Security",
         "Store",
@@ -320,16 +358,31 @@
       "brandsByType": {
         "Laptop": {
           "DELL": [
-            "LATITUDE E-5400"
+            "LATITUDE E-5400",
+            "LATITUDE 3440",
+            "LATITUDE 5400"
           ],
           "Dell": [
             "LATITUDE 5400",
             "LATITUDE 7490",
-            "LATITUDE 3450"
+            "LATITUDE 3450",
+            "LATITUDE E 3450",
+            "LATITUDE 3440",
+            "LATITUDE E7490",
+            "LATITUDE 3410",
+            "LATITUDE 5490",
+            "LATITUDE 3050",
+            "PRO 14"
           ],
           "Lenovo": [
             "ThinkPad L14",
-            "20TDS0GR00"
+            "20TDS0GR00",
+            "THIKPAD E15",
+            "THINKPAD E15",
+            "ThinkPad E14"
+          ],
+          "HP": [
+            "EliteBook 840 G8"
           ]
         },
         "Safety Helmet": {
@@ -341,12 +394,30 @@
           "Dell": [
             "OPTIPLEX 7050",
             "OPTIPLEX 3050"
+          ],
+          "Lenovo": [
+            "10M8S1VN00"
+          ],
+          "LENOVO": [
+            "TH"
+          ]
+        },
+        "Camera": {
+          "Hikvision": [
+            "DS-2CD2043G2"
+          ]
+        },
+        "Mouse": {
+          "DELL": [
+            "MS116"
           ]
         }
       },
       "subCategories": {
         "IT Assets": [
-          "Laptop / Desktop"
+          "Laptop / Desktop",
+          "CCTV / Security Device",
+          "Input Device"
         ],
         "Safety Assets": [
           "Safety Helmet"
@@ -354,6 +425,7 @@
       },
       "vendorsByCategory": {
         "IT Assets": [
+          "DELL INDIA",
           "Dell India",
           "HCL Infosystems",
           "HONEST COMPUTERS",
@@ -371,20 +443,26 @@
       "ram": [
         "24 GB",
         "8GB",
-        "16GB"
+        "16GB",
+        "128GB"
       ],
       "ssd": [
         "256GB",
-        "512GB"
+        "512GB",
+        "1TB"
       ],
       "cpu": [
         "I5-8365U",
         "Core i5",
-        "Core i3"
+        "Core i3",
+        "Apple M1",
+        "APPLE M1",
+        "APPLE M2"
       ],
       "windowsVersion": [
         "Windows 11 Pro",
-        "Windows 10 Pro"
+        "Windows 10 Pro",
+        "Windows 11 Home"
       ],
       "licenseTypes": []
     },

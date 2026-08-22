@@ -919,7 +919,7 @@ export default function MaintenancePage() {
                       <option value="">All locations</option>
                       {locationOptions.map((loc) => (
                         <option key={loc} value={loc}>
-                          {loc}
+                          {locationDisplayTag(loc) || loc}
                         </option>
                       ))}
                     </select>

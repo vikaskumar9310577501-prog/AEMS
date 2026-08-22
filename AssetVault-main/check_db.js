@@ -16,7 +16,7 @@ async function main() {
   for (const t of tables) {
     const count = await db.get(`SELECT COUNT(*) as count FROM ${t.name}`);
     console.log(`Table ${t.name}: ${count.count} rows`);
-    if (count.count > 0) {
+    if (count.count > 0) {  
       const sample = await db.all(`SELECT * FROM ${t.name} LIMIT 5`);
       console.log(`Sample from ${t.name}:`, sample.map(s => {
         // Find keys case-insensitively

@@ -31,17 +31,22 @@ export function plantShortName(code?: string | null, plants?: PlantLike[]): stri
 }
 
 /** Short location tag for plant filter options (e.g. Bhiwadi / Supa). */
-export function plantLocationTag(code?: string | null, plants?: PlantLike[]): string {
-  const c = String(code || '').trim();
-  if (!c) return '';
-  const found = plants?.find((p) => samePlant(p.code, c) || samePlant(p.name, c));
-  const loc = String(found?.location || '').trim();
+export function locationDisplayTag(location?: string | null): string {
+  const loc = String(location || '').trim();
   if (!loc) return '';
   const lower = loc.toLowerCase();
   if (lower.includes('bhiwadi')) return 'Bhiwadi';
   if (lower.includes('supa')) return 'Supa';
   if (lower.includes('pune')) return 'Supa';
   return loc;
+}
+
+/** Short location tag for plant filter options (e.g. Bhiwadi / Supa). */
+export function plantLocationTag(code?: string | null, plants?: PlantLike[]): string {
+  const c = String(code || '').trim();
+  if (!c) return '';
+  const found = plants?.find((p) => samePlant(p.code, c) || samePlant(p.name, c));
+  return locationDisplayTag(found?.location);
 }
 
 /** Plant name + location for filter dropdowns: "PG TECHNOPLAST · Bhiwadi". */

@@ -37,6 +37,10 @@ import {
   LayoutGrid,
   List,
   Settings2,
+  User,
+  QrCode,
+  Boxes,
+  Sparkles,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AssetTable, { AssetViewMode } from '../components/AssetTable';
@@ -739,47 +743,47 @@ function DashboardPageContent() {
     selectedLocation !== 'All' || selectedPlant !== 'All' || selectedStatus !== 'All';
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-slate-50/50">
+    <div className="flex flex-col h-full min-h-0 bg-[#F8FAFC]">
       {headerPortalNode && createPortal(
-        <div className="flex items-center gap-3 w-full justify-end pr-4 lg:pr-5">
-          <div className="flex items-center shrink-0 min-w-[150px] max-w-[300px]">
-            <p className="text-[11px] font-bold text-slate-300 truncate">
-              {headerLocationPlant} <span className="text-slate-500 px-1">|</span> {departmentLabel}
-            </p>
-          </div>
-          <div className="relative flex-1 max-w-md min-w-[150px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+        <div className="flex items-center gap-2.5 w-full justify-end pr-2 sm:pr-4">
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-sm sm:max-w-md min-w-[140px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
                 isSoftwareCategory
-                  ? 'Search software...'
-                  : 'Search assets...'
+                  ? 'Search software, license, vendor...'
+                  : 'Search assets, serial, employee...'
               }
-              className="w-full pl-10 pr-4 py-2 bg-white/95 border border-white/10 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300/50 transition-all placeholder:text-slate-400"
+              className="w-full pl-9 pr-4 py-2 bg-slate-100/90 hover:bg-slate-100 focus:bg-white border border-slate-200/90 rounded-xl text-xs sm:text-sm font-medium text-slate-900 shadow-inner-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
           </div>
+
+          {/* Action Toolbar */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Filter Toggle Button */}
             <button
               type="button"
               onClick={() => setFiltersOpen((o) => !o)}
-              className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              className={`p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border ${
                 filtersOpen || hasActiveFilters
-                  ? 'bg-white text-[#113355] hover:bg-slate-100'
-                  : 'bg-white/10 hover:bg-white/20 text-white'
+                  ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
+              title="Filter Assets"
             >
-              <Filter size={14} />
-              <span className="hidden min-[1500px]:inline">Filter</span>
+              <Filter size={14} className={filtersOpen || hasActiveFilters ? 'text-blue-600' : 'text-slate-500'} />
+              <span className="hidden xl:inline">Filter</span>
               <ChevronDown
                 size={12}
                 className={filtersOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
               />
             </button>
 
-            {/* View settings: Card / Grid / Table */}
+            {/* View switcher: Grid / Card / Table */}
             <div
               className={`relative shrink-0 z-[60] ${viewingQR ? 'hidden' : ''}`}
               ref={viewMenuRef}
@@ -787,16 +791,18 @@ function DashboardPageContent() {
               <button
                 type="button"
                 onClick={() => setViewMenuOpen((o) => !o)}
-                className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
+                className="p-2 sm:px-3 sm:py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+                title="Switch View"
               >
-                <Settings2 size={14} /> <span className="hidden min-[1500px]:inline">View</span>
+                <Settings2 size={14} className="text-slate-500" />
+                <span className="hidden xl:inline capitalize">{viewMode}</span>
                 <ChevronDown size={12} className={viewMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
               </button>
               {viewMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 min-w-[11rem] w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] p-1.5 font-sans whitespace-nowrap">
+                <div className="absolute right-0 top-full mt-2 min-w-[11rem] w-44 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] p-1.5 font-sans whitespace-nowrap">
                   {([
-                    { key: 'card', label: 'Card View', icon: LayoutGrid },
                     { key: 'grid', label: 'Grid View', icon: Eye },
+                    { key: 'card', label: 'Card View', icon: LayoutGrid },
                     { key: 'table', label: 'Table View', icon: List },
                   ] as { key: AssetViewMode; label: string; icon: typeof List }[]).map((opt) => {
                     const Icon = opt.icon;
@@ -809,7 +815,7 @@ function DashboardPageContent() {
                           setViewMode(opt.key);
                           setViewMenuOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                           active ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
                         }`}
                       >
@@ -822,6 +828,7 @@ function DashboardPageContent() {
               )}
             </div>
 
+            {/* Sync Database Button */}
             <button
               type="button"
               disabled={loading}
@@ -847,17 +854,25 @@ function DashboardPageContent() {
                   { id: 'sync-assets' }
                 );
               }}
-              className={`px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+              className={`p-2 sm:px-2.5 sm:py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+              title="Sync with Google Sheets / SQL"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="sr-only">Sync</span>
+              <RefreshCw size={14} className={loading ? 'animate-spin text-blue-600' : ''} />
+              <span className="sr-only">Sync</span>
             </button>
+
+            {/* Export Excel Button */}
             <button
               type="button"
               onClick={exportToExcel}
-              className="px-2.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="p-2 sm:px-2.5 sm:py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+              title="Export to Excel (.xlsx)"
             >
-              <Download size={14} /> <span className="sr-only">Export</span>
+              <Download size={14} />
+              <span className="sr-only">Export</span>
             </button>
+
+            {/* + New Asset Primary Action Button */}
             <button
               type="button"
               onClick={() =>
@@ -867,38 +882,39 @@ function DashboardPageContent() {
                   ),
                 })
               }
-              className="px-3 py-2 bg-white hover:bg-slate-100 text-[#113355] rounded-lg text-xs font-black uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3.5 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-black shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
-              <Plus size={15} strokeWidth={3} />
-              <span className="hidden min-[1700px]:inline">
+              <Plus size={16} strokeWidth={3} />
+              <span className="hidden sm:inline">
                 {isSoftwareCategory
                   ? 'New Software'
                   : isCctvSidebarCategory
                     ? 'New Camera/NVR'
                     : 'New Asset'}
               </span>
-              <span className="min-[1700px]:hidden">New</span>
+              <span className="sm:hidden">New</span>
             </button>
           </div>
         </div>,
         headerPortalNode
       )}
 
+      {/* Collapsible Filter Bar */}
       {filtersOpen && (
-        <div className="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 shrink-0 w-full">
+        <div className="bg-white border-b border-slate-200/90 px-4 lg:px-8 py-3.5 shrink-0 w-full shadow-sm">
           <div className="flex flex-wrap gap-4 items-end w-full">
-            <div className="flex items-center gap-2 text-slate-700 font-bold text-xs uppercase tracking-wider shrink-0">
-              <Filter size={14} className="text-blue-500" /> Filters
+            <div className="flex items-center gap-2 text-slate-800 font-black text-xs uppercase tracking-wider shrink-0">
+              <Filter size={14} className="text-blue-600" /> Filter Options
             </div>
             <div className="flex flex-col gap-1 min-w-[140px] flex-1 sm:flex-none sm:min-w-[160px]">
-              <span className="text-[9px] uppercase font-black text-slate-400">Location</span>
+              <span className="text-[10px] uppercase font-black text-slate-400">Location</span>
               <select
                 value={selectedLocation}
                 onChange={(e) => {
                   setSelectedLocation(e.target.value);
                   setSelectedPlant('All');
                 }}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               >
                 <option value="All">All Locations</option>
                 {locationOptions.map((loc) => (
@@ -907,11 +923,11 @@ function DashboardPageContent() {
               </select>
             </div>
             <div className="flex flex-col gap-1 min-w-[140px] flex-1 sm:flex-none sm:min-w-[160px]">
-              <span className="text-[9px] uppercase font-black text-slate-400">Plant / Plant Code</span>
+              <span className="text-[10px] uppercase font-black text-slate-400">Plant / Plant Code</span>
               <select
                 value={selectedPlant}
                 onChange={(e) => setSelectedPlant(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               >
                 <option value="All">All Plants</option>
                 {plantsFiltered.map((p) => (
@@ -920,11 +936,11 @@ function DashboardPageContent() {
               </select>
             </div>
             <div className="flex flex-col gap-1 min-w-[140px] flex-1 sm:flex-none sm:min-w-[160px]">
-              <span className="text-[9px] uppercase font-black text-slate-400">Status</span>
+              <span className="text-[10px] uppercase font-black text-slate-400">Status</span>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               >
                 <option value="All">All Statuses</option>
                 <option value="Available">Available</option>
@@ -951,7 +967,7 @@ function DashboardPageContent() {
                   setSelectedPlant('All');
                   setSelectedStatus('All');
                 }}
-                className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors uppercase tracking-wider shrink-0 pb-1.5"
+                className="text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors uppercase tracking-wider shrink-0 pb-1.5 underline"
               >
                 Clear Filters
               </button>
@@ -960,168 +976,214 @@ function DashboardPageContent() {
         </div>
       )}
 
-      <div className="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 shrink-0">
-        {selectedCategory !== 'All' && (
-          <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">Category</span>
-              <h2 className="text-sm sm:text-base font-black text-slate-900 truncate">{selectedCategory}</h2>
+      {/* Top 5-Column Modern KPI Cards Bar */}
+      <div className="px-4 lg:px-8 pt-5 pb-3 shrink-0">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'}`}>
+          {/* Card 1: TOTAL ASSETS */}
+          <div
+            onClick={() => setSelectedStatus('All')}
+            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+              selectedStatus === 'All'
+                ? 'border-blue-500 ring-2 ring-blue-500/20'
+                : 'border-slate-200/90 hover:border-blue-200'
+            }`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  {selectedCategory === 'Software / License Assets' ? 'TOTAL SOFTWARE' : 'TOTAL ASSETS'}
+                </p>
+                <h3 className="text-3xl font-black text-slate-900 mt-1.5 tracking-tight">
+                  {locationPlantFilteredAssets.length}
+                </h3>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Boxes className="w-5 h-5" />
+              </div>
             </div>
-            {!(
-              user &&
-              user.role !== 'IT Admin' &&
-              user.categories &&
-              user.categories.length > 0 &&
-              !user.categories.includes('All')
-            ) && (
-              <button
-                type="button"
-                onClick={() => setSearchParams({})}
-                className="text-[10px] font-black text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-colors shrink-0"
-              >
-                ← All Categories
-              </button>
-            )}
+            {/* Active Indicator Line */}
+            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === 'All' ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200'} transition-all`} />
           </div>
-        )}
-        <div className={`grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'}`}>
-              <div 
-                onClick={() => {
-                  setSelectedStatus('All');
-                }}
-                className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm ${selectedStatus === 'All' ? 'border-slate-500 ring-2 ring-slate-500/20' : 'border-slate-200'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className={`text-[10px] font-black uppercase tracking-wider ${selectedStatus === 'All' ? 'text-slate-600' : 'text-slate-400'}`}>
-                      {selectedCategory === 'Software / License Assets' ? 'Total Software' : 'Total Assets'}
-                    </p>
-                    <h3 className="text-2xl font-black text-slate-900 mt-1">{locationPlantFilteredAssets.length}</h3>
-                  </div>
-                  <Layers className={`w-6 h-6 shrink-0 ${selectedStatus === 'All' ? 'text-slate-700' : 'text-slate-400'}`} />
-                </div>
+
+          {/* Card 2: ASSIGNED / IN USE */}
+          <div
+            onClick={() => setSelectedStatus('Assigned')}
+            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+              selectedStatus === 'Assigned'
+                ? 'border-blue-500 ring-2 ring-blue-500/20'
+                : 'border-slate-200/90 hover:border-blue-200'
+            }`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  ASSIGNED / IN USE
+                </p>
+                <h3 className="text-3xl font-black text-blue-600 mt-1.5 tracking-tight">
+                  {dashboardAssignedCount}
+                </h3>
               </div>
-              
-              <div 
-                onClick={() => {
-                  setSelectedStatus('Assigned');
-                }}
-                className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between ${selectedStatus === 'Assigned' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200'}`}
-              >
-                <div>
-                  <p className={`text-[10px] font-black uppercase tracking-wider ${selectedStatus === 'Assigned' ? 'text-blue-600' : 'text-slate-400'}`}>Assigned / In Use</p>
-                  <h3 className="text-2xl font-black text-blue-600 mt-1">
-                    {dashboardAssignedCount}
-                  </h3>
-                </div>
-                <CheckCircle2 className={`w-8 h-8 shrink-0 ${selectedStatus === 'Assigned' ? 'text-blue-500' : 'text-blue-100'}`} />
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <User className="w-5 h-5" />
               </div>
-              
-              <div 
-                onClick={() => setSelectedStatus('Available')}
-                className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between ${
-                  selectedStatus === 'Available'
-                    ? 'border-emerald-500 ring-2 ring-emerald-500/20'
-                    : 'border-slate-200'
-                }`}
-              >
-                <div>
-                  <p className={`text-[10px] font-black uppercase tracking-wider ${
-                    selectedStatus === 'Available'
-                      ? 'text-emerald-600'
-                      : 'text-slate-400'
-                  }`}>Available</p>
-                  <h3 className="text-2xl font-black text-emerald-600 mt-1">
-                    {dashboardAvailableCount}
-                  </h3>
-                </div>
-                <CheckCircle className={`w-8 h-8 shrink-0 ${
-                  selectedStatus === 'Available'
-                    ? 'text-emerald-500'
-                    : 'text-emerald-100'
-                }`} />
+            </div>
+            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === 'Assigned' ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200'} transition-all`} />
+          </div>
+
+          {/* Card 3: AVAILABLE */}
+          <div
+            onClick={() => setSelectedStatus('Available')}
+            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+              selectedStatus === 'Available'
+                ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+                : 'border-slate-200/90 hover:border-emerald-200'
+            }`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  AVAILABLE
+                </p>
+                <h3 className="text-3xl font-black text-emerald-600 mt-1.5 tracking-tight">
+                  {dashboardAvailableCount}
+                </h3>
               </div>
-              
-              {isSoftwareCategory && (
-              <div 
-                onClick={() => setSelectedStatus(renewableSoftwareCardStatus)}
-                className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between ${selectedStatus === renewableSoftwareCardStatus ? 'border-violet-500 ring-2 ring-violet-500/20' : 'border-slate-200 hover:border-violet-300'}`}
-              >
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === 'Available' ? 'bg-emerald-500' : 'bg-transparent group-hover:bg-emerald-200'} transition-all`} />
+          </div>
+
+          {/* Card 4: MAINTENANCE / EXPIRY */}
+          <div
+            onClick={() => setSelectedStatus(maintenanceCardStatus)}
+            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+              selectedStatus === maintenanceCardStatus
+                ? 'border-amber-500 ring-2 ring-amber-500/20'
+                : 'border-slate-200/90 hover:border-amber-200'
+            }`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  {isSoftwareCategory ? 'EXPIRY' : 'MAINTENANCE'}
+                </p>
+                <h3 className="text-3xl font-black text-amber-600 mt-1.5 tracking-tight">
+                  {dashboardMaintenanceOrExpiryCount}
+                </h3>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+            </div>
+            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === maintenanceCardStatus ? 'bg-amber-500' : 'bg-transparent group-hover:bg-amber-200'} transition-all`} />
+          </div>
+
+          {/* Card 5: DAMAGED / SCRAP */}
+          {!isSoftwareCategory && (
+            <div
+              onClick={() => navigate('/damaged-scrap')}
+              className="group cursor-pointer bg-white border border-slate-200/90 hover:border-rose-200 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between text-left"
+            >
+              <div className="flex justify-between items-start">
                 <div>
-                  <p className={`text-[10px] font-black uppercase tracking-wider ${selectedStatus === renewableSoftwareCardStatus ? 'text-violet-600' : 'text-slate-400'}`}>
-                    Renewable Date
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-rose-500">
+                    SCRAPPED
                   </p>
-                  <h3 className="text-2xl font-black text-violet-700 mt-1">
+                  <h3 className="text-3xl font-black text-rose-600 mt-1.5 tracking-tight">
+                    {damagedStats.activeCount}
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/damaged-scrap');
+                    }}
+                    className="text-[10px] text-rose-500 font-bold hover:text-rose-700 transition-colors mt-1 block"
+                  >
+                    View components →
+                  </button>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="mt-3 -mx-5 -mb-5 h-1 bg-transparent group-hover:bg-rose-200 transition-all" />
+            </div>
+          )}
+
+          {isSoftwareCategory && (
+            <div
+              onClick={() => setSelectedStatus(renewableSoftwareCardStatus)}
+              className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+                selectedStatus === renewableSoftwareCardStatus
+                  ? 'border-violet-500 ring-2 ring-violet-500/20'
+                  : 'border-slate-200/90 hover:border-violet-200'
+              }`}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    RENEWABLE DATE
+                  </p>
+                  <h3 className="text-3xl font-black text-violet-700 mt-1.5 tracking-tight">
                     {dashboardRenewableSoftwareCount}
                   </h3>
                 </div>
-                <AlertCircle className={`w-8 h-8 shrink-0 ${selectedStatus === renewableSoftwareCardStatus ? 'text-violet-500' : 'text-violet-100'}`} />
-              </div>
-              )}
-
-              <div 
-                onClick={() => setSelectedStatus(maintenanceCardStatus)}
-                className={`cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between ${selectedStatus === maintenanceCardStatus ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-slate-200'}`}
-              >
-                <div>
-                  <p className={`text-[10px] font-black uppercase tracking-wider ${selectedStatus === maintenanceCardStatus ? 'text-amber-600' : 'text-slate-400'}`}>
-                    {isSoftwareCategory ? 'Expiry' : 'Maintenance'}
-                  </p>
-                  <h3 className="text-2xl font-black text-amber-600 mt-1">
-                    {dashboardMaintenanceOrExpiryCount}
-                  </h3>
+                <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shadow-sm">
+                  <AlertCircle className="w-5 h-5" />
                 </div>
-                <AlertTriangle className={`w-8 h-8 shrink-0 ${selectedStatus === maintenanceCardStatus ? 'text-amber-500' : 'text-amber-100'}`} />
               </div>
-              
-              {!isSoftwareCategory && (
-              <div 
-                onClick={() => navigate('/damaged-scrap')}
-                className="cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between text-left border-slate-200 hover:border-red-300"
-              >
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-red-600">
-                    Damaged / Scrap
-                  </p>
-                  <h3 className="text-2xl font-black mt-1 text-red-700">
-                    {damagedStats.activeCount}
-                  </h3>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); navigate('/damaged-scrap'); }} 
-                    className="text-[9px] text-red-600/80 mt-1 font-bold hover:text-red-800 transition-colors"
-                  >
-                    View component tracking →
-                  </button>
-                </div>
-                <Trash2 className="w-8 h-8 shrink-0 text-red-100" />
-              </div>
-              )}
-              {MISSING_ITEMS_FEATURE_ENABLED && !isSoftwareCategory && (
-              <div 
-                onClick={() => navigate('/missing')}
-                className="cursor-pointer transition-all hover:scale-[1.02] bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between text-left border-slate-200 hover:border-amber-300"
-              >
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">
-                    Missing items
-                  </p>
-                  <h3 className="text-2xl font-black mt-1 text-amber-700">
-                    {missingStats.activeCount}
-                  </h3>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); navigate('/missing'); }} 
-                    className="text-[9px] text-amber-600/80 mt-1 font-bold hover:text-amber-800 transition-colors"
-                  >
-                    View component tracking →
-                  </button>
-                </div>
-                <AlertCircle className="w-8 h-8 shrink-0 text-amber-100" />
-              </div>
-              )}
+              <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === renewableSoftwareCardStatus ? 'bg-violet-600' : 'bg-transparent group-hover:bg-violet-200'} transition-all`} />
             </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-6 lg:px-8 pb-6 lg:pb-8 pt-4">
+      {/* Main Content Body */}
+      <div className="flex-1 overflow-auto px-4 lg:px-8 pb-8 pt-2">
+        {/* Section Title Bar: ASSET INVENTORY + Category Dropdown Filter */}
+        <div className="flex items-center justify-between gap-4 mb-4 py-2 border-b border-slate-200/80">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Boxes size={18} />
+            </div>
+            <div>
+              <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 leading-tight">
+                ASSET INVENTORY
+              </h2>
+              <p className="text-[10px] font-bold text-slate-400">
+                {displayAssets.length} {displayAssets.length === 1 ? 'Item' : 'Items'} Available
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Category Filter Selector */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'All') {
+                    setSearchParams({});
+                  } else {
+                    setSearchParams({ category: val });
+                  }
+                }}
+                className="text-xs font-bold bg-white border border-slate-200/90 text-slate-700 rounded-xl px-3 py-1.5 pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer appearance-none"
+              >
+                <option value="All">All Categories</option>
+                {visibleCategories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+        </div>
         {/* Categories Dynamic Overview Grid (Visible when category is 'All') */}
         {selectedCategory === 'All' && (
           <div className="mb-10">
@@ -1348,6 +1410,22 @@ function DashboardPageContent() {
           onClose={() => setBulkPrintingAssets(null)}
         />
       )}
+
+      {/* Floating Action Button (FAB) for Quick Print / Scanner matching Image 2 */}
+      <button
+        type="button"
+        onClick={() => {
+          if (displayAssets.length > 0) {
+            setBulkPrintingAssets(displayAssets.slice(0, 24));
+          } else {
+            toast('No assets to print QR', { icon: 'ℹ️' });
+          }
+        }}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 flex items-center justify-center transition-all duration-300 z-40"
+        title="Quick QR Batch Print"
+      >
+        <QrCode size={22} className="text-white" />
+      </button>
 
     </div>
   );

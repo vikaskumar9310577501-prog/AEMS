@@ -8,7 +8,7 @@ interface DeviceThumbProps {
   mainCategory?: string;
   subCategory?: string;
   imageUrl?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'cover';
   className?: string;
 }
 
@@ -16,6 +16,7 @@ const sizeMap = {
   sm: 'w-14 h-14',
   md: 'w-16 h-16',
   lg: 'w-32 h-32',
+  cover: 'w-full h-full',
 };
 
 type PreviewImages = {
@@ -67,6 +68,33 @@ export default function DeviceThumb({ assetType, mainCategory, subCategory, imag
         previewImages?.subCategoryImages,
         previewImages?.softwareSubCategoryImages
       );
+
+  if (size === 'cover') {
+    return (
+      <div
+        className={cn(
+          'w-full h-full overflow-hidden bg-slate-900/10 flex items-center justify-center relative select-none',
+          className
+        )}
+      >
+        <img
+          src={src}
+          alt={assetType}
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+          loading="lazy"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            const fallback = mainCategory && mainCategory !== "IT Assets"
+              ? "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=85"
+              : getDevicePreviewFallbackUrl(assetType);
+            if (img.src !== fallback) img.src = fallback;
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
