@@ -118,6 +118,34 @@ export async function deleteMirroredEmployee(employeeId: string): Promise<void> 
   await sbJson(`/rest/v1/employees?employee_id=eq.${encodeURIComponent(employeeId)}`, { method: "DELETE" }).catch(() => undefined);
 }
 
+export async function mirrorOtpToPostgres(
+  email: string,
+  otp: string,
+  expiry: Date,
+  status = "sent"
+): Promise<void> {
+  const probe = await sbFetch("/rest/v1/otp_log?select=email&limit=1");
+  if (!probe.ok) return;
+  const row = {
+    email: email.trim().toLowerCase(),
+    otp,
+    expiry: expiry.toISOString(),
+    status,
+    attempts: 0,
+    requested_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  await sbJson("/rest/v1/otp_log?on_conflict=email", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" } as unknown as HeadersInit,
+    body: JSON.stringify(row),
+  });
+}
+
+export async function deleteMirroredOtp(email: string): Promise<void> {
+  await sbJson(`/rest/v1/otp_log?email=eq.${encodeURIComponent(email)}`, { method: "DELETE" }).catch(() => undefined);
+}
+
 export async function deleteMirroredAsset(id: string): Promise<void> {
   await sbJson(`/rest/v1/assets?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
 }

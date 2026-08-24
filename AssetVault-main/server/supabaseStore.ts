@@ -7,6 +7,8 @@ import {
   deleteMirroredUser,
   mirrorEmployeeToPostgres,
   deleteMirroredEmployee,
+  mirrorOtpToPostgres,
+  deleteMirroredOtp,
 } from "./postgresMirror.js";
 
 const TABLES: Record<JsonTable, { table: string; id: string }> = {
@@ -317,6 +319,9 @@ export async function saveOtp(email: string, otp: string, expiry: Date): Promise
       status: "sent",
     });
     await saveFile("otp_log", next);
+    await mirrorOtpToPostgres(email, otp, expiry).catch((error) => {
+      console.warn("[Supabase] OTP mirror skipped:", error instanceof Error ? error.message : error);
+    });
   });
 }
 
@@ -344,6 +349,7 @@ export async function deleteOtp(email: string): Promise<void> {
       "otp_log",
       rows.filter((row) => String(row.email || "") !== email)
     );
+    await deleteMirroredOtp(email).catch(() => undefined);
   });
 }
 
