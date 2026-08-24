@@ -351,19 +351,19 @@ export default function AppLayout() {
               onClick={() => navigate(isHr ? '/hr-dashboard' : '/dashboard')}
               className="flex flex-col justify-center cursor-pointer select-none shrink-0"
             >
-              <div className="border-b border-blue-400/40 pb-0.5">
+              <div className="border-b border-blue-300/40 pb-0.5">
                 <span className="font-black text-white text-base sm:text-lg tracking-wider leading-none font-mono">
                   A.E.M.S
                 </span>
               </div>
-              <span className="text-[9px] text-blue-200/90 font-bold tracking-tight leading-tight mt-0.5 hidden xs:inline">
+              <span className="text-[10px] text-white/95 font-bold tracking-tight leading-tight mt-1 whitespace-nowrap">
                 Asset Entry Management System
               </span>
             </div>
 
             {/* Vertical Divider & Current Page Name */}
-            <div className="h-6 w-px bg-white/20 mx-1 hidden md:block shrink-0" />
-            <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate hidden md:inline">
+            <div className="h-7 w-[1px] bg-blue-300/40 mx-2 shrink-0" />
+            <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate">
               {location.pathname === '/hr-dashboard'
                 ? 'HR Dashboard'
                 : isDashboard
