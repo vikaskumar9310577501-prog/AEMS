@@ -62,6 +62,62 @@ export async function mirrorAssetToPostgres(
   });
 }
 
+export async function mirrorUserToPostgres(
+  email: string,
+  data: unknown
+): Promise<void> {
+  const probe = await sbFetch("/rest/v1/users?select=email&limit=1");
+  if (!probe.ok) return;
+  const d = (data || {}) as Record<string, unknown>;
+  const row = {
+    email: String(d.email || email).trim().toLowerCase(),
+    role: String(d.role || "User"),
+    locations: txt(d.locations),
+    plants: txt(d.plants),
+    categories: txt(d.categories),
+    json_data: data,
+  };
+  await sbJson("/rest/v1/users?on_conflict=email", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" } as unknown as HeadersInit,
+    body: JSON.stringify(row),
+  });
+}
+
+export async function deleteMirroredUser(email: string): Promise<void> {
+  await sbJson(`/rest/v1/users?email=eq.${encodeURIComponent(email)}`, { method: "DELETE" }).catch(() => undefined);
+}
+
+export async function mirrorEmployeeToPostgres(
+  employeeId: string,
+  data: unknown
+): Promise<void> {
+  const probe = await sbFetch("/rest/v1/employees?select=employee_id&limit=1");
+  if (!probe.ok) return;
+  const d = (data || {}) as Record<string, unknown>;
+  const row = {
+    employee_id: String(d.employeeId || employeeId).trim().toUpperCase(),
+    name: txt(d.name),
+    email: txt(d.email),
+    phone: txt(d.phone),
+    department: txt(d.department),
+    designation: txt(d.designation),
+    location: txt(d.location),
+    plant: txt(d.plant),
+    status: txt(d.status || "Active"),
+    json_data: data,
+  };
+  await sbJson("/rest/v1/employees?on_conflict=employee_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" } as unknown as HeadersInit,
+    body: JSON.stringify(row),
+  });
+}
+
+export async function deleteMirroredEmployee(employeeId: string): Promise<void> {
+  await sbJson(`/rest/v1/employees?employee_id=eq.${encodeURIComponent(employeeId)}`, { method: "DELETE" }).catch(() => undefined);
+}
+
 export async function deleteMirroredAsset(id: string): Promise<void> {
   await sbJson(`/rest/v1/assets?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
 }

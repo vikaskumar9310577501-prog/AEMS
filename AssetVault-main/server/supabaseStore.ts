@@ -1,6 +1,13 @@
 import type { JsonTable } from "./sqlStoreMssql.js";
 import { DATA_BUCKET, downloadFromStorage, uploadToStorage } from "./supabaseClient.js";
-import { deleteMirroredAsset, mirrorAssetToPostgres } from "./postgresMirror.js";
+import {
+  deleteMirroredAsset,
+  mirrorAssetToPostgres,
+  mirrorUserToPostgres,
+  deleteMirroredUser,
+  mirrorEmployeeToPostgres,
+  deleteMirroredEmployee,
+} from "./postgresMirror.js";
 
 const TABLES: Record<JsonTable, { table: string; id: string }> = {
   Assets: { table: "assets", id: "id" },
@@ -111,6 +118,16 @@ export async function upsertJsonRow(
         console.warn("[Supabase] Postgres mirror skipped:", error instanceof Error ? error.message : error);
       });
     }
+    if (table === "Users") {
+      await mirrorUserToPostgres(id, data).catch((error) => {
+        console.warn("[Supabase] Users mirror skipped:", error instanceof Error ? error.message : error);
+      });
+    }
+    if (table === "Employees") {
+      await mirrorEmployeeToPostgres(id, data).catch((error) => {
+        console.warn("[Supabase] Employees mirror skipped:", error instanceof Error ? error.message : error);
+      });
+    }
   });
 }
 
@@ -122,6 +139,12 @@ export async function deleteJsonRow(table: JsonTable, id: string): Promise<boole
     await saveRows(table, next);
     if (table === "Assets") {
       await deleteMirroredAsset(id).catch(() => undefined);
+    }
+    if (table === "Users") {
+      await deleteMirroredUser(id).catch(() => undefined);
+    }
+    if (table === "Employees") {
+      await deleteMirroredEmployee(id).catch(() => undefined);
     }
     return next.length !== rows.length;
   });
