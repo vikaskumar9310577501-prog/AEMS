@@ -284,7 +284,7 @@ export default function AppLayout() {
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-600 text-xs font-bold transition-all shadow-xs"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-600 text-xs font-bold transition-all shadow-xs cursor-pointer"
         >
           <LogOut size={14} />
           Sign Out
@@ -323,70 +323,79 @@ export default function AppLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Top Header Bar */}
-        <header className="bg-white border-b border-slate-200/90 h-16 flex items-center px-4 sm:px-6 justify-between shrink-0 shadow-sm z-20">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Top Header Bar - Corporate Navy Blue matching Image Reference */}
+        <header className="bg-[#0B2545] border-b border-[#081b33] h-16 flex items-center px-4 sm:px-6 justify-between shrink-0 shadow-md z-20">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             {/* Sidebar Toggle / Hover Button */}
             <button
               type="button"
               onMouseEnter={openSidebar}
               onClick={() => setSidebarOpen((o) => !o)}
-              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors shrink-0 flex items-center gap-1.5"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors shrink-0 flex items-center justify-center cursor-pointer border border-white/10"
               title="Open Navigation Menu"
             >
               <Menu size={18} />
             </button>
 
-            {/* Top Bar Title / PG Logo for HR Dashboard */}
-            {location.pathname === '/hr-dashboard' ? (
-              <div className="flex items-center gap-2.5">
-                <img src={LOGO_SRC} alt="PG Logo" className="h-7 w-auto object-contain shrink-0" />
-                <span className="text-slate-900 font-black text-sm sm:text-base tracking-tight">
-                  HR Dashboard
+            {/* White Pill Container for PG Logo */}
+            <div
+              onClick={() => navigate(isHr ? '/hr-dashboard' : '/dashboard')}
+              className="bg-white px-3 py-1 rounded-xl flex items-center justify-center shadow-xs shrink-0 h-9 cursor-pointer hover:opacity-95 transition-opacity"
+              title="Home"
+            >
+              <img src={LOGO_SRC} alt="PG Logo" className="h-6 w-auto object-contain" />
+            </div>
+
+            {/* A.E.M.S Brand Title with Underline and Subtitle */}
+            <div
+              onClick={() => navigate(isHr ? '/hr-dashboard' : '/dashboard')}
+              className="flex flex-col justify-center cursor-pointer select-none shrink-0"
+            >
+              <div className="border-b border-blue-400/40 pb-0.5">
+                <span className="font-black text-white text-base sm:text-lg tracking-wider leading-none font-mono">
+                  A.E.M.S
                 </span>
               </div>
-            ) : (
-              <div className="min-w-0 flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700 truncate">
-                <span
-                  className="text-slate-400 font-semibold hover:text-slate-600 transition-colors cursor-pointer"
-                  onClick={() => navigate('/dashboard')}
-                >
-                  Dashboard
-                </span>
-                <span className="text-slate-300">/</span>
-                <span className="text-slate-900 font-black truncate">
-                  {isDashboard
-                    ? selectedCategory === 'All'
-                      ? 'Asset Inventory'
-                      : selectedCategory
-                    : location.pathname.startsWith('/employees')
-                    ? 'Employee Directory'
-                    : location.pathname.startsWith('/maintenance')
-                    ? 'Maintenance Hub'
-                    : location.pathname.startsWith('/damaged-scrap')
-                    ? 'Damaged & Scrap'
-                    : location.pathname.startsWith('/missing')
-                    ? 'Missing Items'
-                    : location.pathname.startsWith('/users')
-                    ? 'User Management'
-                    : location.pathname.startsWith('/settings')
-                    ? 'System Settings'
-                    : 'Asset Management'}
-                </span>
-              </div>
-            )}
+              <span className="text-[9px] text-blue-200/90 font-bold tracking-tight leading-tight mt-0.5 hidden xs:inline">
+                Asset Entry Management System
+              </span>
+            </div>
+
+            {/* Vertical Divider & Current Page Name */}
+            <div className="h-6 w-px bg-white/20 mx-1 hidden md:block shrink-0" />
+            <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate hidden md:inline">
+              {location.pathname === '/hr-dashboard'
+                ? 'HR Dashboard'
+                : isDashboard
+                ? selectedCategory === 'All'
+                  ? 'Asset Inventory'
+                  : selectedCategory
+                : location.pathname.startsWith('/employees')
+                ? 'Employee Directory'
+                : location.pathname.startsWith('/maintenance')
+                ? 'Maintenance Hub'
+                : location.pathname.startsWith('/damaged-scrap')
+                ? 'Damaged & Scrap'
+                : location.pathname.startsWith('/missing')
+                ? 'Missing Items'
+                : location.pathname.startsWith('/users')
+                ? 'User Management'
+                : location.pathname.startsWith('/settings')
+                ? 'System Settings'
+                : 'Asset Management'}
+            </span>
           </div>
 
-          {/* Header Action Portal (Search, Filters, Export, New Asset) */}
+          {/* Header Action Portal (Search, Filters, Export, User Role) */}
           <div
             ref={setHeaderPortalNode}
             id="portal-header-root"
             className="flex-1 h-full flex items-center justify-end gap-3 min-w-0"
           >
             {!isDashboard && !isMaintenance && (
-              <div className="flex items-center gap-2 text-slate-700 text-xs font-bold">
-                <span className="hidden sm:inline text-slate-500">{user.email}</span>
-                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] uppercase font-black">
+              <div className="flex items-center gap-2 text-white text-xs font-bold">
+                <span className="hidden sm:inline text-blue-200/80 font-medium">{user.email}</span>
+                <span className="px-2.5 py-0.5 rounded-md bg-white/15 text-white border border-white/25 text-[10px] uppercase font-black tracking-wider">
                   {user.role}
                 </span>
               </div>
@@ -394,9 +403,9 @@ export default function AppLayout() {
           </div>
         </header>
 
-        {/* Page Content Outlet */}
-        <main className="flex-1 flex flex-col overflow-hidden min-w-0 bg-[#F8FAFC]">
-          <Outlet context={{ headerPortalNode }} />
+        {/* Dynamic Nested Routed Page */}
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+          <Outlet />
         </main>
       </div>
     </div>
