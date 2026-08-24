@@ -239,7 +239,7 @@ export default function EmployeeProfilePage() {
     );
   }
 
-  const isInactive = isInactiveStatus(employee.status);
+  const isInactive = isInactiveEmployee(employee.status);
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 min-h-screen">
