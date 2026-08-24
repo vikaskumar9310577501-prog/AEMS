@@ -253,37 +253,37 @@ export default function EmployeeProfilePage() {
         className="hidden"
       />
 
-      {/* Top Header Bar */}
-      <header className="bg-white border-b border-slate-200 px-6 lg:px-8 py-4 shrink-0">
-        <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
+      {/* Top Header Bar - Sleek & Compact */}
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 shrink-0">
+        <div className="flex items-center justify-between gap-3 max-w-6xl mx-auto">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => navigate('/employees')}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all border border-slate-200/80"
-              title="Back to Directory"
+              onClick={() => navigate(-1)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all border border-slate-200 cursor-pointer"
+              title="Go Back"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={16} />
             </button>
             <div>
-              <h1 className="text-lg lg:text-xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight leading-tight">
                 Employee Profile
               </h1>
-              <p className="text-xs text-slate-500">
-                Detailed overview and asset assignments
+              <p className="text-[10px] text-slate-400 leading-none">
+                Overview and assigned hardware
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {!isHr && (
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-slate-200/80"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-200"
               >
-                <Edit size={14} />
-                <span>Edit Profile</span>
+                <Edit size={13} />
+                <span>Edit</span>
               </button>
             )}
 
@@ -291,26 +291,26 @@ export default function EmployeeProfilePage() {
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
               >
-                <Trash2 size={14} />
-                <span>Delete Profile</span>
+                <Trash2 size={13} />
+                <span>Delete</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
-        {/* Top Hero Section Card (Exact Match to Image 2) */}
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-7 shadow-sm">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6">
+      {/* Main Container - Compact & Balanced */}
+      <div className="p-4 sm:p-5 max-w-6xl mx-auto w-full space-y-3.5">
+        {/* Top Hero Section Card - Compact */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Left: Avatar + Details */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="flex items-center gap-4 min-w-0">
               {/* Avatar with Camera Icon Overlay */}
               <div className="relative group shrink-0">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-white shadow-md bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
                   {employee.photoUrl ? (
                     <img
                       src={employee.photoUrl}
@@ -318,7 +318,7 @@ export default function EmployeeProfilePage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-3xl font-black text-slate-400 uppercase">
+                    <span className="text-xl sm:text-2xl font-black text-slate-500 uppercase">
                       {employee.name.charAt(0)}
                     </span>
                   )}
@@ -329,193 +329,184 @@ export default function EmployeeProfilePage() {
                   type="button"
                   disabled={uploadingPhoto}
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all border-2 border-white cursor-pointer"
-                  title="Upload profile photo"
+                  className="absolute bottom-0 right-0 w-5 h-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition-all flex items-center justify-center border-2 border-white cursor-pointer"
+                  title="Upload photo"
                 >
-                  <Camera size={14} className={uploadingPhoto ? 'animate-spin' : ''} />
+                  <Camera size={10} className={uploadingPhoto ? 'animate-spin' : ''} />
                 </button>
               </div>
 
               {/* Text Info */}
-              <div>
+              <div className="min-w-0">
                 {/* ID and Status Pills */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                     {employee.employeeId}
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md tracking-wider ${
+                    className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider ${
                       !isInactive
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                         : 'bg-rose-50 text-rose-700 border border-rose-100'
                     }`}
                   >
-                    {!isInactive && <CheckCircle2 size={11} />}
+                    {!isInactive && <CheckCircle2 size={10} />}
                     <span>{employeeStatusLabel(employee.status)}</span>
                   </span>
                 </div>
 
-                {/* Big Name */}
-                <h2 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
+                {/* Name */}
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
                   {employee.name}
                 </h2>
 
                 {/* Role & Department */}
-                <p className="text-xs sm:text-sm font-bold text-slate-500 mt-1">
+                <p className="text-xs font-bold text-slate-500 mt-0.5 truncate">
                   {employee.designation || 'Specialist'} •{' '}
                   <span className="text-slate-700">{employee.department || 'General'} Department</span>
                 </p>
 
                 {/* 3 Info Pills */}
-                <div className="flex flex-wrap items-center gap-2 mt-4">
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5 text-[11px]">
                   {/* Email Pill */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-                    <Mail size={13} className="text-blue-600 shrink-0" />
-                    <div>
-                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">email address</p>
-                      <p className="font-bold text-slate-700">{employee.email || '—'}</p>
-                    </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-200/80">
+                    <Mail size={12} className="text-blue-600 shrink-0" />
+                    <span className="font-semibold text-slate-700 truncate max-w-[170px]">{employee.email || '—'}</span>
                   </div>
 
                   {/* Phone Pill */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-                    <Phone size={13} className="text-blue-600 shrink-0" />
-                    <div>
-                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">phone number</p>
-                      <p className="font-bold text-slate-700">{employee.phone || '—'}</p>
-                    </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-200/80">
+                    <Phone size={12} className="text-blue-600 shrink-0" />
+                    <span className="font-semibold text-slate-700">{employee.phone || '—'}</span>
                   </div>
 
                   {/* Location Pill */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-                    <MapPin size={13} className="text-blue-600 shrink-0" />
-                    <div>
-                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">primary location</p>
-                      <p className="font-bold text-slate-700">{employee.location || 'Bhiwadi'}</p>
-                    </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-200/80">
+                    <MapPin size={12} className="text-blue-600 shrink-0" />
+                    <span className="font-semibold text-slate-700">{employee.location || 'Bhiwadi'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right: Summary Metric Widgets (Exact Match to Image 2) */}
-            <div className="flex items-center gap-3 shrink-0">
+            {/* Right: Metric Widgets */}
+            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
               {/* Card 1: Assigned Assets */}
-              <div className="flex-1 sm:w-44 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="w-28 sm:w-32 bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    ASSIGNED ASSETS
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                    ASSIGNED
                   </span>
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <Laptop size={14} />
+                  <div className="w-5 h-5 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center">
+                    <Laptop size={11} />
                   </div>
                 </div>
-                <div className="mt-2">
-                  <span className="text-3xl font-black text-blue-700">{assignedAssets.length}</span>
+                <div className="mt-1">
+                  <span className="text-xl font-black text-blue-700">{assignedAssets.length}</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 mt-1">Currently held items</p>
+                <p className="text-[9px] font-bold text-slate-400 mt-0.5">Active items</p>
               </div>
 
               {/* Card 2: History Records */}
-              <div className="flex-1 sm:w-44 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="w-28 sm:w-32 bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    HISTORY RECORDS
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                    HISTORY
                   </span>
-                  <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center">
-                    <Clock size={14} />
+                  <div className="w-5 h-5 rounded-md bg-slate-200 text-slate-700 flex items-center justify-center">
+                    <Clock size={11} />
                   </div>
                 </div>
-                <div className="mt-2">
-                  <span className="text-3xl font-black text-slate-900">{history.length}</span>
+                <div className="mt-1">
+                  <span className="text-xl font-black text-slate-900">{history.length}</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 mt-1">Past transactions</p>
+                <p className="text-[9px] font-bold text-slate-400 mt-0.5">Transactions</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-          <div className="flex items-center gap-4 sm:gap-6">
+        {/* Tab Navigation - Compact */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+          <div className="flex items-center gap-3 sm:gap-5">
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
-              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+              className={`pb-2 text-xs font-black transition-all flex items-center gap-1.5 border-b-2 cursor-pointer ${
                 activeTab === 'overview'
                   ? 'text-blue-600 border-blue-600'
                   : 'text-slate-400 border-transparent hover:text-slate-700'
               }`}
             >
-              <UserCheck size={16} />
+              <UserCheck size={14} />
               <span>Overview</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('assets')}
-              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+              className={`pb-2 text-xs font-black transition-all flex items-center gap-1.5 border-b-2 cursor-pointer ${
                 activeTab === 'assets'
                   ? 'text-blue-600 border-blue-600'
                   : 'text-slate-400 border-transparent hover:text-slate-700'
               }`}
             >
-              <Package size={16} />
+              <Package size={14} />
               <span>Active Assets ({assignedAssets.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('history')}
-              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+              className={`pb-2 text-xs font-black transition-all flex items-center gap-1.5 border-b-2 cursor-pointer ${
                 activeTab === 'history'
                   ? 'text-blue-600 border-blue-600'
                   : 'text-slate-400 border-transparent hover:text-slate-700'
               }`}
             >
-              <History size={16} />
+              <History size={14} />
               <span>Activity History</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('documents')}
-              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+              className={`pb-2 text-xs font-black transition-all flex items-center gap-1.5 border-b-2 cursor-pointer ${
                 activeTab === 'documents'
                   ? 'text-blue-600 border-blue-600'
                   : 'text-slate-400 border-transparent hover:text-slate-700'
               }`}
             >
-              <FileText size={16} />
+              <FileText size={14} />
               <span>Documents</span>
             </button>
           </div>
 
-          <div className="pb-3">
+          <div className="pb-2">
             <button
               type="button"
               onClick={() => window.print()}
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5"
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
             >
-              <Download size={14} />
+              <Download size={13} />
               <span>Export PDF</span>
             </button>
           </div>
         </div>
 
-        {/* Tab 1: Overview */}
+        {/* Tab 1: Overview - Compact & Clean */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs">
             {/* Column 1: DEPARTMENT & ORGANIZATION */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                <h3 className="text-[11px] font-black uppercase text-slate-900 tracking-wider">
                   DEPARTMENT &amp; ORGANIZATION
                 </h3>
-                <Building2 size={15} className="text-slate-400" />
+                <Building2 size={13} className="text-slate-400" />
               </div>
 
-              <div className="space-y-3.5 text-xs">
+              <div className="space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 font-bold">Main Department</span>
                   <span className="font-black text-slate-900">{employee.department || '—'}</span>
@@ -536,15 +527,15 @@ export default function EmployeeProfilePage() {
             </div>
 
             {/* Column 2: CONTACT & ASSIGNMENT STATUS */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                <h3 className="text-[11px] font-black uppercase text-slate-900 tracking-wider">
                   CONTACT &amp; STATUS
                 </h3>
-                <Briefcase size={15} className="text-slate-400" />
+                <Briefcase size={13} className="text-slate-400" />
               </div>
 
-              <div className="space-y-3.5 text-xs">
+              <div className="space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 font-bold">Corporate Email</span>
                   <span className="font-bold text-slate-900">{employee.email || '—'}</span>
