@@ -193,6 +193,22 @@ export default function AppLayout() {
             );
           })}
 
+        {/* Prevention / Maintenance placed directly under Maintenance Assets */}
+        {!isHr && canAccessMaintenance(user.role, user.categories) && (
+          <NavLink
+            to="/maintenance"
+            className={navClass}
+            title="Prevention / Maintenance"
+            onClick={closeSidebar}
+          >
+            <div className="flex items-center gap-3">
+              <Wrench size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
+              <span className="truncate">Prevention / Maintenance</span>
+            </div>
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
+          </NavLink>
+        )}
+
         {/* Management Section */}
         <div className="pt-4 pb-1.5 px-3 text-[10px] font-black uppercase text-slate-400 tracking-[0.16em]">
           Management
@@ -213,16 +229,6 @@ export default function AppLayout() {
             <div className="flex items-center gap-3">
               <Building2 size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>HR Operations</span>
-            </div>
-            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
-          </NavLink>
-        )}
-
-        {canAccessMaintenance(user.role, user.categories) && (
-          <NavLink to="/maintenance" className={navClass} title="Maintenance" onClick={closeSidebar}>
-            <div className="flex items-center gap-3">
-              <Wrench size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
-              <span>Maintenance</span>
             </div>
             <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
@@ -373,7 +379,7 @@ export default function AppLayout() {
                 : location.pathname.startsWith('/employees')
                 ? 'Employee Directory'
                 : location.pathname.startsWith('/maintenance')
-                ? 'Maintenance Hub'
+                ? 'Prevention / Maintenance'
                 : location.pathname.startsWith('/damaged-scrap')
                 ? 'Damaged & Scrap'
                 : location.pathname.startsWith('/missing')
