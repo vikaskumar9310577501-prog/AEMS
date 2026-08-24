@@ -37,6 +37,7 @@ import { normalizeEmployeeId } from '../lib/employeeLookup';
 import { parseJsonResponse } from '../lib/apiFetch';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
 import { toast } from 'react-hot-toast';
+import { getDocumentViewUrl } from '../lib/fileUrls';
 
 type ProfileTab = 'overview' | 'assets' | 'history' | 'documents';
 
@@ -502,14 +503,14 @@ export default function EmployeeProfilePage() {
           </div>
         </div>
 
-        {/* Tab 1: Overview (Exact Match to 3 Columns in Image 2) */}
+        {/* Tab 1: Overview */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
-            {/* Column 1: DEPARTMENT INFO */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
+            {/* Column 1: DEPARTMENT & ORGANIZATION */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                  DEPARTMENT INFO
+                  DEPARTMENT &amp; ORGANIZATION
                 </h3>
                 <Building2 size={15} className="text-slate-400" />
               </div>
@@ -517,79 +518,58 @@ export default function EmployeeProfilePage() {
               <div className="space-y-3.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 font-bold">Main Department</span>
-                  <span className="font-black text-slate-900">{employee.department || 'PPC'}</span>
+                  <span className="font-black text-slate-900">{employee.department || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Designation</span>
+                  <span className="font-bold text-slate-900">{employee.designation || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 font-bold">Plant Code</span>
-                  <span className="font-mono font-bold text-slate-900">{employee.plant || '4020'}</span>
+                  <span className="font-mono font-bold text-slate-900">{employee.plant || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Sub-Department</span>
-                  <span className="font-bold text-slate-900">{employee.subDepartment || 'Information Technology'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Cost Center</span>
-                  <span className="font-mono font-bold text-slate-900">{employee.costCenter || 'CC-8902-IND'}</span>
+                  <span className="text-slate-400 font-bold">Primary Location</span>
+                  <span className="font-bold text-slate-900">{employee.location || '—'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Column 2: EMPLOYMENT */}
+            {/* Column 2: CONTACT & ASSIGNMENT STATUS */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                  EMPLOYMENT
+                  CONTACT &amp; STATUS
                 </h3>
                 <Briefcase size={15} className="text-slate-400" />
               </div>
 
               <div className="space-y-3.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Join Date</span>
-                  <span className="font-bold text-slate-900">{employee.joinDate || 'Oct 12, 2021'}</span>
+                  <span className="text-slate-400 font-bold">Corporate Email</span>
+                  <span className="font-bold text-slate-900">{employee.email || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Manager</span>
-                  <span className="font-black text-slate-900">{employee.manager || 'Sanjeev Kumar'}</span>
+                  <span className="text-slate-400 font-bold">Phone Number</span>
+                  <span className="font-bold text-slate-900">{employee.phone || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Employment Type</span>
-                  <span className="font-bold text-slate-900">{employee.employmentType || 'Full-Time'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Probation End</span>
-                  <span className="font-bold text-slate-900">{employee.probationEnd || 'Apr 12, 2022'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Column 3: SECURITY & ACCESS */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                  SECURITY &amp; ACCESS
-                </h3>
-                <ShieldCheck size={15} className="text-slate-400" />
-              </div>
-
-              <div className="space-y-3.5 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">System Role</span>
-                  <span className="font-black text-slate-900">{employee.systemRole || 'Standard User'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Last Login</span>
-                  <span className="font-bold text-slate-900">Today, 09:42 AM</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">Device Trust</span>
-                  <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]">
-                    Compliant
+                  <span className="text-slate-400 font-bold">Employment Status</span>
+                  <span
+                    className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                      !isInactive
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-rose-50 text-rose-700'
+                    }`}
+                  >
+                    {employeeStatusLabel(employee.status)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-bold">MFA Status</span>
-                  <span className="font-bold text-slate-900">Enabled</span>
+                  <span className="text-slate-400 font-bold">Hardware Allocation</span>
+                  <span className="font-bold text-blue-700">
+                    {assignedAssets.length} Active {assignedAssets.length === 1 ? 'Asset' : 'Assets'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -715,41 +695,82 @@ export default function EmployeeProfilePage() {
         {/* Tab 4: Documents */}
         {activeTab === 'documents' && (
           <div className="bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
               <div>
-                <h3 className="text-base font-black text-slate-900">Personnel &amp; Asset Documents</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Asset handover slips, declarations, and ID proofs</p>
+                <h3 className="text-base font-black text-slate-900">Attached Asset Documents</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Documents, invoices, and files attached during asset registration
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => toast.success('Upload feature enabled')}
-                className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-200 self-start sm:self-auto"
               >
-                <Plus size={14} /> Upload Document
+                <Download size={14} /> Print / Export Slip
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <FileText size={18} />
+            {(() => {
+              const docAssets = assignedAssets.filter((a) => a.documentUrl || a.imageUrl);
+              if (docAssets.length === 0) {
+                return (
+                  <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100 p-6">
+                    <FileText className="mx-auto mb-2 text-slate-300" size={40} />
+                    <p className="text-sm font-bold text-slate-700">No attached documents found</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      When registering or editing an asset for this employee, attach a document or PDF to view it here.
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-900">Asset Handover Form</p>
-                    <p className="text-[10px] text-slate-400 font-bold">PDF • Auto-generated</p>
-                  </div>
+                );
+              }
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {docAssets.map((a) => {
+                    const docUrl = a.documentUrl || a.imageUrl;
+                    const viewUrl = getDocumentViewUrl(docUrl);
+                    return (
+                      <div
+                        key={a.id}
+                        className="p-4.5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-200/90 hover:border-blue-300 hover:shadow-sm transition-all flex flex-col justify-between"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                            <FileText size={20} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-black text-slate-900 truncate">
+                              {a.assetName || a.model || a.assetCode}
+                            </p>
+                            <p className="text-[11px] font-mono font-bold text-blue-600 mt-0.5">
+                              {a.assetCode || a.id}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {a.mainCategory}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">
+                            {a.documentUrl ? 'Attached Document' : 'Asset Photo'}
+                          </span>
+                          <a
+                            href={viewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors"
+                          >
+                            <span>View Document</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="p-2 text-slate-500 hover:text-blue-600"
-                  title="Download"
-                >
-                  <Download size={16} />
-                </button>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         )}
       </div>

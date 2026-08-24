@@ -12,10 +12,6 @@ export default function AssetDetailPage() {
   const { assets, loading, user, executeDelete } = useApp();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
-  }
-
   const asset = assetId ? findAssetByRouteId(assets, assetId) : undefined;
 
   const onDelete = () => {
@@ -33,10 +29,10 @@ export default function AssetDetailPage() {
           <p className="text-sm text-slate-500 mt-2">This asset may have been removed or the link is invalid.</p>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(-1)}
             className="mt-6 btn-primary-geometric"
           >
-            Back to Dashboard
+            Go Back
           </button>
         </div>
       </div>
@@ -57,10 +53,10 @@ export default function AssetDetailPage() {
         <div className="max-w-5xl mx-auto">
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors mb-2"
           >
-            <ArrowLeft size={18} /> Back to assets
+            <ArrowLeft size={18} /> Back
           </button>
         </div>
       </header>
