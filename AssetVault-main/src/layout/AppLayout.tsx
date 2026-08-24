@@ -337,30 +337,44 @@ export default function AppLayout() {
               <Menu size={18} />
             </button>
 
-            {/* Breadcrumb Title */}
-            <div className="min-w-0 flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700 truncate">
-              <span className="text-slate-400 font-semibold hover:text-slate-600 transition-colors cursor-pointer" onClick={() => navigate('/dashboard')}>
-                Dashboard
-              </span>
-              <span className="text-slate-300">/</span>
-              <span className="text-slate-900 font-black truncate">
-                {isDashboard
-                  ? (selectedCategory === 'All' ? 'Asset Inventory' : selectedCategory)
-                  : location.pathname.startsWith('/employees')
-                  ? 'Employee Directory'
-                  : location.pathname.startsWith('/maintenance')
-                  ? 'Maintenance Hub'
-                  : location.pathname.startsWith('/damaged-scrap')
-                  ? 'Damaged & Scrap'
-                  : location.pathname.startsWith('/missing')
-                  ? 'Missing Items'
-                  : location.pathname.startsWith('/users')
-                  ? 'User Management'
-                  : location.pathname.startsWith('/settings')
-                  ? 'System Settings'
-                  : 'Asset Management'}
-              </span>
-            </div>
+            {/* Top Bar Title / PG Logo for HR Dashboard */}
+            {location.pathname === '/hr-dashboard' ? (
+              <div className="flex items-center gap-2.5">
+                <img src={LOGO_SRC} alt="PG Logo" className="h-7 w-auto object-contain shrink-0" />
+                <span className="text-slate-900 font-black text-sm sm:text-base tracking-tight">
+                  HR Dashboard
+                </span>
+              </div>
+            ) : (
+              <div className="min-w-0 flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700 truncate">
+                <span
+                  className="text-slate-400 font-semibold hover:text-slate-600 transition-colors cursor-pointer"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  Dashboard
+                </span>
+                <span className="text-slate-300">/</span>
+                <span className="text-slate-900 font-black truncate">
+                  {isDashboard
+                    ? selectedCategory === 'All'
+                      ? 'Asset Inventory'
+                      : selectedCategory
+                    : location.pathname.startsWith('/employees')
+                    ? 'Employee Directory'
+                    : location.pathname.startsWith('/maintenance')
+                    ? 'Maintenance Hub'
+                    : location.pathname.startsWith('/damaged-scrap')
+                    ? 'Damaged & Scrap'
+                    : location.pathname.startsWith('/missing')
+                    ? 'Missing Items'
+                    : location.pathname.startsWith('/users')
+                    ? 'User Management'
+                    : location.pathname.startsWith('/settings')
+                    ? 'System Settings'
+                    : 'Asset Management'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Header Action Portal (Search, Filters, Export, New Asset) */}
