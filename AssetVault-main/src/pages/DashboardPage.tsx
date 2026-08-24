@@ -1142,48 +1142,6 @@ function DashboardPageContent() {
 
       {/* Main Content Body */}
       <div className="flex-1 overflow-auto px-4 lg:px-8 pb-8 pt-2">
-        {/* Section Title Bar: ASSET INVENTORY + Category Dropdown Filter */}
-        <div className="flex items-center justify-between gap-4 mb-4 py-2 border-b border-slate-200/80">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Boxes size={18} />
-            </div>
-            <div>
-              <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 leading-tight">
-                ASSET INVENTORY
-              </h2>
-              <p className="text-[10px] font-bold text-slate-400">
-                {displayAssets.length} {displayAssets.length === 1 ? 'Item' : 'Items'} Available
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Category Filter Selector */}
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === 'All') {
-                    setSearchParams({});
-                  } else {
-                    setSearchParams({ category: val });
-                  }
-                }}
-                className="text-xs font-bold bg-white border border-slate-200/90 text-slate-700 rounded-xl px-3 py-1.5 pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer appearance-none"
-              >
-                <option value="All">All Categories</option>
-                {visibleCategories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-        </div>
         {/* Categories Dynamic Overview Grid (Visible when category is 'All') */}
         {selectedCategory === 'All' && (
           <div className="mb-10">
