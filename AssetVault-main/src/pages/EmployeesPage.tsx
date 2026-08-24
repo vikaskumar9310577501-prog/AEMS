@@ -168,64 +168,53 @@ export default function EmployeesPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 min-h-screen">
-      {/* Top Header & Breadcrumb */}
-      <header className="bg-white border-b border-slate-200 px-6 lg:px-8 py-5 shrink-0">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-1.5">
-              <span>Dashboard</span>
-              <span>›</span>
-              <span className="text-slate-700 font-bold">Employee Directory</span>
-            </div>
-
-            <h1 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
+      {/* Top Header & Search Bar - Compact & Sleek */}
+      <header className="bg-white border-b border-slate-200 px-6 lg:px-8 py-3.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
               Employees
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Manage global directory, department assignments, and corporate asset tracking.
-            </p>
-
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
-                <Building2 size={13} />
+            {/* Badges inline */}
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
+                <Building2 size={12} />
                 <span>Department: IT &amp; Operations</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
-                <UsersIcon size={13} />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
+                <UsersIcon size={12} />
                 <span>{activeCount} Active</span>
               </span>
             </div>
           </div>
 
           {/* Top Actions */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/80">
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${
+                className={`p-1.5 rounded-lg transition-all ${
                   viewMode === 'grid'
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-blue-600 shadow-xs'
                     : 'text-slate-400 hover:text-slate-700'
                 }`}
                 title="Grid View"
               >
-                <LayoutGrid size={16} />
+                <LayoutGrid size={15} />
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-2 rounded-lg transition-all ${
+                className={`p-1.5 rounded-lg transition-all ${
                   viewMode === 'table'
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-blue-600 shadow-xs'
                     : 'text-slate-400 hover:text-slate-700'
                 }`}
                 title="Table View"
               >
-                <List size={16} />
+                <List size={15} />
               </button>
             </div>
 
@@ -244,11 +233,11 @@ export default function EmployeesPage() {
                   { id: 'sync-employees' }
                 );
               }}
-              className={`px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-2 transition-all border border-slate-200/80 ${
+              className={`px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-200/80 ${
                 loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
               }`}
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin text-blue-600' : ''} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-blue-600' : ''} />
               <span>Sync Directory</span>
             </button>
 
@@ -260,9 +249,9 @@ export default function EmployeesPage() {
                   setForm(EMPTY_EMPLOYEE());
                   setModalOpen(true);
                 }}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-blue-500/20"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-xs shadow-blue-500/20"
               >
-                <Plus size={16} />
+                <Plus size={15} />
                 <span>Add Employee</span>
               </button>
             )}
@@ -271,16 +260,16 @@ export default function EmployeesPage() {
             <button
               type="button"
               onClick={exportExcel}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all border border-slate-200/80"
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all border border-slate-200/80"
               title="Export to Excel"
             >
-              <Download size={16} />
+              <Download size={15} />
             </button>
           </div>
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="mt-5 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div className="mt-3 flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
           {/* Search Box */}
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
