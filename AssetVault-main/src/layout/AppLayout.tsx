@@ -36,14 +36,12 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; classN
   [SIDEBAR_CCTV_CATEGORY]: CameraIcon,
   Camera: CameraIcon,
   NVR: VideoIcon,
-  'Office Assets': Sofa,
   'Electrical Assets': Zap,
   'Production Assets': Factory,
   'Safety Assets': ShieldAlert,
   'Vehicle Assets': Car,
   'Furniture Assets': TableIcon,
   'Software / License Assets': FileText,
-  'Admin / Facility Assets': Building2,
   'Maintenance Assets': Wrench,
 };
 

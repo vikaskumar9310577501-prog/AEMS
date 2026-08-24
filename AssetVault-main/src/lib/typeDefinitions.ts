@@ -46,7 +46,7 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
   {
     id: 'fan',
     name: 'Fan',
-    mainCategory: 'Office Assets',
+    mainCategory: 'Furniture Assets',
     subCategory: 'Fan',
     fields: [
       { key: 'fan_type', label: 'Fan Type', type: 'select', options: ['Ceiling', 'Table', 'Wall', 'Exhaust', 'Industrial'] },
@@ -58,7 +58,7 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
   {
     id: 'ac',
     name: 'Air Conditioner (AC)',
-    mainCategory: 'Office Assets',
+    mainCategory: 'Furniture Assets',
     subCategory: 'AC',
     fields: [
       { key: 'tonnage', label: 'Tonnage / Capacity', type: 'select', options: ['1.0 Ton', '1.5 Ton', '2.0 Ton', '3.0 Ton', 'Other'] },
@@ -69,7 +69,7 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
   {
     id: 'office_asset_gen',
     name: 'Office Asset (General)',
-    mainCategory: 'Office Assets',
+    mainCategory: 'Furniture Assets',
     fields: [
       { key: 'material', label: 'Material', type: 'select', options: ['Wood', 'Metal', 'Plastic', 'Glass', 'Other'] },
       { key: 'dimensions', label: 'Dimensions', type: 'text' },
@@ -214,7 +214,7 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
   {
     id: 'admin_facility_asset',
     name: 'Admin / Facility Asset',
-    mainCategory: 'Admin / Facility Assets',
+    mainCategory: 'Furniture Assets',
     fields: [
       { key: 'facility_use', label: 'Facility Use / Location', type: 'text' },
       { key: 'consumable', label: 'Consumable Type', type: 'select', options: ['Asset', 'Semi-Consumable', 'Consumable'] },

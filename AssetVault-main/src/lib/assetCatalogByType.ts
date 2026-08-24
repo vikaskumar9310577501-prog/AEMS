@@ -132,14 +132,12 @@ export function catalogKeyForAssetType(assetType: string): string {
 // Company-Level Main Categories and sheet mappings
 export const MAIN_CATEGORIES = [
   "IT Assets",
-  "Office Assets",
   "Electrical Assets",
   "Production Assets",
   "Safety Assets",
   "Vehicle Assets",
   "Furniture Assets",
   "Software / License Assets",
-  "Admin / Facility Assets",
   "Maintenance Assets"
 ] as const;
 
@@ -147,14 +145,12 @@ export type MainCategory = typeof MAIN_CATEGORIES[number];
 
 export const CATEGORY_SHEET_MAP: Record<string, string> = {
   "IT Assets": "IT Assets",
-  "Office Assets": "Office Assets",
   "Electrical Assets": "Electrical Assets",
   "Production Assets": "Production Assets",
   "Safety Assets": "Safety Assets",
   "Vehicle Assets": "Vehicle Assets",
   "Furniture Assets": "Furniture Assets",
   "Software / License Assets": "Software License Assets",
-  "Admin / Facility Assets": "Admin Facility Assets",
   "Maintenance Assets": "Maintenance Assets"
 };
 
@@ -169,20 +165,6 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "CCTV / Security Device",
     "Server / UPS",
     "Other IT Asset"
-  ],
-  "Office Assets": [
-    "Table",
-    "Chair",
-    "Almirah",
-    "File Cabinet",
-    "Sofa",
-    "Whiteboard",
-    "Fan",
-    "AC",
-    "Water Dispenser",
-    "Refrigerator",
-    "Tea/Coffee Machine",
-    "Other Office Asset"
   ],
   "Electrical Assets": [
     "Inverter",
@@ -235,12 +217,23 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
   ],
   "Furniture Assets": [
     "Workstation",
+    "Table",
     "Meeting Table",
+    "Chair",
+    "Visitor Chair",
+    "Sofa",
+    "Almirah",
+    "File Cabinet",
+    "Locker",
     "Rack",
     "Storage Box",
     "Bench",
-    "Visitor Chair",
-    "Locker",
+    "Whiteboard",
+    "Fan",
+    "AC",
+    "Water Dispenser",
+    "Refrigerator",
+    "Tea/Coffee Machine",
     "Other Furniture Asset"
   ],
   "Software / License Assets": [
@@ -253,18 +246,6 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "Cloud Subscription",
     "Domain / Hosting",
     "Other Software License"
-  ],
-  "Admin / Facility Assets": [
-    "Housekeeping Item",
-    "Pantry Item",
-    "Security Equipment",
-    "Attendance Machine",
-    "Visitor Gate Pass Device",
-    "PA System",
-    "Projector",
-    "Speaker",
-    "Mic",
-    "Other Admin / Facility Asset"
   ],
   "Maintenance Assets": [
     "Screwdriver Set",
@@ -309,22 +290,27 @@ export const PERIPHERAL_TYPES = [
 const MAIN_CATEGORY_ALIASES: Record<string, string> = {
   it: 'IT Assets',
   'it assets': 'IT Assets',
+  'office assets': 'Furniture Assets',
+  'office asset': 'Furniture Assets',
+  furniture: 'Furniture Assets',
+  'furniture assets': 'Furniture Assets',
   'software license assets': 'Software / License Assets',
-  'admin facility assets': 'Admin / Facility Assets',
+  'admin facility assets': 'Furniture Assets',
+  'admin / facility assets': 'Furniture Assets',
   'production manufacturing assets': 'Production Assets',
 };
 
 /** Asset-code prefix → main category (matches server/assetCodeGenerator.ts). */
 const CODE_PREFIX_TO_MAIN: Record<string, string> = {
   IT: 'IT Assets',
-  OFF: 'Office Assets',
+  OFF: 'Furniture Assets',
   ELE: 'Electrical Assets',
   PRD: 'Production Assets',
   SAF: 'Safety Assets',
   VEH: 'Vehicle Assets',
   FUR: 'Furniture Assets',
   SW: 'Software / License Assets',
-  ADM: 'Admin / Facility Assets',
+  ADM: 'Furniture Assets',
   MNT: 'Maintenance Assets',
 };
 

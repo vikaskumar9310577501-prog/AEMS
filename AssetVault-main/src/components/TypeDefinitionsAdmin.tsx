@@ -51,7 +51,7 @@ export default function TypeDefinitionsAdmin() {
     const t: AssetTypeDefinition = {
       id,
       name: 'New Asset Type',
-      mainCategory: 'Office Assets',
+      mainCategory: 'Furniture Assets',
       fields: [{ key: 'notes', label: 'Notes', type: 'textarea' }],
     };
     setTypes((prev) => [...prev, t]);
