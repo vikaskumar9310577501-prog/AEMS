@@ -968,6 +968,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         toast.error("Contact number is required");
         return false;
       }
+      if (!formData.department?.trim()) {
+        toast.error("Department is required");
+        return false;
+      }
       if (!formData.assignedDate?.trim()) {
         toast.error("Assigned date is required when an employee is assigned");
         return false;
@@ -2943,7 +2947,6 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               location: formData.location,
               plantCode: formData.plantCode,
             }}
-            hideDepartmentField
             onChange={(patch) =>
               setFormData((prev) => ({
                 ...prev,

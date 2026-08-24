@@ -74,10 +74,8 @@ export default function EmployeeSelector({
       contactMobile: emp.phone || values.contactMobile,
       location: emp.location || values.location,
       plantCode: emp.plant || values.plantCode,
+      department: emp.department || values.department || '',
     };
-    if (!hideDepartmentField) {
-      patch.department = emp.department || values.department;
-    }
     onChange(patch);
     onEmployeeResolved?.(emp);
   };
