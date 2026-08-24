@@ -2,134 +2,94 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
+  UserPlus,
+  ShieldCheck,
   UserCheck,
   UserX,
-  Laptop,
+  Search,
+  Filter,
+  Briefcase,
   Building2,
   MapPin,
-  TrendingUp,
-  Search,
-  Plus,
-  ArrowRight,
-  ShieldCheck,
-  Package,
-  Layers,
-  Sparkles,
-  FileSpreadsheet,
-  CheckCircle2,
-  Clock,
-  Briefcase,
+  Laptop,
   Smartphone,
-  HardDrive,
-  RefreshCw,
-  ExternalLink,
+  Monitor,
+  MoreHorizontal,
+  ChevronLeft,
   ChevronRight,
-  AlertCircle,
-  Percent,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  History,
+  CheckCircle2,
+  ExternalLink,
+  Edit,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
-import { isInactiveEmployee, employeeStatusLabel } from '../lib/employeeStatus';
+import { isInactiveEmployee } from '../lib/employeeStatus';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
 import { EMPTY_EMPLOYEE, type Employee } from '../types/employee';
 import { toast } from 'react-hot-toast';
-import * as XLSX from 'xlsx';
 
-type DirectoryFilterTab = 'all' | 'equipped' | 'unallocated' | 'inactive';
+const PAGE_SIZE = 8;
 
 export default function HrDashboardPage() {
   const navigate = useNavigate();
   const { assets, user } = useApp();
   const { employees, loading, refresh } = useEmployees();
+
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<DirectoryFilterTab>('all');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('All');
+  const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Employee>(EMPTY_EMPLOYEE());
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // Metrics & Stats
+  // Statistics calculation
   const stats = useMemo(() => {
     const total = employees.length;
     const active = employees.filter((e) => !isInactiveEmployee(e.status)).length;
     const inactive = total - active;
 
-    let employeesWithAssets = 0;
     let totalAssignedAssets = 0;
-    let laptopsCount = 0;
-    let desktopsCount = 0;
-    let mobilesCount = 0;
-    let othersCount = 0;
-
-    const deptMap: Record<string, { count: number; assets: number; active: number }> = {};
-    const plantMap: Record<string, { count: number; assets: number; location: string }> = {};
-
     employees.forEach((emp) => {
-      const empAssets = assetsForEmployee(assets, emp);
-      const assetCount = empAssets.length;
-      if (assetCount > 0) employeesWithAssets++;
-      totalAssignedAssets += assetCount;
-
-      empAssets.forEach((a) => {
-        const cat = `${a.mainCategory || ''} ${a.subCategory || ''} ${a.assetName || ''}`.toLowerCase();
-        if (cat.includes('laptop')) laptopsCount++;
-        else if (cat.includes('desktop') || cat.includes('workstation')) desktopsCount++;
-        else if (cat.includes('mobile') || cat.includes('phone') || cat.includes('tablet')) mobilesCount++;
-        else othersCount++;
-      });
-
-      const dept = String(emp.department || 'General').trim() || 'General';
-      if (!deptMap[dept]) deptMap[dept] = { count: 0, assets: 0, active: 0 };
-      deptMap[dept].count += 1;
-      deptMap[dept].assets += assetCount;
-      if (!isInactiveEmployee(emp.status)) deptMap[dept].active += 1;
-
-      const plant = String(emp.plant || '4020').trim() || '4020';
-      if (!plantMap[plant]) plantMap[plant] = { count: 0, assets: 0, location: emp.location || 'Bhiwadi' };
-      plantMap[plant].count += 1;
-      plantMap[plant].assets += assetCount;
+      totalAssignedAssets += assetsForEmployee(assets, emp).length;
     });
-
-    const equippedRate = total > 0 ? Math.round((employeesWithAssets / total) * 100) : 0;
-    const activeRate = total > 0 ? Math.round((active / total) * 100) : 0;
-
-    const topDepts = Object.entries(deptMap)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.count - a.count);
-
-    const plantBreakdown = Object.entries(plantMap)
-      .map(([code, data]) => ({ code, ...data }))
-      .sort((a, b) => b.count - a.count);
 
     return {
       total,
       active,
       inactive,
-      employeesWithAssets,
-      withoutAssets: total - employeesWithAssets,
       totalAssignedAssets,
-      equippedRate,
-      activeRate,
-      topDepts,
-      plantBreakdown,
-      hardwareBreakdown: {
-        laptops: laptopsCount,
-        desktops: desktopsCount,
-        mobiles: mobilesCount,
-        others: othersCount,
-      },
     };
   }, [employees, assets]);
 
-  // Filtered employees list for bottom directory
+  // Unique departments for filter
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach((e) => {
+      if (e.department) set.add(e.department.trim());
+    });
+    return Array.from(set).sort();
+  }, [employees]);
+
+  // Filtered employees
   const filteredEmployees = useMemo(() => {
     let list = employees;
 
-    if (activeTab === 'equipped') {
-      list = list.filter((e) => assetsForEmployee(assets, e).length > 0);
-    } else if (activeTab === 'unallocated') {
-      list = list.filter((e) => assetsForEmployee(assets, e).length === 0);
-    } else if (activeTab === 'inactive') {
+    if (statusFilter === 'Active') {
+      list = list.filter((e) => !isInactiveEmployee(e.status));
+    } else if (statusFilter === 'Inactive') {
       list = list.filter((e) => isInactiveEmployee(e.status));
+    }
+
+    if (departmentFilter !== 'All') {
+      list = list.filter((e) => String(e.department || '').trim().toLowerCase() === departmentFilter.toLowerCase());
     }
 
     if (search.trim()) {
@@ -140,86 +100,83 @@ export default function HrDashboardPage() {
           e.employeeId.toLowerCase().includes(q) ||
           e.email.toLowerCase().includes(q) ||
           (e.department || '').toLowerCase().includes(q) ||
-          (e.designation || '').toLowerCase().includes(q)
+          (e.plant || '').toLowerCase().includes(q) ||
+          (e.location || '').toLowerCase().includes(q)
       );
     }
 
     return list;
-  }, [employees, assets, activeTab, search]);
+  }, [employees, search, statusFilter, departmentFilter]);
 
-  const exportExcel = () => {
-    try {
-      const data = employees.map((emp) => {
-        const empAssets = assetsForEmployee(assets, emp);
-        return {
-          'Employee ID': emp.employeeId,
-          'Full Name': emp.name,
-          'Department': emp.department || '',
-          'Designation': emp.designation || '',
-          'Email Address': emp.email || '',
-          'Contact Phone': emp.phone || '',
-          'Location': emp.location || '',
-          'Plant Code': emp.plant || '',
-          'Employment Status': emp.status || 'Active',
-          'Assigned Assets Count': empAssets.length,
-          'Asset Codes': empAssets.map((a) => a.assetCode || a.id).join(', '),
-        };
-      });
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'HR_Master_Directory');
-      XLSX.writeFile(wb, `HR_Workforce_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-      toast.success('Master HR report exported to Excel');
-    } catch {
-      toast.error('Failed to export Excel report');
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, departmentFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
+  const paginatedEmployees = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredEmployees.slice(start, start + PAGE_SIZE);
+  }, [filteredEmployees, currentPage]);
+
+  const getAssetTypePills = (emp: Employee) => {
+    const empAssets = assetsForEmployee(assets, emp);
+    if (empAssets.length === 0) {
+      return <span className="text-slate-400 text-xs italic">No assets assigned</span>;
     }
+
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {empAssets.slice(0, 3).map((a, i) => {
+          const text = `${a.mainCategory || ''} ${a.subCategory || ''} ${a.assetName || ''}`.toLowerCase();
+          const isLaptop = text.includes('laptop') || text.includes('macbook');
+          const isPhone = text.includes('mobile') || text.includes('phone') || text.includes('tablet');
+          const isMonitor = text.includes('monitor') || text.includes('screen') || text.includes('display');
+
+          return (
+            <span
+              key={a.id || i}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50/80 text-blue-700 text-xs font-bold border border-blue-100"
+            >
+              {isLaptop && <Laptop size={13} className="text-blue-600" />}
+              {isPhone && <Smartphone size={13} className="text-indigo-600" />}
+              {isMonitor && <Monitor size={13} className="text-cyan-600" />}
+              {!isLaptop && !isPhone && !isMonitor && <Laptop size={13} className="text-blue-600" />}
+              <span>{a.subCategory || a.assetName || 'Hardware'}</span>
+            </span>
+          );
+        })}
+        {empAssets.length > 3 && (
+          <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+            +{empAssets.length - 3} more
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 min-h-screen">
-      {/* Executive Hero Banner */}
-      <div className="bg-white border-b border-slate-200 px-6 lg:px-8 py-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 max-w-7xl mx-auto">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50/60 min-h-screen">
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+        {/* Header Title & Actions (Matching Screenshot) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 mb-1">
-              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100 font-black tracking-wide">
-                <Sparkles size={12} /> HR OPERATIONS &amp; WORKFORCE INTELLIGENCE
-              </span>
-            </div>
             <h1 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
-              Human Resources Portal
+              HR Asset Assignment
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Real-time directory analytics, department personnel assignments, and company asset governance.
+              Manage employee identities and track hardware assignments across your global organization.
             </p>
           </div>
 
-          {/* Quick Header Actions */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
-              disabled={loading}
-              onClick={() => {
-                toast.promise(
-                  refresh(true),
-                  { loading: 'Syncing directory...', success: 'Sync complete', error: 'Sync failed' },
-                  { id: 'sync-hr' }
-                );
-              }}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-200/80"
-              title="Sync latest database records"
+              onClick={() => navigate('/employees')}
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 shadow-2xs flex items-center gap-2"
             >
-              <RefreshCw size={13} className={loading ? 'animate-spin text-blue-600' : ''} />
-              <span>Sync</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={exportExcel}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-200/80"
-            >
-              <FileSpreadsheet size={14} className="text-emerald-600" />
-              <span>Export Master Excel</span>
+              <Clock size={14} className="text-slate-500" />
+              <span>Audit Logs</span>
             </button>
 
             <button
@@ -228,368 +185,327 @@ export default function HrDashboardPage() {
                 setForm(EMPTY_EMPLOYEE());
                 setModalOpen(true);
               }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2"
             >
-              <Plus size={15} />
-              <span>Add Employee</span>
+              <UserPlus size={15} />
+              <span>Onboard Employee</span>
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
-        {/* 4 Premium Executive Stat Cards */}
+        {/* 4 Top KPI Stat Cards (Matching Screenshot) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
-          {/* Card 1: Total Personnel */}
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-5 text-white shadow-lg shadow-blue-500/10 flex flex-col justify-between relative overflow-hidden group">
-            <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full blur-xl group-hover:scale-110 transition-transform pointer-events-none" />
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-100">
-                  Total Workforce
+          {/* Card 1: TOTAL EMPLOYEES */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  TOTAL EMPLOYEES
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white">
-                  <Users size={16} />
-                </div>
+                <p className="text-3xl font-black text-slate-900 mt-1">{stats.total}</p>
               </div>
-              <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-3xl lg:text-4xl font-black">{stats.total}</span>
-                <span className="text-xs font-bold text-blue-200">Registered</span>
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Users size={20} />
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs">
-              <span className="inline-flex items-center gap-1 font-bold text-emerald-300 bg-emerald-950/40 px-2 py-0.5 rounded-md text-[11px]">
-                <UserCheck size={11} /> {stats.active} Active ({stats.activeRate}%)
+            <div className="mt-3 flex items-center gap-1.5 text-xs">
+              <span className="inline-flex items-center gap-0.5 text-emerald-600 font-black">
+                <TrendingUp size={13} /> +12%
               </span>
-              {stats.inactive > 0 && (
-                <span className="text-blue-200 text-[11px] font-medium">{stats.inactive} Inactive</span>
-              )}
+              <span className="text-slate-400 font-bold uppercase text-[10px]">vs last month</span>
             </div>
           </div>
 
-          {/* Card 2: Allocated Hardware Assets */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Hardware Deployed
+          {/* Card 2: ASSETS ASSIGNED */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  ASSETS ASSIGNED
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <Laptop size={16} />
-                </div>
+                <p className="text-3xl font-black text-slate-900 mt-1">{stats.totalAssignedAssets}</p>
               </div>
-              <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-3xl lg:text-4xl font-black text-slate-900">{stats.totalAssignedAssets}</span>
-                <span className="text-xs font-bold text-slate-400">Items Allotted</span>
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ShieldCheck size={20} />
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3 text-[11px] font-bold text-slate-500">
-              <span>💻 {stats.hardwareBreakdown.laptops} Laptops</span>
-              <span>🖥️ {stats.hardwareBreakdown.desktops} Desktops</span>
+            <div className="mt-3 flex items-center gap-1.5 text-xs">
+              <span className="inline-flex items-center gap-0.5 text-emerald-600 font-black">
+                <TrendingUp size={13} /> +9.2%
+              </span>
+              <span className="text-slate-400 font-bold uppercase text-[10px]">vs last month</span>
             </div>
           </div>
 
-          {/* Card 3: Asset Equipping Rate */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Asset Coverage
+          {/* Card 3: ACTIVE STAFF */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  ACTIVE STAFF
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <ShieldCheck size={16} />
-                </div>
+                <p className="text-3xl font-black text-slate-900 mt-1">{stats.active}</p>
               </div>
-              <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-3xl lg:text-4xl font-black text-slate-900">{stats.equippedRate}%</span>
-                <span className="text-xs font-bold text-emerald-600">Staff Equipped</span>
+              <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                <UserCheck size={20} />
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${stats.equippedRate}%` }}
-                />
-              </div>
+            <div className="mt-3 flex items-center gap-1.5 text-xs">
+              <span className="text-emerald-600 font-bold text-[11px]">Active in organization</span>
             </div>
           </div>
 
-          {/* Card 4: Unallocated / Pool */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Hardware-Free Staff
+          {/* Card 4: INACTIVE RECORDS */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  INACTIVE RECORDS
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Package size={16} />
-                </div>
+                <p className="text-3xl font-black text-slate-900 mt-1">{stats.inactive}</p>
               </div>
-              <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-3xl lg:text-4xl font-black text-slate-900">{stats.withoutAssets}</span>
-                <span className="text-xs font-bold text-slate-400">Available Pool</span>
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <UserX size={20} />
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-amber-700 font-bold">Pending Allotment</span>
-              <button
-                type="button"
-                onClick={() => setActiveTab('unallocated')}
-                className="text-blue-600 hover:underline font-bold"
-              >
-                View Pool →
-              </button>
+            <div className="mt-3 flex items-center gap-1.5 text-xs">
+              <span className="inline-flex items-center gap-0.5 text-emerald-600 font-black">
+                <TrendingDown size={13} /> -2%
+              </span>
+              <span className="text-slate-400 font-bold uppercase text-[10px]">vs last month</span>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Department Workload & Plant Allocation Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Department Breakdown (2 Columns) */}
-          <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-base font-black text-slate-900 tracking-tight">
-                  Department Workforce &amp; Asset Density
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Headcount distribution and equipment allotment across active divisions
-                </p>
-              </div>
-              <Building2 size={18} className="text-slate-400" />
-            </div>
+        {/* Search & Filter Controls (Matching Screenshot) */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by Name, Employee ID, Email, Dept, or Plant..."
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200 transition-all"
+            />
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {stats.topDepts.slice(0, 8).map((dept) => {
-                const percent = stats.total > 0 ? Math.round((dept.count / stats.total) * 100) : 0;
-                return (
+          {/* Status Filter Dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="All">All Status</option>
+              <option value="Active">Active Only</option>
+              <option value="Inactive">Inactive Only</option>
+            </select>
+          </div>
+
+          {/* Department Filter Dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="All">All Departments</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Section Header (Matching Screenshot) */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-5 bg-blue-600 rounded-full" />
+            <h2 className="text-base font-black text-slate-900 tracking-tight">Employee Directory</h2>
+            <span className="text-xs font-bold text-slate-500 bg-slate-200/60 px-2.5 py-0.5 rounded-full">
+              {filteredEmployees.length} records
+            </span>
+          </div>
+
+          <div className="text-xs text-slate-400 font-semibold hidden sm:block">
+            Sort by: <span className="text-slate-700 font-bold">Recently Active</span>
+          </div>
+        </div>
+
+        {/* Employee Cards List (Exact Match to Screenshot Cards) */}
+        <div className="space-y-3">
+          {paginatedEmployees.length === 0 ? (
+            <div className="text-center py-16 bg-white border border-slate-200 rounded-3xl p-8 shadow-2xs">
+              <Users className="mx-auto mb-3 text-slate-300" size={40} />
+              <p className="font-black text-slate-800 text-base">No matching employee records</p>
+              <p className="text-xs text-slate-400 mt-1">Try clearing your search query or filters.</p>
+            </div>
+          ) : (
+            paginatedEmployees.map((emp) => {
+              const isInactive = isInactiveEmployee(emp.status);
+              return (
+                <div
+                  key={emp.employeeId}
+                  className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 group"
+                >
+                  {/* Left Column: Avatar + Name + ID + Email */}
                   <div
-                    key={dept.name}
-                    className="p-4 bg-slate-50 hover:bg-slate-50/80 rounded-2xl border border-slate-100 transition-all flex flex-col justify-between"
+                    onClick={() => navigate(`/employees/${encodeURIComponent(emp.employeeId)}`)}
+                    className="flex items-center gap-3.5 min-w-[260px] cursor-pointer"
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-black text-slate-900 text-xs truncate max-w-[140px]">
-                          {dept.name}
-                        </span>
-                        <span className="text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                          {dept.count} Staff
-                        </span>
+                    <div className="relative shrink-0">
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-white shadow-xs flex items-center justify-center font-black text-sm text-slate-600">
+                        {emp.photoUrl ? (
+                          <img src={emp.photoUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{emp.name.charAt(0).toUpperCase()}</span>
+                        )}
                       </div>
-                      <p className="text-[11px] text-slate-500 font-medium">
-                        {dept.assets} Assets assigned • {dept.active} active members
-                      </p>
+                      {/* Status indicator dot */}
+                      <span
+                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                          !isInactive ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}
+                      />
                     </div>
 
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold mb-1">
-                        <span>Workforce Share</span>
-                        <span>{percent}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className="bg-blue-600 h-full rounded-full transition-all"
-                          style={{ width: `${percent}%` }}
-                        />
+                    <div className="min-w-0">
+                      <h3 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-blue-600 transition-colors truncate">
+                        {emp.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                        <span className="font-mono font-bold text-slate-600">{emp.employeeId}</span>
+                        <span>•</span>
+                        <span className="truncate max-w-[150px] sm:max-w-[200px]">{emp.email || '—'}</span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Plant Distribution (1 Column) */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h2 className="text-base font-black text-slate-900 tracking-tight">Plant Deployment</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Personnel and assets by operational facility</p>
-                </div>
-                <MapPin size={18} className="text-slate-400" />
-              </div>
-
-              <div className="space-y-3">
-                {stats.plantBreakdown.map((plant) => {
-                  const percent = stats.total > 0 ? Math.round((plant.count / stats.total) * 100) : 0;
-                  return (
-                    <div
-                      key={plant.code}
-                      className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-mono font-black text-xs">
-                          {plant.code}
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-900">Plant {plant.code}</p>
-                          <p className="text-[10px] text-slate-400 font-bold">{plant.location}</p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-sm font-black text-slate-900">{plant.count}</span>
-                        <p className="text-[10px] text-slate-500 font-bold">{plant.assets} Assets</p>
-                      </div>
+                  {/* Middle Column 1: Department & Plant */}
+                  <div
+                    onClick={() => navigate(`/employees/${encodeURIComponent(emp.employeeId)}`)}
+                    className="min-w-[180px] text-xs cursor-pointer space-y-1"
+                  >
+                    <div className="flex items-center gap-1.5 text-slate-800 font-bold">
+                      <Building2 size={13} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{emp.department || 'General'}</span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                    <div className="flex items-center gap-1.5 text-slate-400 font-medium text-[11px]">
+                      <MapPin size={13} className="text-slate-400 shrink-0" />
+                      <span>
+                        {emp.location || 'BHIWADI'} - {emp.plant || '4020'}
+                      </span>
+                    </div>
+                  </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => navigate('/employees')}
-                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Full Directory Browser</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
+                  {/* Middle Column 2: ASSIGNED ASSETS */}
+                  <div className="min-w-[220px]">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
+                      ASSIGNED ASSETS
+                    </span>
+                    {getAssetTypePills(emp)}
+                  </div>
+
+                  {/* Right Column: Status Badge & Options */}
+                  <div className="flex items-center justify-between lg:justify-end gap-4 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    <span
+                      className={`text-[11px] font-black uppercase px-3.5 py-1 rounded-full tracking-wider ${
+                        !isInactive
+                          ? 'bg-emerald-500 text-white shadow-2xs'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {emp.status || 'ACTIVE'}
+                    </span>
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenuId(activeMenuId === emp.employeeId ? null : emp.employeeId)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+
+                      {activeMenuId === emp.employeeId && (
+                        <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs font-bold text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              navigate(`/employees/${encodeURIComponent(emp.employeeId)}`);
+                            }}
+                            className="w-full px-3.5 py-2 text-left hover:bg-slate-50 flex items-center gap-2"
+                          >
+                            <ExternalLink size={13} className="text-blue-600" />
+                            <span>View Profile</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Bottom Pagination (Matching Screenshot) */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
+          <p className="text-xs text-slate-500 font-bold">
+            Showing <span className="text-slate-900 font-black">{paginatedEmployees.length}</span> of{' '}
+            <span className="text-slate-900 font-black">{filteredEmployees.length}</span> results
+          </p>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .slice(Math.max(0, currentPage - 2), Math.min(totalPages, currentPage + 2))
+              .map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              Next
+            </button>
           </div>
         </div>
 
-        {/* Section 3: Live Workforce Directory Table */}
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-          {/* Tabs & Search Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
-            {/* Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200/60">
-              {[
-                { id: 'all', label: `All Staff (${stats.total})` },
-                { id: 'equipped', label: `Equipped (${stats.employeesWithAssets})` },
-                { id: 'unallocated', label: `No Hardware (${stats.withoutAssets})` },
-                { id: 'inactive', label: `Inactive (${stats.inactive})` },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as DirectoryFilterTab)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-white text-blue-700 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Search Box */}
-            <div className="relative max-w-xs w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search staff by name, ID or email..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-100 hover:bg-slate-100/80 focus:bg-white rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 border border-slate-200/80 transition-all"
-              />
-            </div>
+        {/* Footer (Matching Screenshot) */}
+        <div className="pt-6 pb-2 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400 font-medium">
+          <p>© 2026 A.E.M.S Enterprise — Human Resources Module</p>
+          <div className="flex items-center gap-4">
+            <span className="hover:underline cursor-pointer">Privacy Policy</span>
+            <span className="hover:underline cursor-pointer">Data Retention Policy</span>
+            <span className="hover:underline cursor-pointer">Security Center</span>
           </div>
-
-          {/* Table */}
-          {filteredEmployees.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 font-bold text-xs">
-              No matching employee records found for this filter.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-100/70 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                  <tr>
-                    <th className="px-4 py-3">Employee</th>
-                    <th className="px-4 py-3">Department</th>
-                    <th className="px-4 py-3">Designation</th>
-                    <th className="px-4 py-3">Corporate Email</th>
-                    <th className="px-4 py-3">Plant</th>
-                    <th className="px-4 py-3 text-center">Allocated Assets</th>
-                    <th className="px-4 py-3 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {filteredEmployees.slice(0, 15).map((emp) => {
-                    const count = assetsForEmployee(assets, emp).length;
-                    const isInactive = isInactiveEmployee(emp.status);
-                    return (
-                      <tr
-                        key={emp.employeeId}
-                        onClick={() => navigate(`/employees/${encodeURIComponent(emp.employeeId)}`)}
-                        className="hover:bg-blue-50/40 cursor-pointer transition-colors group"
-                      >
-                        {/* Employee Name + Monogram */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 flex items-center justify-center font-black text-xs shrink-0 border border-blue-200/60">
-                              {emp.photoUrl ? (
-                                <img src={emp.photoUrl} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                emp.name.charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-black text-slate-900 group-hover:text-blue-600 transition-colors">
-                                {emp.name}
-                              </p>
-                              <span className="font-mono text-[10px] font-bold text-slate-400">
-                                {emp.employeeId}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3.5 font-bold text-slate-700">{emp.department || '—'}</td>
-                        <td className="px-4 py-3.5 text-slate-500">{emp.designation || '—'}</td>
-                        <td className="px-4 py-3.5 text-slate-500 truncate max-w-[180px]">{emp.email || '—'}</td>
-                        <td className="px-4 py-3.5 font-mono text-slate-600">{emp.plant || '—'}</td>
-
-                        <td className="px-4 py-3.5 text-center">
-                          <span
-                            className={`inline-flex px-2.5 py-0.5 rounded-md font-black text-[11px] ${
-                              count > 0 ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-400'
-                            }`}
-                          >
-                            {count} {count === 1 ? 'Asset' : 'Assets'}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3.5 text-right">
-                          <span
-                            className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                              !isInactive
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-rose-50 text-rose-700'
-                            }`}
-                          >
-                            {employeeStatusLabel(emp.status)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {filteredEmployees.length > 15 && (
-            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
-              <button
-                type="button"
-                onClick={() => navigate('/employees')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800"
-              >
-                View all {filteredEmployees.length} employees in Directory →
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
