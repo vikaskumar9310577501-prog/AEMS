@@ -134,7 +134,7 @@ export default function HrDashboardPage() {
   const portalTarget = headerPortalNode || (typeof document !== 'undefined' ? document.getElementById('portal-header-root') : null);
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-[#f8fafc] min-h-screen text-slate-900">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-[#F8F6F0] min-h-screen text-slate-900">
       {/* Top Header Portal: Search Bar, All Status, Departments, User Info */}
       {portalTarget &&
         createPortal(
@@ -221,91 +221,68 @@ export default function HrDashboardPage() {
         }
       `}</style>
 
-      {/* STICKY TOP KPI CARDS */}
-      <div className="sticky top-0 z-20 bg-[#f8fafc]/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 shadow-xs">
+      {/* STICKY TOP COMPACT KPI CARDS */}
+      <div className="sticky top-0 z-20 bg-[#F8F6F0]/95 backdrop-blur-md border-b border-[#E8E5DF] px-4 sm:px-6 py-2.5 shadow-2xs">
         <div className="max-w-7xl mx-auto w-full">
-          {/* 4 Highlighted Bold Compact KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Card 1: TOTAL EMPLOYEES (Highlighted Blue) */}
-            <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">
-                    TOTAL EMPLOYEES
-                  </span>
-                  <p className="text-2xl font-black text-blue-950 mt-0.5">{stats.total}</p>
-                </div>
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                  <Users size={16} />
-                </div>
+          {/* 4 Compact Highlighted KPI Cards with exact requested color themes */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+            {/* Card 1: TOTAL EMPLOYEES (Warm White Theme) */}
+            <div className="bg-[#FAF8F5] border border-[#E5E0D8] rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
+                  TOTAL EMPLOYEES
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-0.5">{stats.total}</p>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-blue-700">
-                <TrendingUp size={12} />
-                <span>+12% VS LAST MONTH</span>
+              <div className="w-7 h-7 rounded-lg bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
+                <Users size={15} />
               </div>
             </div>
 
-            {/* Card 2: ASSETS ASSIGNED (Highlighted Emerald) */}
-            <div className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                    ASSETS ASSIGNED
-                  </span>
-                  <p className="text-2xl font-black text-emerald-950 mt-0.5">{stats.totalAssignedAssets}</p>
-                </div>
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                  <ShieldCheck size={16} />
-                </div>
+            {/* Card 2: ASSETS ASSIGNED (Blue Theme) */}
+            <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-blue-700">
+                  ASSETS ASSIGNED
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-blue-950 leading-none mt-0.5">{stats.totalAssignedAssets}</p>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-emerald-700">
-                <TrendingUp size={12} />
-                <span>+5.2% VS LAST MONTH</span>
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Laptop size={15} />
               </div>
             </div>
 
-            {/* Card 3: ACTIVE STAFF (Highlighted Slate) */}
-            <div className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                    ACTIVE STAFF
-                  </span>
-                  <p className="text-2xl font-black text-slate-900 mt-0.5">{stats.active}</p>
-                </div>
-                <div className="w-8 h-8 rounded-xl bg-slate-700 text-white flex items-center justify-center shadow-xs">
-                  <UserCheck size={16} />
-                </div>
+            {/* Card 3: ACTIVE STAFF (Green Theme) */}
+            <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700">
+                  ACTIVE STAFF
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-emerald-950 leading-none mt-0.5">{stats.active}</p>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-slate-600">
-                <span>{Math.round((stats.active / Math.max(1, stats.total)) * 100)}% active workforce</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <UserCheck size={15} />
               </div>
             </div>
 
-            {/* Card 4: INACTIVE RECORDS (Darker Red + Heartbeat Animation) */}
+            {/* Card 4: INACTIVE RECORDS (Darker Red Theme + Heartbeat Animation) */}
             <div
               onClick={() => setStatusFilter(statusFilter === 'Inactive' ? 'all' : 'Inactive')}
-              className={`border-2 rounded-2xl p-3.5 shadow-sm transition-all cursor-pointer ${
+              className={`border-2 rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-xs transition-all cursor-pointer flex items-center justify-between ${
                 statusFilter === 'Inactive'
                   ? 'bg-rose-200 border-rose-600 ring-2 ring-rose-500'
-                  : 'bg-[#ffe4e6] border-rose-400'
+                  : 'bg-[#FFE4E6] border-rose-400'
               } animate-heartbeat-subtle`}
               title="Click to filter Inactive records"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-800">
-                    INACTIVE RECORDS
-                  </span>
-                  <p className="text-2xl font-black text-rose-950 mt-0.5">{stats.inactive}</p>
-                </div>
-                <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-xs">
-                  <UserX size={16} />
-                </div>
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-rose-800">
+                  INACTIVE RECORDS
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-rose-950 leading-none mt-0.5">{stats.inactive}</p>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-[10px] font-black text-rose-800">
-                <TrendingDown size={12} />
-                <span>-2% VS LAST MONTH</span>
+              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <UserX size={15} />
               </div>
             </div>
           </div>

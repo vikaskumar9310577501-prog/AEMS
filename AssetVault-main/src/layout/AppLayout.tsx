@@ -294,7 +294,7 @@ export default function AppLayout() {
   );
 
   return (
-    <div className="h-screen flex overflow-hidden font-sans bg-[#F8FAFC] relative">
+    <div className="h-screen flex overflow-hidden font-sans bg-[#F8F6F0] relative">
       {/* Invisible Hover Trigger Zone on Left Corner / Edge */}
       <div
         onMouseEnter={openSidebar}
