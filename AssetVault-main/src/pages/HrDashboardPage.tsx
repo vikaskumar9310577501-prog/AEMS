@@ -180,79 +180,93 @@ export default function HrDashboardPage() {
           </div>
         </div>
 
-        {/* 4 Metric KPI Cards - Matching Screenshot Exactly */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Custom Heartbeat Keyframes Style */}
+        <style>{`
+          @keyframes hrHeartbeat {
+            0%, 100% { transform: scale(1); box-shadow: 0 1px 3px 0 rgba(244, 63, 94, 0.05); }
+            15% { transform: scale(1.02); box-shadow: 0 0 14px 2px rgba(244, 63, 94, 0.18); }
+            30% { transform: scale(1); box-shadow: 0 1px 3px 0 rgba(244, 63, 94, 0.05); }
+            45% { transform: scale(1.015); box-shadow: 0 0 10px 1px rgba(244, 63, 94, 0.12); }
+            60% { transform: scale(1); box-shadow: 0 1px 3px 0 rgba(244, 63, 94, 0.05); }
+          }
+          .animate-heartbeat-subtle {
+            animation: hrHeartbeat 2.2s ease-in-out infinite;
+          }
+        `}</style>
+
+        {/* 4 Compact Metric KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* Card 1: TOTAL EMPLOYEES */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                   TOTAL EMPLOYEES
                 </span>
-                <p className="text-3xl font-black text-slate-900 mt-2">{stats.total}</p>
+                <p className="text-2xl font-black text-slate-900 mt-1">{stats.total}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#eef4ff] text-[#1e60ec] flex items-center justify-center">
-                <Users size={20} />
+              <div className="w-8 h-8 rounded-xl bg-[#eef4ff] text-[#1e60ec] flex items-center justify-center">
+                <Users size={16} />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
-              <TrendingUp size={13} />
+            <div className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+              <TrendingUp size={12} />
               <span>+12% VS LAST MONTH</span>
             </div>
           </div>
 
           {/* Card 2: ASSETS ASSIGNED */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                   ASSETS ASSIGNED
                 </span>
-                <p className="text-3xl font-black text-slate-900 mt-2">{stats.totalAssignedAssets}</p>
+                <p className="text-2xl font-black text-slate-900 mt-1">{stats.totalAssignedAssets}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#ecfdf5] text-[#10b981] flex items-center justify-center">
-                <ShieldCheck size={20} />
+              <div className="w-8 h-8 rounded-xl bg-[#ecfdf5] text-[#10b981] flex items-center justify-center">
+                <ShieldCheck size={16} />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
-              <TrendingUp size={13} />
+            <div className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+              <TrendingUp size={12} />
               <span>+5.2% VS LAST MONTH</span>
             </div>
           </div>
 
           {/* Card 3: ACTIVE STAFF */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                   ACTIVE STAFF
                 </span>
-                <p className="text-3xl font-black text-slate-900 mt-2">{stats.active}</p>
+                <p className="text-2xl font-black text-slate-900 mt-1">{stats.active}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                <UserCheck size={20} />
+              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                <UserCheck size={16} />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+            <div className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-slate-400">
               <span>{Math.round((stats.active / Math.max(1, stats.total)) * 100)}% active workforce</span>
             </div>
           </div>
 
-          {/* Card 4: INACTIVE RECORDS */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          {/* Card 4: INACTIVE RECORDS (Soft Light Red Background + Heartbeat Animation) */}
+          <div className="bg-[#fff1f2]/90 border border-rose-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between animate-heartbeat-subtle transition-all cursor-pointer">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-black uppercase tracking-wider text-rose-500">
                   INACTIVE RECORDS
                 </span>
-                <p className="text-3xl font-black text-slate-900 mt-2">{stats.inactive}</p>
+                <p className="text-2xl font-black text-rose-900 mt-1">{stats.inactive}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#fef2f2] text-[#ef4444] flex items-center justify-center">
-                <UserX size={20} />
+              <div className="w-8 h-8 rounded-xl bg-rose-100/80 text-rose-600 flex items-center justify-center">
+                <UserX size={16} />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
-              <TrendingDown size={13} />
+            <div className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-rose-600">
+              <TrendingDown size={12} />
               <span>-2% VS LAST MONTH</span>
             </div>
           </div>
@@ -344,10 +358,10 @@ export default function HrDashboardPage() {
           </div>
         </div>
 
-        {/* Employee Directory List Cards - Matching Screenshot Rows */}
-        <div className="space-y-3">
+        {/* Employee Directory List Cards - Compact & Balanced */}
+        <div className="space-y-2.5">
           {paginatedEmployees.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 font-bold text-xs">
+            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-400 font-bold text-xs">
               No matching employees found. Try adjusting your search query or filters.
             </div>
           ) : (
@@ -358,15 +372,15 @@ export default function HrDashboardPage() {
               return (
                 <div
                   key={emp.employeeId}
-                  className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-4.5 sm:p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 group"
+                  className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-3.5 sm:p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 group"
                 >
                   {/* Column 1: Avatar + Name + ID + Email */}
                   <div
                     onClick={() => navigate(`/employees/${encodeURIComponent(emp.employeeId)}`)}
-                    className="flex items-center gap-3.5 min-w-[240px] cursor-pointer"
+                    className="flex items-center gap-3 min-w-[230px] cursor-pointer"
                   >
                     <div className="relative shrink-0">
-                      <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center font-black text-slate-600 text-sm">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center font-black text-slate-600 text-xs">
                         {emp.photoUrl ? (
                           <img src={emp.photoUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -375,22 +389,22 @@ export default function HrDashboardPage() {
                       </div>
                       {/* Online dot indicator */}
                       <div
-                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
                           !isInactive ? 'bg-[#10b981]' : 'bg-slate-400'
                         }`}
                       />
                     </div>
 
                     <div>
-                      <h3 className="font-black text-slate-900 text-sm group-hover:text-[#1e60ec] transition-colors">
+                      <h3 className="font-black text-slate-900 text-xs sm:text-sm group-hover:text-[#1e60ec] transition-colors">
                         {emp.name}
                       </h3>
-                      <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
-                        <span className="font-mono font-bold text-slate-500 text-[11px]">
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500">
+                        <span className="font-mono font-bold text-slate-500 text-[10px]">
                           {emp.employeeId}
                         </span>
                         <span>•</span>
-                        <span className="truncate max-w-[150px] sm:max-w-[200px] text-[11px] text-slate-400">
+                        <span className="truncate max-w-[140px] sm:max-w-[190px] text-[10px] text-slate-400">
                           {emp.email || '—'}
                         </span>
                       </div>
@@ -398,13 +412,13 @@ export default function HrDashboardPage() {
                   </div>
 
                   {/* Column 2: Department + Location/Plant */}
-                  <div className="min-w-[180px] space-y-1">
+                  <div className="min-w-[170px] space-y-0.5">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                      <Building2 size={13} className="text-slate-400 shrink-0" />
+                      <Building2 size={12} className="text-slate-400 shrink-0" />
                       <span className="truncate">{emp.department || 'General'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                      <MapPin size={12} className="text-slate-400 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">
+                      <MapPin size={11} className="text-slate-400 shrink-0" />
                       <span className="uppercase">
                         {emp.location || 'BHIWADI'} - {emp.plant || '4020'}
                       </span>
@@ -412,8 +426,8 @@ export default function HrDashboardPage() {
                   </div>
 
                   {/* Column 3: ASSIGNED ASSETS */}
-                  <div className="min-w-[200px] lg:flex-1">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
+                  <div className="min-w-[190px] lg:flex-1">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-1">
                       ASSIGNED ASSETS
                     </span>
                     {empAssets.length === 0 ? (
