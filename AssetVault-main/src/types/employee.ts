@@ -12,6 +12,14 @@ export interface Employee {
   /** Plant code from settings */
   plant: string;
   status: EmployeeStatus;
+  photoUrl?: string;
+  subDepartment?: string;
+  costCenter?: string;
+  joinDate?: string;
+  manager?: string;
+  employmentType?: string;
+  probationEnd?: string;
+  systemRole?: string;
   createdAt?: string;
   updatedAt?: string;
 }

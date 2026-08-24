@@ -127,6 +127,22 @@ export default function AppLayout() {
 
       {/* Navigation List */}
       <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+        {isHr && (
+          <NavLink
+            to="/hr-dashboard"
+            end
+            onClick={closeSidebar}
+            className={({ isActive }) => navClass({ isActive })}
+            title="HR Dashboard"
+          >
+            <div className="flex items-center gap-3">
+              <LayoutDashboard size={18} className="shrink-0 text-blue-600" />
+              <span className="font-black text-blue-700">HR Dashboard</span>
+            </div>
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
+          </NavLink>
+        )}
+
         {!hideAllDashboard && !isHr && (
           <NavLink
             to="/dashboard"
@@ -187,6 +203,16 @@ export default function AppLayout() {
             <div className="flex items-center gap-3">
               <UserCircle size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
               <span>Employees</span>
+            </div>
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
+          </NavLink>
+        )}
+
+        {!isHr && isUserAdmin && (
+          <NavLink to="/hr-dashboard" className={navClass} title="HR Operations" onClick={closeSidebar}>
+            <div className="flex items-center gap-3">
+              <Building2 size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
+              <span>HR Operations</span>
             </div>
             <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>

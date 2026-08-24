@@ -24,6 +24,8 @@ import MaintenancePage from './pages/MaintenancePage';
 import NewMaintenanceMachinePage from './pages/NewMaintenanceMachinePage';
 import MaintenanceReportPage from './pages/MaintenanceReportPage';
 
+import HrDashboardPage from './pages/HrDashboardPage';
+
 function AuthLoading() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center gap-4">
@@ -46,7 +48,7 @@ function LoginRoute() {
 function IndexRedirect() {
   const { user } = useApp();
   if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+    return <Navigate to="/hr-dashboard" replace />;
   }
   return <Navigate to="/dashboard" replace />;
 }
@@ -68,6 +70,7 @@ function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route index element={<IndexRedirect />} />
             <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="hr-dashboard" element={<HrDashboardPage />} />
             <Route path="assets/new" element={<NewAssetPage />} />
             <Route path="assets/:assetId" element={<AssetDetailPage />} />
             <Route path="assets/:assetId/edit" element={<EditAssetPage />} />

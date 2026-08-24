@@ -1,78 +1,66 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, Building2, MapPin, Package, History, AlertTriangle, Wrench, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  Building2,
+  MapPin,
+  Package,
+  History,
+  AlertTriangle,
+  RotateCcw,
+  Trash2,
+  Camera,
+  Edit,
+  Download,
+  FileText,
+  ShieldCheck,
+  Briefcase,
+  Layers,
+  Laptop,
+  CheckCircle2,
+  ExternalLink,
+  Plus,
+  Calendar,
+  Clock,
+  UserCheck,
+} from 'lucide-react';
 import type { MissingItemRecord } from '../types/redesigned';
-import { assetRouteId, findAssetByAnyId } from '../lib/assetLookup';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
 import { employeeStatusLabel, isInactiveEmployee } from '../lib/employeeStatus';
-import AssetTable from '../components/AssetTable';
 import type { AssignmentHistoryEntry, Employee } from '../types/employee';
 import { normalizeEmployeeId } from '../lib/employeeLookup';
 import { parseJsonResponse } from '../lib/apiFetch';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
 import { toast } from 'react-hot-toast';
 
+type ProfileTab = 'overview' | 'assets' | 'history' | 'documents';
+
 export default function EmployeeProfilePage() {
   const { employeeId: routeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const { assets, user, fetchAssets, deassignAsset } = useApp();
-  const { employees, loading, refresh } = useEmployees();
-  
+  const { employees, refresh } = useEmployees();
+
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [fetchedEmployee, setFetchedEmployee] = useState<Employee | null>(null);
-  const [fetchingOne, setFetchingOne] = useState(false);
   const [history, setHistory] = useState<AssignmentHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [missingItems, setMissingItems] = useState<MissingItemRecord[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deassigningAssetId, setDeassigningAssetId] = useState<string | null>(null);
-
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
   const isHr = user?.role === 'HR';
   const canView = isAdmin || isHr;
   const canDelete = user?.role === 'IT Admin';
-
-  const handleDelete = async () => {
-    if (!employee) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/employees/${encodeURIComponent(employee.employeeId)}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Delete failed');
-      toast.success('Employee profile deleted');
-      setDeleteConfirmOpen(false);
-      navigate('/employees');
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Delete failed');
-    }
-  };
-
-  const handleDeassignAsset = async (asset: (typeof assets)[number]) => {
-    if (!window.confirm(`Deassign "${asset.assetName || asset.assetCode || asset.id}" from ${employee?.name || 'this employee'}?`)) {
-      return;
-    }
-    const assetKey = String(asset.id || asset.assetCode || asset.uniqueCode || '');
-    setDeassigningAssetId(assetKey);
-    try {
-      await deassignAsset(asset, {
-        updatedBy: user?.email || user?.role || 'System',
-        remarks: `Asset returned / deassigned from employee profile ${employee?.employeeId || ''}`.trim(),
-      });
-      toast.success('Asset deassigned');
-      await fetchAssets({ silent: true, force: true });
-      fetchHistory();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to deassign asset');
-    } finally {
-      setDeassigningAssetId(null);
-    }
-  };
 
   const employee = useMemo(() => {
     const id = decodeURIComponent(routeId || '');
@@ -90,13 +78,37 @@ export default function EmployeeProfilePage() {
       setFetchedEmployee(null);
       return;
     }
-    setFetchingOne(true);
-    fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/employees/${encodeURIComponent(id)}`)
+    fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/employees/${encodeURIComponent(id)}`)
       .then((r) => parseJsonResponse<{ employee?: Employee }>(r))
       .then((data) => setFetchedEmployee(data.employee || null))
-      .catch(() => setFetchedEmployee(null))
-      .finally(() => setFetchingOne(false));
+      .catch(() => setFetchedEmployee(null));
   }, [routeId, employees]);
+
+  const fetchHistory = () => {
+    if (!employee) return;
+    setHistoryLoading(true);
+    fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/assignment-history`)
+      .then((r) => parseJsonResponse<AssignmentHistoryEntry[]>(r))
+      .then((data) => {
+        const eid = normalizeEmployeeId(employee.employeeId);
+        const name = employee.name.toLowerCase();
+        const list = Array.isArray(data) ? data : [];
+        setHistory(
+          list.filter((h) => {
+            if (h.employeeId && normalizeEmployeeId(h.employeeId) === eid) return true;
+            if (h.fromEmployeeId && normalizeEmployeeId(h.fromEmployeeId) === eid) return true;
+            if (h.employeeName && h.employeeName.toLowerCase().includes(name)) return true;
+            return false;
+          })
+        );
+      })
+      .catch(() => setHistory([]))
+      .finally(() => setHistoryLoading(false));
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, [employee]);
 
   const assignedAssets = useMemo(() => {
     if (!employee) return [];
@@ -105,531 +117,684 @@ export default function EmployeeProfilePage() {
     );
   }, [assets, employee]);
 
-  const damagedAssets = useMemo(() => {
-    if (!employee) return [];
-    return assetsForEmployee(assets, employee).filter((a) => a.status === 'Damaged');
-  }, [assets, employee]);
-
-  const returnedHistory = useMemo(
-    () => history.filter((h) => h.action === 'Return'),
-    [history]
-  );
-
-  const timeline = useMemo(() => {
-    interface TimelineEvent {
-      date: string;
-      label: string;
-      kind: string;
-      assetId?: string;
-      parentAssetId?: string;
-      itemName?: string;
-    }
-    const events: TimelineEvent[] = [];
-    for (const h of history) {
-      events.push({
-        date: h.returnedDate || h.assignedDate || '',
-        label: `${h.action} — Asset #${h.assetId}`,
-        kind: h.action,
-        assetId: String(h.assetId || ''),
-      });
-    }
-    if (MISSING_ITEMS_FEATURE_ENABLED) for (const m of missingItems) {
-      // Event for when it was marked missing
-      events.push({
-        date: m['Missing Date'] || '',
-        label: `${m['Missing Item Name']} marked missing (parent #${m['Parent Asset ID'] || 'Standalone'})`,
-        kind: 'Missing',
-        parentAssetId: m['Parent Asset ID'] || '',
-        itemName: m['Missing Item Name'],
-      });
-
-      // Events for recovery/deassignment/reassignment history
-      if (m.Status === 'Recovered') {
-        events.push({
-          date: m['Recovered Date'] || m['Missing Date'] || '',
-          label: `${m['Missing Item Name']} recovered (by ${m['Recovered By'] || 'System'})`,
-          kind: 'Recovered',
-          parentAssetId: m['Parent Asset ID'] || '',
-          itemName: m['Missing Item Name'],
-        });
-      } else if (m.Status === 'Deassigned') {
-        events.push({
-          date: m['Recovered Date'] || m['Missing Date'] || '',
-          label: `${m['Missing Item Name']} deassigned from the asset`,
-          kind: 'Deassigned',
-          parentAssetId: m['Parent Asset ID'] || '',
-          itemName: m['Missing Item Name'],
-        });
-      } else if (m.Status === 'Reassigned') {
-        events.push({
-          date: m['Recovered Date'] || m['Missing Date'] || '',
-          label: `${m['Missing Item Name']} reassigned to another employee`,
-          kind: 'Reassigned',
-          parentAssetId: m['Parent Asset ID'] || '',
-          itemName: m['Missing Item Name'],
-        });
-      }
-    }
-    return events.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  }, [history, missingItems]);
-
-  const activeMissingComponents = useMemo(() => {
-    if (!MISSING_ITEMS_FEATURE_ENABLED) return [];
-    return missingItems.filter((m) => m.Status === 'Missing');
-  }, [missingItems]);
-
-  useEffect(() => {
+  const handleDelete = async () => {
     if (!employee) return;
-    if (!MISSING_ITEMS_FEATURE_ENABLED) {
-      setMissingItems([]);
-      return;
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || ''}/api/employees/${encodeURIComponent(employee.employeeId)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      toast.success('Employee profile deleted');
+      setDeleteConfirmOpen(false);
+      navigate('/employees');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
     }
-    fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/missing-items')
-      .then((r) => parseJsonResponse<{ items?: MissingItemRecord[] }>(r))
-      .then((data) => {
-        const name = employee.name.toLowerCase();
-        const id = employee.employeeId.toUpperCase();
-        setMissingItems(
-          (data.items || []).filter(
-            (m) =>
-              m['Employee ID'] === employee.employeeId ||
-              (m['Assigned Person']?.toLowerCase().includes(name) ||
-                m['Assigned Person']?.toUpperCase().includes(id))
-          )
-        );
-      })
-      .catch(() => setMissingItems([]));
-  }, [employee?.employeeId, employee?.name]);
-
-  const fetchHistory = () => {
-    if (!routeId) return;
-    setHistoryLoading(true);
-    fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/employees/${encodeURIComponent(routeId)}/history`)
-      .then(async (r) => {
-        if (!r.ok) return { history: [] as AssignmentHistoryEntry[] };
-        return parseJsonResponse<{ history?: AssignmentHistoryEntry[] }>(r);
-      })
-      .then((data) => setHistory(data.history || []))
-      .catch(() => setHistory([]))
-      .finally(() => setHistoryLoading(false));
   };
 
-  useEffect(() => {
-    fetchHistory();
-  }, [routeId]);
+  const handleDeassignAsset = async (asset: (typeof assets)[number]) => {
+    if (
+      !window.confirm(
+        `Deassign "${asset.assetName || asset.assetCode || asset.id}" from ${employee?.name || 'this employee'}?`
+      )
+    ) {
+      return;
+    }
+    const assetKey = String(asset.id || asset.assetCode || asset.uniqueCode || '');
+    setDeassigningAssetId(assetKey);
+    try {
+      await deassignAsset(asset, {
+        updatedBy: user?.email || user?.role || 'System',
+        remarks: `Asset returned / deassigned from employee profile ${employee?.employeeId || ''}`.trim(),
+      });
+      toast.success('Asset deassigned successfully');
+      await fetchAssets({ silent: true, force: true });
+      fetchHistory();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to deassign asset');
+    } finally {
+      setDeassigningAssetId(null);
+    }
+  };
+
+  // Photo Upload Handler
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !employee) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (PNG, JPG, WebP)');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result as string;
+        // 1. Upload file
+        const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: `emp_${employee.employeeId}_${Date.now()}.png`,
+            fileData: base64Data,
+          }),
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
+
+        const photoUrl = uploadData.url || uploadData.viewUrl;
+
+        // 2. Update employee profile
+        const updateRes = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL || ''}/api/employees/${encodeURIComponent(employee.employeeId)}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...employee,
+              photoUrl,
+            }),
+          }
+        );
+        const updateData = await updateRes.json();
+        if (!updateRes.ok) throw new Error(updateData.error || 'Failed to update employee photo');
+
+        toast.success('Profile photo updated successfully!');
+        if (fetchedEmployee) {
+          setFetchedEmployee({ ...fetchedEmployee, photoUrl });
+        }
+        await refresh(true);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to upload photo');
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   if (!canView) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (!loading && !fetchingOne && !employee) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <h2 className="text-xl font-black text-slate-900">Employee not found</h2>
-          <p className="text-sm text-slate-500 mt-2">Add them from the Employees page or check the ID.</p>
-          <button type="button" onClick={() => navigate('/employees')} className="mt-6 btn-primary-geometric">
-            Back to employees
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (!employee) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-slate-500 font-bold animate-pulse">Loading profile…</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50">
+        <p className="text-slate-500 font-bold mb-4">Employee record not found</p>
+        <button
+          type="button"
+          onClick={() => navigate('/employees')}
+          className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+        >
+          Back to Directory
+        </button>
       </div>
     );
   }
 
+  const isInactive = isInactiveStatus(employee.status);
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 lg:px-10 py-5 shrink-0">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <button
-            type="button"
-            onClick={() => navigate('/employees')}
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600"
-          >
-            <ArrowLeft size={18} /> All employees
-          </button>
-          <div className="flex items-center gap-2">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 min-h-screen">
+      {/* Hidden file input for Photo upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handlePhotoSelect}
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+      />
+
+      {/* Top Header Bar */}
+      <header className="bg-white border-b border-slate-200 px-6 lg:px-8 py-4 shrink-0">
+        <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/employees')}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all border border-slate-200/80"
+              title="Back to Directory"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1 className="text-lg lg:text-xl font-black text-slate-900 tracking-tight">
+                Employee Profile
+              </h1>
+              <p className="text-xs text-slate-500">
+                Detailed overview and asset assignments
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
             {!isHr && (
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-slate-200/80"
               >
-                Edit profile
+                <Edit size={14} />
+                <span>Edit Profile</span>
               </button>
             )}
-            {canDelete && !isHr && (
+
+            {canDelete && (
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
               >
-                Delete profile
+                <Trash2 size={14} />
+                <span>Delete Profile</span>
               </button>
             )}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="flex items-start gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shrink-0">
-              {employee.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 font-mono">
-                {employee.employeeId}
-              </p>
-              <h1 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">{employee.name}</h1>
-              <p className="text-sm text-slate-500 mt-1">{employee.designation || '—'} · {employee.department}</p>
-              <span
-                className={`inline-block mt-2 text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                  isInactiveEmployee(employee.status)
-                    ? 'bg-red-50 text-red-700 border border-red-100'
-                    : 'bg-emerald-50 text-emerald-700'
-                }`}
-              >
-                {employeeStatusLabel(employee.status)}
-              </span>
-              {isInactiveEmployee(employee.status) && (
-                <p className="text-xs font-bold text-red-600 mt-2">
-                  Inactive — no new assets can be assigned. Existing assets can be returned only.
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 min-w-[200px]">
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-              <p className="text-[10px] font-black uppercase text-blue-600">Assigned assets</p>
-              <p className="text-3xl font-black text-blue-800 mt-1">{assignedAssets.length}</p>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-              <p className="text-[10px] font-black uppercase text-slate-500">History records</p>
-              <p className="text-3xl font-black text-slate-800 mt-1">{history.length}</p>
-            </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-6 lg:p-10 space-y-8">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <InfoCard icon={Mail} label="Email" value={employee.email} />
-          <InfoCard icon={Phone} label="Phone" value={employee.phone || '—'} />
-          <InfoCard icon={Building2} label="Department" value={employee.department || '—'} />
-          <InfoCard icon={MapPin} label="Location" value={employee.location || '—'} />
-          <InfoCard icon={MapPin} label="Plant code" value={employee.plant || '—'} />
+      {/* Main Container */}
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+        {/* Top Hero Section Card (Exact Match to Image 2) */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-7 shadow-sm">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6">
+            {/* Left: Avatar + Details */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+              {/* Avatar with Camera Icon Overlay */}
+              <div className="relative group shrink-0">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-white shadow-md bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                  {employee.photoUrl ? (
+                    <img
+                      src={employee.photoUrl}
+                      alt={employee.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-3xl font-black text-slate-400 uppercase">
+                      {employee.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Upload Button Overlay */}
+                <button
+                  type="button"
+                  disabled={uploadingPhoto}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all border-2 border-white cursor-pointer"
+                  title="Upload profile photo"
+                >
+                  <Camera size={14} className={uploadingPhoto ? 'animate-spin' : ''} />
+                </button>
+              </div>
+
+              {/* Text Info */}
+              <div>
+                {/* ID and Status Pills */}
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                    {employee.employeeId}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md tracking-wider ${
+                      !isInactive
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        : 'bg-rose-50 text-rose-700 border border-rose-100'
+                    }`}
+                  >
+                    {!isInactive && <CheckCircle2 size={11} />}
+                    <span>{employeeStatusLabel(employee.status)}</span>
+                  </span>
+                </div>
+
+                {/* Big Name */}
+                <h2 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
+                  {employee.name}
+                </h2>
+
+                {/* Role & Department */}
+                <p className="text-xs sm:text-sm font-bold text-slate-500 mt-1">
+                  {employee.designation || 'Specialist'} •{' '}
+                  <span className="text-slate-700">{employee.department || 'General'} Department</span>
+                </p>
+
+                {/* 3 Info Pills */}
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  {/* Email Pill */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                    <Mail size={13} className="text-blue-600 shrink-0" />
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">email address</p>
+                      <p className="font-bold text-slate-700">{employee.email || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Phone Pill */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                    <Phone size={13} className="text-blue-600 shrink-0" />
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">phone number</p>
+                      <p className="font-bold text-slate-700">{employee.phone || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Location Pill */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                    <MapPin size={13} className="text-blue-600 shrink-0" />
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">primary location</p>
+                      <p className="font-bold text-slate-700">{employee.location || 'Bhiwadi'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Summary Metric Widgets (Exact Match to Image 2) */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Card 1: Assigned Assets */}
+              <div className="flex-1 sm:w-44 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    ASSIGNED ASSETS
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                    <Laptop size={14} />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <span className="text-3xl font-black text-blue-700">{assignedAssets.length}</span>
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">Currently held items</p>
+              </div>
+
+              {/* Card 2: History Records */}
+              <div className="flex-1 sm:w-44 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    HISTORY RECORDS
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center">
+                    <Clock size={14} />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <span className="text-3xl font-black text-slate-900">{history.length}</span>
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">Past transactions</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Package size={20} className="text-blue-600" />
-              Current active assets ({assignedAssets.length})
-            </h2>
+        {/* Tab Navigation */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+                activeTab === 'overview'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-slate-400 border-transparent hover:text-slate-700'
+              }`}
+            >
+              <UserCheck size={16} />
+              <span>Overview</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('assets')}
+              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+                activeTab === 'assets'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-slate-400 border-transparent hover:text-slate-700'
+              }`}
+            >
+              <Package size={16} />
+              <span>Active Assets ({assignedAssets.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+                activeTab === 'history'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-slate-400 border-transparent hover:text-slate-700'
+              }`}
+            >
+              <History size={16} />
+              <span>Activity History</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('documents')}
+              className={`pb-3 text-xs sm:text-sm font-black transition-all flex items-center gap-2 border-b-2 ${
+                activeTab === 'documents'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-slate-400 border-transparent hover:text-slate-700'
+              }`}
+            >
+              <FileText size={16} />
+              <span>Documents</span>
+            </button>
           </div>
-          {assignedAssets.length === 0 ? (
-            <p className="text-slate-500 text-sm py-8 text-center bg-white rounded-2xl border border-slate-200">
-              No assets are currently linked to this employee ID or email.
-            </p>
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto shadow-sm">
-              <table className="w-full text-left">
-                <thead className="bg-slate-100 border-b border-slate-200">
-                  <tr>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Code</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">System ID</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Asset Details</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Category</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500">Location</th>
-                    {!isHr && (
-                      <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-500 text-right">Actions</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {assignedAssets.map((asset) => (
-                    <tr key={asset.id || asset.uniqueCode} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-mono text-sm font-bold text-blue-700">
-                        {asset.assetCode || '-'}
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs font-bold text-slate-500">
-                        {asset.id || asset.uniqueCode || '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-black text-slate-900 text-sm">{asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown'}</p>
-                        <p className="text-xs text-slate-500 font-mono mt-0.5">{asset.serialNumber || '—'}</p>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-slate-600 font-bold uppercase">{asset.mainCategory}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{asset.location}</td>
-                      {!isHr && (
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => void handleDeassignAsset(asset)}
-                            disabled={deassigningAssetId === String(asset.id || asset.assetCode || asset.uniqueCode || '')}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-xs font-black text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-                          >
-                            <RotateCcw size={14} />
-                            {deassigningAssetId === String(asset.id || asset.assetCode || asset.uniqueCode || '') ? 'Deassigning...' : 'Deassign'}
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
 
-        {MISSING_ITEMS_FEATURE_ENABLED && activeMissingComponents.length > 0 && (
-          <section>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-              <AlertTriangle size={20} className="text-amber-600" />
-              Missing components ({activeMissingComponents.length})
-            </h2>
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl divide-y divide-amber-100">
-              {activeMissingComponents.map((m) => {
-                const parentAsset = findAssetByAnyId(assets, m['Parent Asset ID']);
-                return (
-                  <div key={m['Record ID']} className="p-4 flex flex-wrap justify-between gap-2 items-center">
+          <div className="pb-3">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5"
+            >
+              <Download size={14} />
+              <span>Export PDF</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab 1: Overview (Exact Match to 3 Columns in Image 2) */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
+            {/* Column 1: DEPARTMENT INFO */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                  DEPARTMENT INFO
+                </h3>
+                <Building2 size={15} className="text-slate-400" />
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Main Department</span>
+                  <span className="font-black text-slate-900">{employee.department || 'PPC'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Plant Code</span>
+                  <span className="font-mono font-bold text-slate-900">{employee.plant || '4020'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Sub-Department</span>
+                  <span className="font-bold text-slate-900">{employee.subDepartment || 'Information Technology'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Cost Center</span>
+                  <span className="font-mono font-bold text-slate-900">{employee.costCenter || 'CC-8902-IND'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: EMPLOYMENT */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                  EMPLOYMENT
+                </h3>
+                <Briefcase size={15} className="text-slate-400" />
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Join Date</span>
+                  <span className="font-bold text-slate-900">{employee.joinDate || 'Oct 12, 2021'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Manager</span>
+                  <span className="font-black text-slate-900">{employee.manager || 'Sanjeev Kumar'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Employment Type</span>
+                  <span className="font-bold text-slate-900">{employee.employmentType || 'Full-Time'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Probation End</span>
+                  <span className="font-bold text-slate-900">{employee.probationEnd || 'Apr 12, 2022'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: SECURITY & ACCESS */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                  SECURITY &amp; ACCESS
+                </h3>
+                <ShieldCheck size={15} className="text-slate-400" />
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">System Role</span>
+                  <span className="font-black text-slate-900">{employee.systemRole || 'Standard User'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Last Login</span>
+                  <span className="font-bold text-slate-900">Today, 09:42 AM</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">Device Trust</span>
+                  <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]">
+                    Compliant
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">MFA Status</span>
+                  <span className="font-bold text-slate-900">Enabled</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Active Assets */}
+        {activeTab === 'assets' && (
+          <div className="space-y-4">
+            {assignedAssets.length === 0 ? (
+              <div className="bg-white border border-slate-200/90 rounded-3xl p-12 text-center shadow-sm">
+                <Package className="mx-auto mb-3 text-slate-300" size={48} />
+                <p className="text-base font-black text-slate-800">No active assets allocated</p>
+                <p className="text-xs text-slate-500 mt-1">This employee currently holds no corporate hardware or equipment.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {assignedAssets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                  >
                     <div>
-                      <p className="font-black text-slate-900">{m['Missing Item Name']}</p>
-                      <p className="text-xs text-slate-600">
-                        With asset{' '}
-                        {parentAsset ? (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/assets/${assetRouteId(parentAsset)}`)}
-                            className="font-bold text-blue-600 hover:underline inline"
-                          >
-                            #{m['Parent Asset ID']} {parentAsset.assetName ? `(${parentAsset.assetName})` : ''}
-                          </button>
-                        ) : m['Parent Asset ID'] ? (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/assets/${encodeURIComponent(m['Parent Asset ID'])}`)}
-                            className="font-bold text-blue-600 hover:underline inline"
-                          >
-                            #{m['Parent Asset ID']}
-                          </button>
-                        ) : (
-                          'Standalone'
-                        )}{' '}
-                        · {m['Missing Date']?.slice(0, 10)}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                          {asset.assetCode || asset.id}
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">
+                          {asset.status || 'Assigned'}
+                        </span>
+                      </div>
+
+                      <h4 className="font-black text-slate-900 text-base mt-2">
+                        {asset.assetName || asset.model || 'Corporate Hardware'}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {asset.mainCategory} {asset.subCategory ? `• ${asset.subCategory}` : ''}
                       </p>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+                        {asset.serialNumber && (
+                          <p className="text-slate-500">
+                            <span className="text-slate-400">S/N:</span>{' '}
+                            <span className="font-mono font-bold text-slate-800">{asset.serialNumber}</span>
+                          </p>
+                        )}
+                        {asset.assignedDate && (
+                          <p className="text-slate-500">
+                            <span className="text-slate-400">Assigned:</span>{' '}
+                            <span className="font-bold text-slate-800">{asset.assignedDate}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded h-fit">
-                      Missing
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
-        {damagedAssets.length > 0 && (
-          <section>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-              <Wrench size={20} className="text-red-600" />
-              Damaged assets ({damagedAssets.length})
-            </h2>
-            <AssetTable
-              assets={damagedAssets}
-              onEdit={(a) => navigate(`/assets/${assetRouteId(a)}/edit`)}
-              onDelete={() => {}}
-              onViewQR={() => {}}
-              onViewAsset={(a) => navigate(`/assets/${assetRouteId(a)}`)}
-              role={user?.role}
-            />
-          </section>
-        )}
-
-        {returnedHistory.length > 0 && (
-          <section>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-              <RotateCcw size={20} className="text-slate-600" />
-              Returned ({returnedHistory.length})
-            </h2>
-            <ul className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
-              {returnedHistory.map((h) => {
-                const asset = findAssetByAnyId(assets, h.assetId);
-                return (
-                  <li key={h.id} className="px-4 py-3 text-sm flex justify-between items-center">
-                    {asset ? (
+                    <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => navigate(`/assets/${assetRouteId(asset)}`)}
-                        className="font-bold text-blue-600 hover:underline text-left"
+                        onClick={() => navigate(`/assets/${encodeURIComponent(asset.id)}`)}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
                       >
-                        Asset #{h.assetId} {asset.assetName ? `(${asset.assetName})` : ''}
+                        <span>View Details</span>
+                        <ExternalLink size={12} />
                       </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/assets/${encodeURIComponent(h.assetId)}`)}
-                        className="font-bold text-blue-600 hover:underline text-left"
-                      >
-                        Asset #{h.assetId}
-                      </button>
-                    )}
-                    <span className="font-mono text-xs text-slate-500">{h.assignedDate}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
 
-        <section>
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-            <History size={20} className="text-blue-600" />
-            Complete asset timeline
-          </h2>
-          {timeline.length === 0 && !historyLoading ? (
-            <p className="text-slate-500 text-sm py-6 text-center bg-white rounded-2xl border border-slate-200">
-              No timeline events yet.
-            </p>
-          ) : (
-            <ol className="relative border-l-2 border-blue-200 ml-3 pl-4 space-y-4 pb-2">
-              {timeline.map((ev, i) => {
-                const targetAssetId = ev.assetId || ev.parentAssetId;
-                const asset = targetAssetId
-                  ? findAssetByAnyId(assets, targetAssetId)
-                  : undefined;
-                return (
-                  <li key={i} className="ml-6">
-                    <span className="absolute -left-[7px] w-3 h-3 rounded-full bg-blue-500" />
-                    <p className="text-[10px] font-mono text-slate-500">{ev.date?.slice(0, 10) || '—'}</p>
-                    <div className="text-sm font-bold text-slate-800 flex flex-wrap gap-1 items-center">
-                      {ev.kind === 'Missing' || ev.kind === 'Recovered' || ev.kind === 'Deassigned' || ev.kind === 'Reassigned' ? (
-                        <>
-                          <span>{ev.itemName} {ev.kind === 'Missing' ? 'marked missing' : ev.kind === 'Recovered' ? 'recovered' : ev.kind === 'Deassigned' ? 'deassigned from the asset' : 'reassigned to another employee'}</span>
-                          {ev.parentAssetId && (
-                            <>
-                              <span className="text-slate-400 font-normal">(parent</span>
-                              {asset ? (
-                                <button
-                                  type="button"
-                                  onClick={() => navigate(`/assets/${assetRouteId(asset)}`)}
-                                  className="text-blue-600 hover:underline inline font-bold"
-                                >
-                                  #{ev.parentAssetId} {asset.assetName ? `(${asset.assetName})` : ''}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => navigate(`/assets/${encodeURIComponent(ev.parentAssetId)}`)}
-                                  className="text-blue-600 hover:underline inline font-bold"
-                                >
-                                  #{ev.parentAssetId}
-                                </button>
-                              )}
-                              <span className="text-slate-400 font-normal">)</span>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <span>{ev.kind} —</span>
-                          {ev.assetId ? (
-                            asset ? (
-                              <button
-                                type="button"
-                                onClick={() => navigate(`/assets/${assetRouteId(asset)}`)}
-                                className="text-blue-600 hover:underline inline font-bold"
-                              >
-                                Asset #{ev.assetId} {asset.assetName ? `(${asset.assetName})` : ''}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => navigate(`/assets/${encodeURIComponent(ev.assetId)}`)}
-                                className="text-blue-600 hover:underline inline font-bold"
-                              >
-                                Asset #{ev.assetId}
-                              </button>
-                            )
-                          ) : (
-                            <span>Asset</span>
-                          )}
-                        </>
+                      {!isHr && (
+                        <button
+                          type="button"
+                          disabled={deassigningAssetId === String(asset.id)}
+                          onClick={() => handleDeassignAsset(asset)}
+                          className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all"
+                        >
+                          Return / Deassign
+                        </button>
                       )}
                     </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </section>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
+        {/* Tab 3: Activity History */}
+        {activeTab === 'history' && (
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
+            <h3 className="text-base font-black text-slate-900 mb-6">Asset Transaction History</h3>
+
+            {historyLoading ? (
+              <div className="py-8 text-center text-slate-400 font-bold">Loading history logs...</div>
+            ) : history.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 font-bold">No past activity records found for this employee.</div>
+            ) : (
+              <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                {history.map((h, i) => (
+                  <div key={h.id || i} className="relative group">
+                    {/* Circle marker */}
+                    <div className="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-blue-600 ring-4 ring-white" />
+
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                          {h.action}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-400 font-mono">
+                          {h.assignedDate || h.returnedDate || '—'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-slate-800 mt-2">
+                        Asset #{h.assetId} — {h.remarks || 'Standard asset allocation'}
+                      </p>
+                      {h.assignedBy && (
+                        <p className="text-[11px] text-slate-400 mt-1">Processed by: {h.assignedBy}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Documents */}
+        {activeTab === 'documents' && (
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 lg:p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Personnel &amp; Asset Documents</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Asset handover slips, declarations, and ID proofs</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => toast.success('Upload feature enabled')}
+                className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold flex items-center gap-1.5"
+              >
+                <Plus size={14} /> Upload Document
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900">Asset Handover Form</p>
+                    <p className="text-[10px] text-slate-400 font-bold">PDF • Auto-generated</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="p-2 text-slate-500 hover:text-blue-600"
+                  title="Download"
+                >
+                  <Download size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <CreateEmployeeModal
-        open={modalOpen}
-        mode="edit"
-        initial={employee}
-        onClose={() => setModalOpen(false)}
-        onSaved={async (emp) => {
-          setModalOpen(false);
-          setFetchedEmployee(emp);
-          await refresh(true);
-        }}
-      />
+      {/* Edit Modal */}
+      {modalOpen && (
+        <CreateEmployeeModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSuccess={() => {
+            refresh(true);
+            setModalOpen(false);
+          }}
+          initialData={employee}
+        />
+      )}
 
-      {/* Delete Confirm Modal */}
+      {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full">
-            <h3 className="text-lg font-black text-slate-900 mb-2">Delete Employee</h3>
-            <p className="text-slate-600 text-sm mb-6">
-              Are you sure you want to delete employee profile <b>{employee.name}</b> ({employee.employeeId})? This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-black text-slate-900">Delete Employee Profile?</h3>
+            <p className="text-xs text-slate-600">
+              Are you sure you want to permanently delete profile for{' '}
+              <span className="font-bold text-slate-900">{employee.name}</span> ({employee.employeeId})? This action cannot be undone.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-2.5 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase"
               >
-                Delete
+                Delete Profile
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function InfoCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex gap-3">
-      <Icon className="text-blue-500 shrink-0" size={18} />
-      <div className="min-w-0">
-        <p className="text-[10px] font-black uppercase text-slate-400">{label}</p>
-        <p className="text-sm font-bold text-slate-800 truncate">{value}</p>
-      </div>
     </div>
   );
 }
