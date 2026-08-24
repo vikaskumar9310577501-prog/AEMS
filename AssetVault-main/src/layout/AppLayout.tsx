@@ -392,7 +392,7 @@ export default function AppLayout() {
             id="portal-header-root"
             className="flex-1 h-full flex items-center justify-end gap-3 min-w-0"
           >
-            {!isDashboard && !isMaintenance && (
+            {!isDashboard && !isMaintenance && location.pathname !== '/hr-dashboard' && (
               <div className="flex items-center gap-2 text-white text-xs font-bold">
                 <span className="hidden sm:inline text-blue-200/80 font-medium">{user.email}</span>
                 <span className="px-2.5 py-0.5 rounded-md bg-white/15 text-white border border-white/25 text-[10px] uppercase font-black tracking-wider">
@@ -405,7 +405,7 @@ export default function AppLayout() {
 
         {/* Dynamic Nested Routed Page */}
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          <Outlet />
+          <Outlet context={{ headerPortalNode }} />
         </main>
       </div>
     </div>
