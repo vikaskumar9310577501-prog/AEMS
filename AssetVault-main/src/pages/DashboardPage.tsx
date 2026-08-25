@@ -47,6 +47,7 @@ import AssetTable, { AssetViewMode } from '../components/AssetTable';
 import QRCodeDisplay from '../components/QRCodeDisplay';
 import BulkQRPrintModal from '../components/BulkQRPrintModal';
 import DeleteAssetModal from '../components/DeleteAssetModal';
+import AvailableAssetsModal from '../components/AvailableAssetsModal';
 import { AssetTableSkeleton } from '../components/LoadingSkeleton';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
@@ -274,6 +275,7 @@ function DashboardPageContent() {
   const [summaryCollapsed, setSummaryCollapsed] = useState(true);
   const [viewingQR, setViewingQR] = useState<Asset | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
+  const [showAvailableModal, setShowAvailableModal] = useState(false);
 
   // Dashboard view mode
   const [viewMode, setViewMode] = useState<AssetViewMode>(() => {
@@ -1026,11 +1028,14 @@ function DashboardPageContent() {
 
           {/* Card 3: AVAILABLE */}
           <div
-            onClick={() => setSelectedStatus('Available')}
+            onClick={() => {
+              setSelectedStatus('Available');
+              setShowAvailableModal(true);
+            }}
             className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
               selectedStatus === 'Available'
                 ? 'border-emerald-500 ring-2 ring-emerald-500/20'
-                : 'border-slate-200/90 hover:border-emerald-200'
+                : 'border-slate-200/90 hover:border-emerald-300'
             }`}
           >
             <div className="flex justify-between items-start">
@@ -1041,12 +1046,22 @@ function DashboardPageContent() {
                 <h3 className="text-3xl font-black text-emerald-600 mt-1.5 tracking-tight">
                   {dashboardAvailableCount}
                 </h3>
+                <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                  Assets Available
+                </p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
             </div>
-            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === 'Available' ? 'bg-emerald-500' : 'bg-transparent group-hover:bg-emerald-200'} transition-all`} />
+
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-600 group-hover:underline flex items-center gap-1">
+                Click to View →
+              </span>
+            </div>
+
+            <div className={`mt-2 -mx-5 -mb-5 h-1 ${selectedStatus === 'Available' ? 'bg-emerald-500' : 'bg-transparent group-hover:bg-emerald-400'} transition-all`} />
           </div>
 
           {/* Card 4: MAINTENANCE / EXPIRY */}
@@ -1378,6 +1393,14 @@ function DashboardPageContent() {
       >
         <QrCode size={22} className="text-white" />
       </button>
+
+      {/* Available Assets Modal (Interactive View with Dynamic Category Counts) */}
+      <AvailableAssetsModal
+        isOpen={showAvailableModal}
+        onClose={() => setShowAvailableModal(false)}
+        assets={assets}
+        onSelectAsset={(asset) => navigate(`/assets/${assetRouteId(asset)}`)}
+      />
 
     </div>
   );
