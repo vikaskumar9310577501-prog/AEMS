@@ -346,10 +346,10 @@ export default function AppLayout() {
             {/* White Pill Container for PG Logo */}
             <div
               onClick={() => navigate(isHr ? '/hr-dashboard' : '/dashboard')}
-              className="bg-white px-3 py-1 rounded-xl flex items-center justify-center shadow-xs shrink-0 h-9 cursor-pointer hover:opacity-95 transition-opacity"
+              className="bg-white px-2.5 sm:px-3 py-1 rounded-xl flex items-center justify-center shadow-xs shrink-0 h-9 cursor-pointer hover:opacity-95 transition-opacity"
               title="Home"
             >
-              <img src={LOGO_SRC} alt="PG Logo" className="h-6 w-auto object-contain" />
+              <img src={LOGO_SRC} alt="PG Logo" className="h-5 sm:h-6 w-auto object-contain" />
             </div>
 
             {/* A.E.M.S Brand Title with Underline and Subtitle */}
@@ -358,18 +358,18 @@ export default function AppLayout() {
               className="flex flex-col justify-center cursor-pointer select-none shrink-0"
             >
               <div className="border-b border-blue-300/40 pb-0.5">
-                <span className="font-black text-white text-base sm:text-lg tracking-wider leading-none font-mono">
+                <span className="font-black text-white text-sm sm:text-base md:text-lg tracking-wider leading-none font-mono">
                   A.E.M.S
                 </span>
               </div>
-              <span className="text-[10px] text-white/95 font-bold tracking-tight leading-tight mt-1 whitespace-nowrap">
+              <span className="text-[9px] sm:text-[10px] text-white/95 font-bold tracking-tight leading-tight mt-0.5 whitespace-nowrap hidden min-[480px]:inline">
                 Asset Entry Management System
               </span>
             </div>
 
             {/* Vertical Divider & Current Page Name */}
-            <div className="h-7 w-[1px] bg-blue-300/40 mx-2 shrink-0" />
-            <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate">
+            <div className="h-6 w-[1px] bg-blue-300/40 mx-1.5 sm:mx-2 shrink-0 hidden sm:block" />
+            <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate hidden sm:inline-block max-w-[160px] md:max-w-none">
               {location.pathname === '/hr-dashboard'
                 ? 'HR Dashboard'
                 : isDashboard

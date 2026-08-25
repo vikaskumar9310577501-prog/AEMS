@@ -159,9 +159,9 @@ export default function AssetTable({
         return "bg-amber-50 text-amber-700 border-amber-200";
       case "Damaged":
       case "Lost":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-rose-600 text-white border-rose-600 animate-pulse font-black shadow-xs";
       case "Scrap":
-        return "bg-slate-100 text-slate-700 border-slate-300";
+        return "bg-slate-800 text-white border-slate-900";
       case "Sold":
         return "bg-purple-50 text-purple-700 border-purple-200";
       default:
@@ -458,7 +458,7 @@ export default function AssetTable({
                   <div className="absolute bottom-3 left-3 z-10">
                     <span
                       className={cn(
-                        "text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider shadow-md backdrop-blur-md inline-block",
+                        "text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider shadow-md backdrop-blur-md inline-flex items-center gap-1.5",
                         statusLabel === "Available"
                           ? "bg-emerald-600 text-white shadow-emerald-900/20"
                           : statusLabel === "Assigned" || statusLabel === "In Use"
@@ -466,10 +466,16 @@ export default function AssetTable({
                           : statusLabel === "Under Maintenance"
                           ? "bg-amber-500 text-white shadow-amber-900/20"
                           : statusLabel === "Damaged" || statusLabel === "Lost"
-                          ? "bg-rose-600 text-white shadow-rose-900/20"
+                          ? "bg-rose-600 text-white shadow-rose-900/40 animate-pulse ring-2 ring-white/60"
                           : "bg-slate-700 text-white shadow-slate-900/20"
                       )}
                     >
+                      {(statusLabel === "Damaged" || statusLabel === "Lost") && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                        </span>
+                      )}
                       {statusLabel}
                     </span>
                   </div>

@@ -110,6 +110,13 @@ export default function AssetDetails({
     asset.status?.toLowerCase() === "damaged" ||
     (asset.status?.toLowerCase() === "available" && !!asset.employeeId);
 
+  const isDamagedAsset =
+    asset.status?.toLowerCase() === "damaged" ||
+    asset.status?.toLowerCase() === "under repair" ||
+    asset.status?.toLowerCase() === "scrap" ||
+    asset.status?.toLowerCase() === "lost" ||
+    asset.status?.toLowerCase() === "missing";
+
   const handleDeassign = async () => {
     if (!isAssignedAsset || deassigning) return;
     if (!window.confirm("Deassign this asset from the current employee and mark it available?")) return;
@@ -266,7 +273,21 @@ export default function AssetDetails({
               </span>
             )}
             {asset.status && (
-              <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded uppercase">
+              <span
+                className={`text-[10px] font-black px-2.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1.5 ${
+                  isDamagedAsset
+                    ? "bg-rose-600 text-white animate-pulse shadow-md shadow-rose-500/30 ring-2 ring-rose-400"
+                    : asset.status === "Assigned"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-emerald-100 text-emerald-800"
+                }`}
+              >
+                {isDamagedAsset && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                  </span>
+                )}
                 {displayAssetStatus(asset.status)}
               </span>
             )}
@@ -374,6 +395,35 @@ export default function AssetDetails({
 
   const body = (
     <div className={`flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 ${isPage ? "" : ""}`}>
+      {/* Blinking Critical Alert Banner for Damaged / Under Repair / Scrap Assets */}
+      {isDamagedAsset && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-600/15 via-rose-500/10 to-rose-600/5 border-2 border-rose-500 shadow-xl shadow-rose-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <AlertTriangle size={24} className="animate-bounce text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600"></span>
+                </span>
+                <h4 className="text-sm sm:text-base font-black uppercase text-rose-900 tracking-wide truncate">
+                  CRITICAL ALERT: {asset.status?.toUpperCase() || "DAMAGED"} ASSET
+                </h4>
+              </div>
+              <p className="text-xs text-rose-700 font-bold mt-1">
+                This asset is currently classified as <strong>{asset.status || "Damaged"}</strong>. It is flagged and quarantined from active employee assignment until repaired or inspected.
+              </p>
+            </div>
+          </div>
+          <span className="px-3.5 py-1.5 bg-rose-600 text-white text-xs font-black rounded-xl uppercase tracking-wider shrink-0 shadow-sm border border-rose-400 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span>DAMAGED / UNDER REPAIR</span>
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl">
         <p className="text-xs font-bold text-blue-800">Tap the QR code to open the scan page (PDF).</p>
         <button
@@ -401,8 +451,12 @@ export default function AssetDetails({
           }
           value={asset.serialNumber}
         />
-        <Field label="Condition" value={asset.condition || "Good"} color="text-amber-600" />
-        <Field label="Status" value={displayAssetStatus(asset.status)} color="text-emerald-600 font-bold" />
+        <Field label="Condition" value={asset.condition || "Good"} color={isDamagedAsset ? "text-rose-600 font-bold" : "text-amber-600"} />
+        <Field
+          label="Status"
+          value={displayAssetStatus(asset.status)}
+          color={isDamagedAsset ? "text-rose-600 font-black animate-pulse uppercase" : "text-emerald-600 font-bold"}
+        />
         {asset.accountAssetCode && (
           <Field label="Account Asset Code" value={asset.accountAssetCode} />
         )}
