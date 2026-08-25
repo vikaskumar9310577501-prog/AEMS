@@ -973,12 +973,12 @@ function DashboardPageContent() {
       )}
 
       {/* Top 5-Column Modern KPI Cards Bar */}
-      <div className="px-4 lg:px-8 pt-5 pb-3 shrink-0">
-        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-4 ${isSoftwareCategory ? 'lg:grid-cols-5' : 'lg:grid-cols-5'}`}>
+      <div className="px-4 lg:px-6 pt-3.5 pb-2 shrink-0">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3`}>
           {/* Card 1: TOTAL ASSETS */}
           <div
             onClick={() => setSelectedStatus('All')}
-            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+            className={`group cursor-pointer bg-white border rounded-xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
               selectedStatus === 'All'
                 ? 'border-blue-500 ring-2 ring-blue-500/20'
                 : 'border-slate-200/90 hover:border-blue-200'
@@ -986,25 +986,25 @@ function DashboardPageContent() {
           >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {selectedCategory === 'Software / License Assets' ? 'TOTAL SOFTWARE' : 'TOTAL ASSETS'}
                 </p>
-                <h3 className="text-3xl font-black text-slate-900 mt-1.5 tracking-tight">
+                <h3 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">
                   {locationPlantFilteredAssets.length}
                 </h3>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
-                <Boxes className="w-5 h-5" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
+                <Boxes className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
               </div>
             </div>
             {/* Active Indicator Line */}
-            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === 'All' ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200'} transition-all`} />
+            <div className={`mt-2.5 -mx-3.5 sm:-mx-4 -mb-3.5 sm:-mb-4 h-1 ${selectedStatus === 'All' ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200'} transition-all`} />
           </div>
 
           {/* Card 2: ASSIGNED / IN USE */}
           <div
             onClick={() => setSelectedStatus('Assigned')}
-            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+            className={`group cursor-pointer bg-white border rounded-xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
               selectedStatus === 'Assigned'
                 ? 'border-blue-500 ring-2 ring-blue-500/20'
                 : 'border-slate-200/90 hover:border-blue-200'
@@ -1012,18 +1012,18 @@ function DashboardPageContent() {
           >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   ASSIGNED / IN USE
                 </p>
-                <h3 className="text-3xl font-black text-blue-600 mt-1.5 tracking-tight">
+                <h3 className="text-2xl font-black text-blue-600 mt-1 tracking-tight">
                   {dashboardAssignedCount}
                 </h3>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
-                <User className="w-5 h-5" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
+                <User className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
               </div>
             </div>
-            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === 'Assigned' ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200'} transition-all`} />
+            <div className={`mt-2.5 -mx-3.5 sm:-mx-4 -mb-3.5 sm:-mb-4 h-1 ${selectedStatus === 'Assigned' ? 'bg-blue-600' : 'bg-transparent group-hover:bg-blue-200'} transition-all`} />
           </div>
 
           {/* Card 3: AVAILABLE */}
@@ -1032,7 +1032,7 @@ function DashboardPageContent() {
               setSelectedStatus('Available');
               setShowAvailableModal(true);
             }}
-            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+            className={`group cursor-pointer bg-white border rounded-xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
               selectedStatus === 'Available'
                 ? 'border-emerald-500 ring-2 ring-emerald-500/20'
                 : 'border-slate-200/90 hover:border-emerald-300'
@@ -1040,34 +1040,34 @@ function DashboardPageContent() {
           >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   AVAILABLE
                 </p>
-                <h3 className="text-3xl font-black text-emerald-600 mt-1.5 tracking-tight">
+                <h3 className="text-2xl font-black text-emerald-600 mt-1 tracking-tight">
                   {dashboardAvailableCount}
                 </h3>
-                <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
                   Assets Available
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                <CheckCircle2 className="w-5 h-5" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
               </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-600 group-hover:underline flex items-center gap-1">
+            <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-emerald-600 group-hover:underline flex items-center gap-0.5">
                 Click to View →
               </span>
             </div>
 
-            <div className={`mt-2 -mx-5 -mb-5 h-1 ${selectedStatus === 'Available' ? 'bg-emerald-500' : 'bg-transparent group-hover:bg-emerald-400'} transition-all`} />
+            <div className={`mt-1.5 -mx-3.5 sm:-mx-4 -mb-3.5 sm:-mb-4 h-1 ${selectedStatus === 'Available' ? 'bg-emerald-500' : 'bg-transparent group-hover:bg-emerald-400'} transition-all`} />
           </div>
 
           {/* Card 4: MAINTENANCE / EXPIRY */}
           <div
             onClick={() => setSelectedStatus(maintenanceCardStatus)}
-            className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+            className={`group cursor-pointer bg-white border rounded-xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
               selectedStatus === maintenanceCardStatus
                 ? 'border-amber-500 ring-2 ring-amber-500/20'
                 : 'border-slate-200/90 hover:border-amber-200'
@@ -1075,32 +1075,32 @@ function DashboardPageContent() {
           >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {isSoftwareCategory ? 'EXPIRY' : 'MAINTENANCE'}
                 </p>
-                <h3 className="text-3xl font-black text-amber-600 mt-1.5 tracking-tight">
+                <h3 className="text-2xl font-black text-amber-600 mt-1 tracking-tight">
                   {dashboardMaintenanceOrExpiryCount}
                 </h3>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
-                <AlertTriangle className="w-5 h-5" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
+                <AlertTriangle className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
               </div>
             </div>
-            <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === maintenanceCardStatus ? 'bg-amber-500' : 'bg-transparent group-hover:bg-amber-200'} transition-all`} />
+            <div className={`mt-2.5 -mx-3.5 sm:-mx-4 -mb-3.5 sm:-mb-4 h-1 ${selectedStatus === maintenanceCardStatus ? 'bg-amber-500' : 'bg-transparent group-hover:bg-amber-200'} transition-all`} />
           </div>
 
           {/* Card 5: DAMAGED / SCRAP */}
           {!isSoftwareCategory && (
             <div
               onClick={() => navigate('/damaged-scrap')}
-              className="group cursor-pointer bg-white border border-slate-200/90 hover:border-rose-200 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between text-left"
+              className="group cursor-pointer bg-white border border-slate-200/90 hover:border-rose-200 rounded-xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between text-left"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-rose-500">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">
                     SCRAPPED
                   </p>
-                  <h3 className="text-3xl font-black text-rose-600 mt-1.5 tracking-tight">
+                  <h3 className="text-2xl font-black text-rose-600 mt-1 tracking-tight">
                     {damagedStats.activeCount}
                   </h3>
                   <button
@@ -1108,23 +1108,23 @@ function DashboardPageContent() {
                       e.stopPropagation();
                       navigate('/damaged-scrap');
                     }}
-                    className="text-[10px] text-rose-500 font-bold hover:text-rose-700 transition-colors mt-1 block"
+                    className="text-[9px] text-rose-500 font-bold hover:text-rose-700 transition-colors mt-0.5 block"
                   >
                     View components →
                   </button>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm">
-                  <Trash2 className="w-5 h-5" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shadow-xs">
+                  <Trash2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                 </div>
               </div>
-              <div className="mt-3 -mx-5 -mb-5 h-1 bg-transparent group-hover:bg-rose-200 transition-all" />
+              <div className="mt-2.5 -mx-3.5 sm:-mx-4 -mb-3.5 sm:-mb-4 h-1 bg-transparent group-hover:bg-rose-200 transition-all" />
             </div>
           )}
 
           {isSoftwareCategory && (
             <div
               onClick={() => setSelectedStatus(renewableSoftwareCardStatus)}
-              className={`group cursor-pointer bg-white border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+              className={`group cursor-pointer bg-white border rounded-xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
                 selectedStatus === renewableSoftwareCardStatus
                   ? 'border-violet-500 ring-2 ring-violet-500/20'
                   : 'border-slate-200/90 hover:border-violet-200'
@@ -1132,18 +1132,18 @@ function DashboardPageContent() {
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     RENEWABLE DATE
                   </p>
-                  <h3 className="text-3xl font-black text-violet-700 mt-1.5 tracking-tight">
+                  <h3 className="text-2xl font-black text-violet-700 mt-1 tracking-tight">
                     {dashboardRenewableSoftwareCount}
                   </h3>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shadow-sm">
-                  <AlertCircle className="w-5 h-5" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shadow-xs">
+                  <AlertCircle className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                 </div>
               </div>
-              <div className={`mt-3 -mx-5 -mb-5 h-1 ${selectedStatus === renewableSoftwareCardStatus ? 'bg-violet-600' : 'bg-transparent group-hover:bg-violet-200'} transition-all`} />
+              <div className={`mt-2.5 -mx-3.5 sm:-mx-4 -mb-3.5 sm:-mb-4 h-1 ${selectedStatus === renewableSoftwareCardStatus ? 'bg-violet-600' : 'bg-transparent group-hover:bg-violet-200'} transition-all`} />
             </div>
           )}
         </div>

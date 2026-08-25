@@ -367,29 +367,31 @@ export default function AppLayout() {
               </span>
             </div>
 
-            {/* Vertical Divider & Current Page Name */}
-            <div className="h-6 w-[1px] bg-blue-300/40 mx-1.5 sm:mx-2 shrink-0 hidden sm:block" />
-            <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate hidden sm:inline-block max-w-[160px] md:max-w-none">
-              {location.pathname === '/hr-dashboard'
-                ? 'HR Dashboard'
-                : isDashboard
-                ? selectedCategory === 'All'
-                  ? 'Asset Inventory'
-                  : selectedCategory
-                : location.pathname.startsWith('/employees')
-                ? 'Employee Directory'
-                : location.pathname.startsWith('/maintenance')
-                ? 'Prevention / Maintenance'
-                : location.pathname.startsWith('/damaged-scrap')
-                ? 'Damaged & Scrap'
-                : location.pathname.startsWith('/missing')
-                ? 'Missing Items'
-                : location.pathname.startsWith('/users')
-                ? 'User Management'
-                : location.pathname.startsWith('/settings')
-                ? 'System Settings'
-                : 'Asset Management'}
-            </span>
+            {/* Vertical Divider & Current Page Name (Omitted on main Asset Inventory dashboard per user request) */}
+            {!(isDashboard && selectedCategory === 'All') && (
+              <>
+                <div className="h-6 w-[1px] bg-blue-300/40 mx-1.5 sm:mx-2 shrink-0 hidden sm:block" />
+                <span className="text-white font-bold text-xs sm:text-sm tracking-wide truncate hidden sm:inline-block max-w-[160px] md:max-w-none">
+                  {location.pathname === '/hr-dashboard'
+                    ? 'HR Dashboard'
+                    : isDashboard
+                    ? selectedCategory
+                    : location.pathname.startsWith('/employees')
+                    ? 'Employee Directory'
+                    : location.pathname.startsWith('/maintenance')
+                    ? 'Prevention / Maintenance'
+                    : location.pathname.startsWith('/damaged-scrap')
+                    ? 'Damaged & Scrap'
+                    : location.pathname.startsWith('/missing')
+                    ? 'Missing Items'
+                    : location.pathname.startsWith('/users')
+                    ? 'User Management'
+                    : location.pathname.startsWith('/settings')
+                    ? 'System Settings'
+                    : 'Asset Management'}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Header Action Portal (Search, Filters, Export, User Role) */}

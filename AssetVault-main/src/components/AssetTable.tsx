@@ -305,32 +305,33 @@ export default function AssetTable({
     </div>
   );
 
-  // ===== CARD VIEW (VEMS-style, one card per row) =====
+  // ===== CARD VIEW =====
   if (viewMode === "card") {
     return (
       <div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
           {paginatedAssets.map((asset, index) => {
             const code = formatAssetCodeLabel(asset);
             const name = asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown Asset';
             const assignee = isCctvAsset(asset) ? '' : (asset.contactName || '');
+
             return (
               <div
                 key={`${asset.id}-${index}`}
                 onClick={handleCardClick(asset)}
-                className="relative bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group"
+                className="relative bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group"
               >
                 <div className={cn("absolute top-0 left-0 right-0 h-1", getStatusAccent(asset.status))} />
-                <div className="p-5 pt-6">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-start gap-3 min-w-0">
+                <div className="p-3.5 sm:p-4 pt-4 sm:pt-4.5">
+                  <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                    <div className="flex items-start gap-2.5 min-w-0">
                       {showCheckboxes && (
-                        <div className="flex items-center self-center pr-1.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center self-center pr-1" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedAssetIds.includes(asset.id)}
                             onChange={() => handleSelectOne(asset.id)}
-                            className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                            className="w-3.5 h-3.5 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
                           />
                         </div>
                       )}
@@ -342,16 +343,16 @@ export default function AssetTable({
                         size="md"
                       />
                       <div className="min-w-0">
-                        <p className="font-black text-slate-900 text-sm font-mono tracking-tight truncate">{code}</p>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-tight truncate">{name}</p>
+                        <p className="font-black text-slate-900 text-xs font-mono tracking-tight truncate">{code}</p>
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight truncate">{name}</p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 uppercase tracking-wider whitespace-nowrap">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 uppercase tracking-wider whitespace-nowrap">
                         {asset.mainCategory || 'IT Assets'}
                       </span>
                       <span className={cn(
-                        "text-[9px] px-2 py-0.5 rounded-full font-black border uppercase tracking-wider whitespace-nowrap",
+                        "text-[8px] px-1.5 py-0.5 rounded-full font-black border uppercase tracking-wider whitespace-nowrap",
                         getStatusBadgeClass(asset.status)
                       )}>
                         {displayAssetStatus(asset.status)}
@@ -359,18 +360,18 @@ export default function AssetTable({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    <span className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-widest">
+                  <div className="flex flex-wrap gap-1 mb-2.5">
+                    <span className="text-[8px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-widest">
                       {formatSelectedTypeLabel(asset)}
                     </span>
                     {asset.condition && (
-                      <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-widest">
+                      <span className="text-[8px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-widest">
                         {asset.condition}
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 border-t border-slate-100 pt-2 text-[11px]">
                     {!hideAssigneeColumn && (
                       <DetailRow icon={User} label="Assigned" value={assignee || 'Unassigned'} />
                     )}
@@ -381,7 +382,7 @@ export default function AssetTable({
                       value={
                         <span>
                           {asset.location || '—'}
-                          {asset.plantCode ? <span className="text-slate-400"> Â· {asset.plantCode}</span> : null}
+                          {asset.plantCode ? <span className="text-slate-400"> · {asset.plantCode}</span> : null}
                         </span>
                       }
                     />
@@ -393,7 +394,7 @@ export default function AssetTable({
                   </div>
 
                   {role !== 'HR' && (
-                    <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-end mt-2 pt-2 border-t border-slate-100">
                       {renderActions(asset)}
                     </div>
                   )}
@@ -411,7 +412,7 @@ export default function AssetTable({
   if (viewMode === "grid") {
     return (
       <div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
           {paginatedAssets.map((asset, index) => {
             const code = formatAssetCodeLabel(asset);
             const name = asset.assetName || `${asset.make || ''} ${asset.model || ''}`.trim() || 'Unknown Asset';
@@ -422,10 +423,10 @@ export default function AssetTable({
               <div
                 key={`${asset.id}-${index}`}
                 onClick={handleCardClick(asset)}
-                className="group relative bg-white border border-slate-200/90 rounded-2xl shadow-sm hover:shadow-xl hover:border-blue-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
+                className="group relative bg-white border border-slate-200/90 rounded-xl shadow-xs hover:shadow-lg hover:border-blue-200 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col cursor-pointer"
               >
-                {/* Top Cover Banner */}
-                <div className="relative h-44 w-full bg-slate-100 overflow-hidden shrink-0">
+                {/* Top Cover Banner - Reduced Height for 100% Zoom Fit */}
+                <div className="relative h-28 sm:h-32 w-full bg-slate-100 overflow-hidden shrink-0">
                   <DeviceThumb
                     assetType={asset.assetType}
                     mainCategory={asset.mainCategory}
@@ -437,28 +438,28 @@ export default function AssetTable({
                   {/* Top-Left Checkbox */}
                   {showCheckboxes && (
                     <div
-                      className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-md p-1.5 rounded-lg shadow-sm border border-slate-200/50 flex items-center justify-center transition-transform active:scale-95"
+                      className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-md p-1 rounded-md shadow-xs border border-slate-200/50 flex items-center justify-center transition-transform active:scale-95"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
                         type="checkbox"
                         checked={selectedAssetIds.includes(asset.id)}
                         onChange={() => handleSelectOne(asset.id)}
-                        className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                        className="w-3.5 h-3.5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
                       />
                     </div>
                   )}
 
                   {/* Top-Right Category Tag */}
-                  <div className="absolute top-3 right-3 z-10 bg-slate-900/60 backdrop-blur-md text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  <div className="absolute top-2 right-2 z-10 bg-slate-900/60 backdrop-blur-md text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
                     {asset.mainCategory || 'IT Assets'}
                   </div>
 
                   {/* Bottom-Left Overlay Status Badge */}
-                  <div className="absolute bottom-3 left-3 z-10">
+                  <div className="absolute bottom-2 left-2 z-10">
                     <span
                       className={cn(
-                        "text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider shadow-md backdrop-blur-md inline-flex items-center gap-1.5",
+                        "text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider shadow-sm backdrop-blur-md inline-flex items-center gap-1",
                         statusLabel === "Available"
                           ? "bg-emerald-600 text-white shadow-emerald-900/20"
                           : statusLabel === "Assigned" || statusLabel === "In Use"
@@ -471,9 +472,9 @@ export default function AssetTable({
                       )}
                     >
                       {(statusLabel === "Damaged" || statusLabel === "Lost") && (
-                        <span className="relative flex h-2 w-2">
+                        <span className="relative flex h-1.5 w-1.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
                         </span>
                       )}
                       {statusLabel}
@@ -481,20 +482,20 @@ export default function AssetTable({
                   </div>
                 </div>
 
-                {/* Card Body */}
-                <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1">
+                {/* Card Body - Compact & Comfortable */}
+                <div className="p-3 sm:p-3.5 flex flex-col gap-2 flex-1">
                   <div>
-                    <p className="font-mono text-[11px] font-bold text-slate-400 tracking-wider truncate uppercase">
+                    <p className="font-mono text-[10px] font-bold text-slate-400 tracking-wider truncate uppercase">
                       {code}
                     </p>
-                    <h4 className="font-black text-slate-900 text-base leading-snug group-hover:text-blue-600 transition-colors truncate mt-0.5">
+                    <h4 className="font-black text-slate-900 text-sm leading-snug group-hover:text-blue-600 transition-colors truncate mt-0.5">
                       {name}
                     </h4>
                   </div>
 
-                  <div className="space-y-2 text-xs pt-1">
-                    <div className="flex items-center gap-2 text-slate-600 font-semibold">
-                      <MapPin size={14} className="text-slate-400 shrink-0" />
+                  <div className="space-y-1.5 text-[11px] pt-0.5">
+                    <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+                      <MapPin size={13} className="text-slate-400 shrink-0" />
                       <span className="truncate">
                         {asset.location || '—'}
                         {asset.plantCode ? ` · ${asset.plantCode}` : ''}
@@ -502,21 +503,21 @@ export default function AssetTable({
                     </div>
 
                     {!hideAssigneeColumn && (
-                      <div className="flex items-center gap-2 text-slate-600 font-semibold">
-                        <User size={14} className="text-slate-400 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+                        <User size={13} className="text-slate-400 shrink-0" />
                         <span className="truncate">{assignee || '—'}</span>
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 text-slate-600 font-semibold">
-                      <CheckCircle2 size={14} className="text-slate-400 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+                      <CheckCircle2 size={13} className="text-slate-400 shrink-0" />
                       <span className="truncate">{formatSelectedTypeLabel(asset)}</span>
                     </div>
                   </div>
 
                   {/* Card Footer Actions */}
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
-                    <div className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-100">
+                    <div className="text-[9px] font-mono text-slate-400 truncate max-w-[120px]">
                       {asset.serialNumber ? `#${asset.serialNumber}` : ''}
                     </div>
 
