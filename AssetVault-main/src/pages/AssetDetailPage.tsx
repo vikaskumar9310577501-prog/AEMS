@@ -48,20 +48,20 @@ export default function AssetDetailPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 lg:px-10 py-4 shrink-0">
-        <div className="max-w-5xl mx-auto">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden bg-slate-50">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 shrink-0 shadow-xs">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors mb-2"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
           >
-            <ArrowLeft size={18} /> Back
+            <ArrowLeft size={16} /> Back to Assets
           </button>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24">
         <div className="max-w-5xl mx-auto">
           <AssetDetails
             layout="page"
