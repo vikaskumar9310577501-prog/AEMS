@@ -1596,17 +1596,17 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       <section className="space-y-6">
         <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
           <div className="grid md:grid-cols-5 gap-0">
-            <div className="md:col-span-2 p-6 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-              <img src={LOGO_SRC} alt={APP_NAME} className="w-12 h-12 object-contain mb-4" />
+            <div className="md:col-span-2 p-5 lg:p-6 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+              <img src={LOGO_SRC} alt={APP_NAME} className="w-10 h-10 object-contain mb-3" />
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Step 1</p>
-              <h4 className="text-2xl font-black mt-1">Select Asset Category</h4>
-              <p className="text-sm text-slate-300 mt-2">Choose the main asset category and its specific sub-category to proceed.</p>
+              <h4 className="text-xl lg:text-2xl font-black mt-1">Select Asset Category</h4>
+              <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">Choose the main asset category and its specific sub-category to proceed.</p>
             </div>
-            <div className="md:col-span-3 relative min-h-[280px] bg-slate-50 flex items-center justify-center p-6">
+            <div className="md:col-span-3 relative min-h-[190px] lg:min-h-[220px] max-h-[240px] bg-slate-50 flex items-center justify-center p-4">
               <img
                 src={previewUrl}
                 alt={selectedTypeLabel}
-                className="max-w-full max-h-[220px] w-auto h-auto object-contain drop-shadow-lg"
+                className="max-w-full max-h-[160px] lg:max-h-[185px] w-auto h-auto object-contain drop-shadow-md"
               />
               {canUploadPreview && (
                 <>
@@ -1621,15 +1621,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     type="button"
                     onClick={() => categoryPreviewInputRef.current?.click()}
                     disabled={uploadingPreview}
-                    className="absolute top-4 right-4 z-10 flex items-center gap-2 px-3 py-2 bg-white/95 hover:bg-white text-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg border border-slate-200 transition-all disabled:opacity-60"
+                    className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 hover:bg-white text-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-md border border-slate-200 transition-all disabled:opacity-60 cursor-pointer"
                   >
-                    <Upload size={14} />
+                    <Upload size={13} />
                     {uploadingPreview ? "Uploading..." : "Upload image"}
                   </button>
                 </>
               )}
-              <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-slate-900/80 to-transparent pointer-events-none">
-                <p className="text-white font-black text-lg">{formData.mainCategory || "IT Assets"}</p>
+              <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-slate-900/80 to-transparent pointer-events-none">
+                <p className="text-white font-black text-base">{formData.mainCategory || "IT Assets"}</p>
                 <p className="text-white/80 text-xs">{selectedTypeLabel}</p>
               </div>
             </div>
@@ -3037,9 +3037,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 justify-between pt-6 border-t border-slate-100">
-        <div className="flex gap-3">
-          <button type="button" onClick={onCancel} disabled={isSubmitting} className="btn-secondary-geometric disabled:opacity-50">
+      <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md -mx-6 -mb-6 p-4 sm:p-5 border-t border-slate-200 rounded-b-2xl flex flex-wrap gap-3 items-center justify-between shadow-lg">
+        <div className="flex gap-2.5 items-center">
+          <button type="button" onClick={onCancel} disabled={isSubmitting} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50">
             Discard
           </button>
           {!initialData && (
@@ -3047,15 +3047,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               type="button"
               onClick={handleSaveDraft}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-xs"
             >
               Save as Draft
             </button>
           )}
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2.5 items-center">
           {formStep > 1 && (
-            <button type="button" onClick={goBack} disabled={isSubmitting} className="btn-secondary-geometric flex items-center gap-2 disabled:opacity-50">
+            <button type="button" onClick={goBack} disabled={isSubmitting} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
               <ChevronLeft size={16} /> Back
             </button>
           )}
@@ -3065,7 +3065,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               onMouseDown={(e) => e.preventDefault()}
               onClick={goNext}
               disabled={isSubmitting}
-              className="btn-primary-geometric flex items-center gap-2 disabled:opacity-50"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md hover:shadow-lg"
             >
               Next <ChevronRight size={16} />
             </button>
@@ -3074,7 +3074,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               type="submit"
               onClick={handleSubmit}
               disabled={isSubmitting || loading}
-              className="btn-primary-geometric cursor-pointer shadow-md hover:shadow-lg transition-all"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-md hover:shadow-lg"
             >
               {isSubmitting || loading ? 'Saving...' : initialData ? 'Save Changes' : 'Register Asset'}
             </button>
