@@ -2687,7 +2687,7 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
       // Save parent asset
       const dbMode = readAppData().settings.dbMode;
       let result;
-      if (dbMode === "redesigned") {
+      if (isDbMode() || dbMode === "redesigned") {
         const row = buildRedesignedAssetRow(assetData, String(parentAsset.id), String(parentAsset.qrCodeText ?? ""));
         result = await proxyToGas({ action: "update_asset_redesigned", id: parentAsset.id, row });
         const masterHeaders = getDefaultAssetHeaders();
@@ -2702,7 +2702,8 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
         );
         const targetId = String(parentAsset.id).replace(/^0+/, "").trim();
         const rowIndex = rows.findIndex((row: any[]) =>
-          String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === targetId
+          String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === targetId ||
+          (parentAsset.assetCode && String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === String(parentAsset.assetCode).replace(/^0+/, "").trim())
         );
         if (rowIndex === -1) throw new Error("Asset not found in Google Sheet");
         const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
@@ -3176,21 +3177,34 @@ async function assertInventorySnapshotSynced(
 }
 
 function normalizeAssetLookupId(value: unknown): string {
-  return String(value ?? "").replace(/^0+/, "").trim().toLowerCase();
+  const s = String(value ?? "").trim();
+  const n = parseInt(s, 10);
+  const withoutLeadingZeroes = s.replace(/^0+/, "") || "0";
+  if (!Number.isNaN(n) && (String(n) === withoutLeadingZeroes || String(n) === s)) {
+    return String(n);
+  }
+  return s.toLowerCase();
 }
 
 function findMappedAssetByAnyId(assets: MappedAsset[], lookupId: unknown): MappedAsset | undefined {
+  if (lookupId == null) return undefined;
+  const rawTarget = String(lookupId).trim();
   const target = normalizeAssetLookupId(lookupId);
-  if (!target) return undefined;
-  return assets.find((asset) =>
-    [
+  if (!rawTarget && !target) return undefined;
+
+  return assets.find((asset) => {
+    if (String(asset.id ?? "").trim() === rawTarget) return true;
+    if (String(asset.assetCode ?? "").trim() === rawTarget) return true;
+    if (String(asset.serialNumber ?? "").trim() === rawTarget) return true;
+
+    return [
       asset.id,
       asset.assetCode,
       asset.uniqueCode,
       asset.serialNumber,
       getCanonicalScanId(asset),
-    ].some((candidate) => normalizeAssetLookupId(candidate) === target)
-  );
+    ].some((candidate) => normalizeAssetLookupId(candidate) === target);
+  });
 }
 
 app.post("/api/missing-items/:recordId/deassign", async (req, res) => {
@@ -3476,7 +3490,7 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
 
     const dbMode = readAppData().settings.dbMode;
     let result;
-    if (dbMode === "redesigned") {
+    if (isDbMode() || dbMode === "redesigned") {
       const row = buildRedesignedAssetRow(assetData, canonicalAssetId, String(assetData.qrCodeText ?? ""));
       result = await proxyToGas({ action: "update_asset_redesigned", id: canonicalAssetId, row });
 
@@ -3495,7 +3509,9 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
       const normalizeId = (val: any) => String(val || "").replace(/^0+/, "").trim();
       const targetId = normalizeId(canonicalAssetId);
       const rowIndex = rows.findIndex((row: any[]) =>
-        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId
+        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId ||
+        (existing.assetCode && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.assetCode)) ||
+        (existing.serialNumber && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.serialNumber))
       );
       if (rowIndex === -1) throw new Error("Asset not found in Google Sheet");
 
@@ -4717,7 +4733,7 @@ app.put("/api/assets/:id", async (req, res) => {
     const masterHeaders = getDefaultAssetHeaders();
     let localCategory = String(assetData.mainCategory || "IT Assets");
     let localRow: string[];
-    if (dbMode === "redesigned") {
+    if (isDbMode() || dbMode === "redesigned") {
       const row = buildRedesignedAssetRow(assetData, canonicalId, String(assetData.qrCodeText ?? ""));
       result = await proxyToGas({ action: "update_asset_redesigned", id: canonicalId, row });
       localRow = buildMasterAssetRow(assetData);
@@ -4733,7 +4749,9 @@ app.put("/api/assets/:id", async (req, res) => {
       const normalizeId = (val: any) => String(val || "").replace(/^0+/, "").trim();
       const targetId = normalizeId(canonicalId);
       const rowIndex = rows.findIndex((row: any[]) =>
-        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId
+        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId ||
+        (existing.assetCode && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.assetCode)) ||
+        (existing.serialNumber && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.serialNumber))
       );
       if (rowIndex === -1) return res.status(404).json({ error: "Asset not found" });
 
@@ -4855,7 +4873,7 @@ app.post("/api/assets/:id/deassign", async (req, res) => {
     let localRow: string[];
     const localCategory = String(assetData.mainCategory || "IT Assets");
 
-    if (dbMode === "redesigned") {
+    if (isDbMode() || dbMode === "redesigned") {
       const row = buildRedesignedAssetRow(assetData, canonicalId, String(assetData.qrCodeText ?? ""));
       result = await proxyToGas({ action: "update_asset_redesigned", id: canonicalId, row });
       localRow = buildMasterAssetRow(assetData);
@@ -4871,7 +4889,9 @@ app.post("/api/assets/:id/deassign", async (req, res) => {
       const normalizeId = (val: any) => String(val || "").replace(/^0+/, "").trim();
       const targetId = normalizeId(canonicalId);
       const rowIndex = rows.findIndex((row: any[]) =>
-        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId
+        normalizeId(row[idCol !== -1 ? idCol : 0]) === targetId ||
+        (existing.assetCode && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.assetCode)) ||
+        (existing.serialNumber && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.serialNumber))
       );
       if (rowIndex === -1) return res.status(404).json({ error: "Asset not found" });
 
