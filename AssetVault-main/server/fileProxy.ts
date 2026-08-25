@@ -52,6 +52,30 @@ function isJpegBytes(bytes: Uint8Array): boolean {
   return bytes.length > 2 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
 }
 
+function isWebpBytes(bytes: Uint8Array): boolean {
+  return (
+    bytes.length > 11 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  );
+}
+
+function isGifBytes(bytes: Uint8Array): boolean {
+  return (
+    bytes.length > 5 &&
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38
+  );
+}
+
 function extractDriveConfirmToken(html: string): string | null {
   const patterns = [
     /confirm=([0-9A-Za-z_\-]+)/,
@@ -71,7 +95,7 @@ async function fetchWithRedirects(url: string, maxRedirects = 8): Promise<Respon
   for (let i = 0; i < maxRedirects; i++) {
     const res = await fetch(current, {
       redirect: "manual",
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; AssestFlow/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
     });
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get("location");
@@ -84,7 +108,7 @@ async function fetchWithRedirects(url: string, maxRedirects = 8): Promise<Respon
     return res;
   }
   return fetch(current, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; AssestFlow/1.0)" },
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
   });
 }
 
@@ -114,6 +138,8 @@ async function fetchUrlOnce(url: string): Promise<FetchedFile | null> {
   if (isPdfBytes(bytes)) contentType = "application/pdf";
   else if (isPngBytes(bytes)) contentType = "image/png";
   else if (isJpegBytes(bytes)) contentType = "image/jpeg";
+  else if (isWebpBytes(bytes)) contentType = "image/webp";
+  else if (isGifBytes(bytes)) contentType = "image/gif";
 
   if (contentType.includes("text/html")) return null;
 
@@ -122,7 +148,7 @@ async function fetchUrlOnce(url: string): Promise<FetchedFile | null> {
 
 /**
  * Fetch file bytes from Google Drive URLs only.
- * Tries GAS proxy first, then Drive download/view URLs.
+ * Tries GAS proxy first, then direct Google CDN (lh3), thumbnails, and Drive download/view URLs.
  */
 export async function fetchRemoteFile(url: string): Promise<FetchedFile | null> {
   try {
@@ -166,7 +192,12 @@ export async function fetchRemoteFile(url: string): Promise<FetchedFile | null> 
 
     const attempts: string[] = [];
     if (fileId) {
-      attempts.push(driveDownloadUrl(fileId), driveViewUrl(fileId));
+      attempts.push(
+        `https://lh3.googleusercontent.com/d/${fileId}`,
+        `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`,
+        driveDownloadUrl(fileId),
+        driveViewUrl(fileId)
+      );
     }
     if (isAllowedRemoteUrl(trimmed)) {
       attempts.push(toDriveDirectUrl(trimmed));

@@ -1455,7 +1455,18 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
     setIsSubmitting(true);
     try {
-      if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+      if (!validateStep(1)) {
+        setFormStep(1);
+        setIsSubmitting(false);
+        return;
+      }
+      if (!validateStep(2)) {
+        setFormStep(2);
+        setIsSubmitting(false);
+        return;
+      }
+      if (!validateStep(3)) {
+        setFormStep(3);
         setIsSubmitting(false);
         return;
       }
@@ -1464,6 +1475,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       const requiresMacAddress = isIT && ["Laptop", "Desktop"].includes(dataToSubmit.assetType);
       if (requiresMacAddress && !validateMac(dataToSubmit.macAddress)) {
         setMacError("Invalid Format. Use XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (Hex only)");
+        setFormStep(2);
         const el = document.getElementById("mac-address-input");
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setIsSubmitting(false);
@@ -1519,6 +1531,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     <form
       ref={formTopRef}
       onSubmit={handleSubmit}
+      noValidate
       onInvalid={handleInvalid}
       onKeyDown={handleFormKeyDown}
       className={cn("space-y-8", isPageLayout && "space-y-10")}
@@ -3059,8 +3072,9 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           ) : (
             <button
               type="submit"
-              disabled={isSubmitting || loading || !saveReady}
-              className="btn-primary-geometric"
+              onClick={handleSubmit}
+              disabled={isSubmitting || loading}
+              className="btn-primary-geometric cursor-pointer shadow-md hover:shadow-lg transition-all"
             >
               {isSubmitting || loading ? 'Saving...' : initialData ? 'Save Changes' : 'Register Asset'}
             </button>

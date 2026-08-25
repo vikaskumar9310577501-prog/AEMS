@@ -3,8 +3,10 @@
 export function extractDriveFileId(url: string): string | null {
   if (!url) return null;
   const trimmed = url.trim();
+  if (/^[a-zA-Z0-9_-]{20,60}$/.test(trimmed)) return trimmed;
   const patterns = [
     /\/file\/d\/([^/?#]+)/i,
+    /\/d\/([^/?#]+)/i,
     /[?&]id=([^&]+)/i,
     /\/uc\?[^#]*\bid=([^&]+)/i,
     /\/open\?[^#]*\bid=([^&]+)/i,

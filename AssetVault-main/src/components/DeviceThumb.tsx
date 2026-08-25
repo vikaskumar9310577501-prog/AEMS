@@ -59,7 +59,8 @@ export default function DeviceThumb({ assetType, mainCategory, subCategory, imag
     });
   }, []);
 
-  const src = imageUrl
+  const isDirectPhoto = !!imageUrl && (imageUrl.startsWith('data:image') || imageUrl.startsWith('blob:') || imageUrl.startsWith('local-') || imageUrl.includes('/custom-assets/'));
+  const src = isDirectPhoto
     ? getDeviceImageUrl(imageUrl)
     : getAssetPreviewUrl(
         mainCategory || "IT Assets",

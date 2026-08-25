@@ -721,6 +721,11 @@ app.get("/api/file/view", async (req, res) => {
 
     const data = await fetchRemoteFile(source);
     if (!data) {
+      const accept = String(req.headers.accept || "");
+      const isImgReq = accept.includes("image") || /\.(png|jpe?g|webp|gif|svg)/i.test(source) || (!accept.includes("text/html") && !accept.includes("application/pdf"));
+      if (isImgReq) {
+        return res.redirect(302, "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80");
+      }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.status(404).send(
         `<html><body style="font-family:system-ui;padding:24px"><h2>File not found</h2><p>Check Google Drive sharing: <b>Anyone with the link</b> can view. Re-upload the PDF from the asset form if needed.</p></body></html>`
@@ -747,6 +752,18 @@ app.get("/api/file/view", async (req, res) => {
     res.status(500).send(
       `<html><body style="font-family:system-ui;padding:24px"><h2>Could not open file</h2><p>${error.message || "Failed to load file"}</p></body></html>`
     );
+  }
+});
+
+app.get("/api/assignment-history", async (req, res) => {
+  try {
+    if (GAS_WEBAPP_URL || SPREADSHEET_ID) {
+      await fetchHistoryFromGas(proxyToGas, SPREADSHEET_ID);
+    }
+    const history = readAssignmentHistory();
+    res.json(normalizeHistoryForUi(history));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to load assignment history" });
   }
 });
 

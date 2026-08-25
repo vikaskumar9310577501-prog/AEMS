@@ -11,26 +11,18 @@ import {
   Filter,
   Building2,
   Users as UsersIcon,
-  ChevronLeft,
-  ChevronRight,
-  MoreVertical,
   Download,
-  CheckCircle2,
-  MapPin,
-  Sparkles,
 } from 'lucide-react';
 import { useEmployees } from '../hooks/useEmployees';
 import { useApp } from '../context/AppProvider';
 import { assetsForEmployee } from '../lib/employeeAssets';
 import { isInactiveEmployee, employeeStatusLabel } from '../lib/employeeStatus';
-import type { Employee, EmployeeStatus } from '../types/employee';
+import type { Employee } from '../types/employee';
 import { EMPTY_EMPLOYEE } from '../types/employee';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
 import * as XLSX from 'xlsx';
 
 type StatusFilter = 'all' | 'Active' | 'Inactive';
-
-const PAGE_SIZE = 12;
 
 function isInactiveStatus(status: string | undefined): boolean {
   return isInactiveEmployee(status);
@@ -44,7 +36,8 @@ function employeeMatchesSearch(employee: Employee, query: string): boolean {
     employee.name.toLowerCase().includes(q) ||
     employee.email.toLowerCase().includes(q) ||
     (employee.department || '').toLowerCase().includes(q) ||
-    (employee.designation || '').toLowerCase().includes(q)
+    (employee.designation || '').toLowerCase().includes(q) ||
+    (employee.plant || '').toLowerCase().includes(q)
   );
 }
 
@@ -61,7 +54,6 @@ export default function EmployeesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Employee>(EMPTY_EMPLOYEE());
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const isAdmin = user?.role === 'IT Admin' || user?.role === 'Admin';
   const isHr = user?.role === 'HR';
@@ -127,17 +119,6 @@ export default function EmployeesPage() {
     return list;
   }, [employees, search, statusFilter, departmentFilter, plantFilter]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter, departmentFilter, plantFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginatedEmployees = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
-
   const exportExcel = () => {
     try {
       const data = filtered.map((emp) => ({
@@ -167,9 +148,9 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 min-h-screen">
-      {/* Top Header & Search Bar - Compact & Sleek */}
-      <header className="bg-white border-b border-slate-200 px-6 lg:px-8 py-3.5 shrink-0">
+    <div className="h-full flex flex-col min-h-0 bg-slate-50 overflow-hidden">
+      {/* Top Header & Search Bar - Fixed at top, never scrolls away */}
+      <header className="bg-white border-b border-slate-200 px-6 lg:px-8 py-3.5 shrink-0 z-20 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
@@ -179,7 +160,7 @@ export default function EmployeesPage() {
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
                 <Building2 size={12} />
-                <span>Department: IT &amp; Operations</span>
+                <span>{employees.length} Total Registered</span>
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
                 <UsersIcon size={12} />
@@ -369,8 +350,30 @@ export default function EmployeesPage() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      {/* Main Scrollable Content Area - ONLY this scrolls */}
+      <div className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        {/* Counter Summary Bar */}
+        <div className="mb-5 flex items-center justify-between bg-white px-4 py-2.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <p className="text-xs font-bold text-slate-600">
+            Showing <span className="text-blue-700 font-black">{filtered.length}</span> of{' '}
+            <span className="text-slate-900 font-black">{employees.length}</span> employees
+          </p>
+          {(departmentFilter !== 'all' || plantFilter !== 'all' || search.trim() || statusFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setDepartmentFilter('all');
+                setPlantFilter('all');
+                setSearch('');
+                setStatusFilter('all');
+              }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+
         {loading && employees.length === 0 ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
@@ -382,9 +385,9 @@ export default function EmployeesPage() {
             <p className="text-xs text-slate-500 mt-1">Try adjusting your search query or clear active filters.</p>
           </div>
         ) : viewMode === 'grid' ? (
-          /* Grid View - Matching Image 1 Perfectly */
+          /* Grid View - All Employees Rendered Directly */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
-            {paginatedEmployees.map((emp) => {
+            {filtered.map((emp) => {
               const count = assetsForEmployee(assets, emp).length;
               const isInactive = isInactiveStatus(emp.status);
               return (
@@ -446,7 +449,7 @@ export default function EmployeesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {paginatedEmployees.map((emp) => {
+                  {filtered.map((emp) => {
                     const count = assetsForEmployee(assets, emp).length;
                     const isInactive = isInactiveStatus(emp.status);
                     return (
@@ -486,49 +489,9 @@ export default function EmployeesPage() {
           </div>
         )}
 
-        {/* Bottom Pagination Bar */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
-          <p className="text-xs font-bold text-slate-500">
-            Showing <span className="text-slate-900 font-black">{paginatedEmployees.length}</span> of{' '}
-            <span className="text-slate-900 font-black">{filtered.length}</span> employees
-          </p>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              Previous
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))
-              .map((page) => (
-                <button
-                  key={page}
-                  type="button"
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-
-            <button
-              type="button"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              Next
-            </button>
-          </div>
+        {/* Bottom Footer Note */}
+        <div className="mt-8 text-center py-4 border-t border-slate-200 text-xs font-bold text-slate-400">
+          Showing all <span className="text-slate-700 font-black">{filtered.length}</span> registered employees
         </div>
       </div>
 
