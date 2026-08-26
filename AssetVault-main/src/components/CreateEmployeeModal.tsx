@@ -13,6 +13,8 @@ import {
   validateEmployeePhone,
   normalizeEmployeePhoneInput,
 } from '../lib/employeeValidation';
+import { useApp } from '../context/AppProvider';
+import { buildScopedLocationOptions, buildScopedPlantOptions, sameScopeOption } from '../lib/scopeOptions';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -40,29 +42,27 @@ interface EmployeeSaveResponse {
   success?: boolean;
   employee?: Employee;
   error?: string;
-  sheetWarning?: string;
-  alreadyExists?: boolean;
 }
 
 interface CreateEmployeeModalProps {
   open: boolean;
-  initial?: Partial<Employee>;
+  initial?: Partial<Employee> | null;
   onClose: () => void;
   onSaved: (employee: Employee) => void;
   mode?: 'create' | 'edit';
 }
 
-function sameSettingValue(left: unknown, right: unknown): boolean {
-  return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+function sameSettingValue(a: string | undefined, b: string | undefined): boolean {
+  return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 }
 
-function mergeSettingsWithDefaults(settings?: AppSettings | null): AppSettings {
+function mergeSettingsWithDefaults(settings: AppSettings | null | undefined): AppSettings {
   const departments = Array.from(
     new Set([
       ...DEFAULT_DEPARTMENTS,
       ...(settings?.catalog?.departments || []),
-    ])
-  ).sort((a, b) => a.localeCompare(b));
+    ].filter(Boolean))
+  );
 
   return {
     locations: settings?.locations || [],
@@ -75,6 +75,7 @@ function mergeSettingsWithDefaults(settings?: AppSettings | null): AppSettings {
 }
 
 export default function CreateEmployeeModal({ open, initial, onClose, onSaved, mode }: CreateEmployeeModalProps) {
+  const { user } = useApp();
   const [form, setForm] = useState<Employee>(EMPTY_EMPLOYEE());
   const [saving, setSaving] = useState(false);
   const [employeeIdError, setEmployeeIdError] = useState<string | null>(null);
@@ -87,7 +88,7 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
     if (cachedSettings) {
       setSettings(mergeSettingsWithDefaults(cachedSettings));
     }
-    fetch(`${API_BASE}/api/settings`)
+    fetch(`${API_BASE}/api/settings`, { credentials: 'include' })
       .then((r) => parseJsonResponse<AppSettings>(r))
       .then((next) => {
         cachedSettings = mergeSettingsWithDefaults(next);
@@ -96,27 +97,55 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
       .catch(() => setSettings((prev) => mergeSettingsWithDefaults(prev)));
   }, [open]);
 
+  const allowedLocations = useMemo(() => {
+    return buildScopedLocationOptions(
+      settings.locations,
+      settings.plants,
+      user,
+      form.location ? [form.location] : []
+    );
+  }, [settings.locations, settings.plants, user, form.location]);
+
+  const allowedPlants = useMemo(() => {
+    return buildScopedPlantOptions(
+      settings.plants,
+      user,
+      form.plant ? [{ code: form.plant, name: form.plant, location: form.location }] : [],
+      allowedLocations
+    );
+  }, [settings.plants, user, form.plant, form.location, allowedLocations]);
+
+  const plantsForLocation = useMemo(() => {
+    const list = allowedPlants.filter(
+      (p) => !form.location || !p.location || sameScopeOption(p.location, form.location)
+    );
+    return list;
+  }, [allowedPlants, form.location]);
+
   useEffect(() => {
     if (!open) return;
     setEmployeeIdError(null);
+    const initialLocation = initial?.location || (allowedLocations.length === 1 ? allowedLocations[0] : '');
+    const scopedPlants = allowedPlants.filter(
+      (p) => !initialLocation || !p.location || sameScopeOption(p.location, initialLocation)
+    );
+    const initialPlant = initial?.plant || (scopedPlants.length === 1 ? scopedPlants[0].code : '');
+
     setForm({
       ...EMPTY_EMPLOYEE(),
       ...initial,
+      location: initialLocation,
+      plant: initialPlant,
       employeeId: String(initial?.employeeId || '').trim().toUpperCase(),
       phone: normalizeEmployeePhoneInput(String(initial?.phone || '')),
       status: initial?.status === 'Inactive' ? 'Inactive' : 'Active',
     });
-  }, [open, initial]);
+  }, [open, initial, allowedLocations, allowedPlants]);
 
   const departments = useMemo(() => {
     const fromCatalog = settings.catalog?.departments ?? [];
     return Array.from(new Set([...fromCatalog, form.department].filter(Boolean)));
   }, [settings.catalog?.departments, form.department]);
-
-  const plantsForLocation = useMemo(() => {
-    if (!form.location) return settings.plants;
-    return settings.plants.filter((p) => !p.location || sameSettingValue(p.location, form.location));
-  }, [settings.plants, form.location]);
 
   if (!open) return null;
 
@@ -325,21 +354,30 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
           <SmartSelect
             label="Location"
             value={form.location}
-            options={optionsWithValue(settings.locations, form.location)}
-            onChange={(location) => setForm((f) => ({ ...f, location, plant: '' }))}
+            options={optionsWithValue(allowedLocations, form.location)}
+            onChange={(location) => {
+              const matchingPlants = allowedPlants.filter(
+                (p) => !location || !p.location || sameScopeOption(p.location, location)
+              );
+              setForm((f) => ({
+                ...f,
+                location,
+                plant: matchingPlants.length === 1 ? matchingPlants[0].code : '',
+              }));
+            }}
             placeholder="Select location"
           />
 
           <SmartSelect
-            label="Plant code"
+            label="Plant / Building"
             value={form.plant}
-            disabled={!form.location && settings.locations.length > 0}
+            disabled={!form.location && allowedLocations.length > 1}
             options={optionsWithValue(
               plantsForLocation.map((p) => p.code),
               form.plant
             )}
             onChange={(plant) => setForm((f) => ({ ...f, plant }))}
-            placeholder={form.location ? 'Select plant' : 'Select location first'}
+            placeholder="Select plant"
           />
 
           <div>

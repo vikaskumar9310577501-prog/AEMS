@@ -20,17 +20,17 @@ export function sameScopeOption(left: unknown, right: unknown): boolean {
   return !!l && !!r && l === r;
 }
 
-function scopeOptionIncludes(left: unknown, right: unknown): boolean {
+export function scopeOptionIncludes(left: unknown, right: unknown): boolean {
   const l = norm(left);
   const r = norm(right);
   return !!l && !!r && (l === r || l.includes(r) || r.includes(l));
 }
 
-function cleanScopeList(values: string[] | undefined): string[] {
+export function cleanScopeList(values: string[] | undefined): string[] {
   return (values || []).map((value) => String(value || '').trim()).filter(Boolean);
 }
 
-function hasAllScope(values: string[] | undefined): boolean {
+export function hasAllScope(values: string[] | undefined): boolean {
   return cleanScopeList(values).some((value) => sameScopeOption(value, 'All'));
 }
 

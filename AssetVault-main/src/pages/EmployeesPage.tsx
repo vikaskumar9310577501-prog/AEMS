@@ -21,6 +21,7 @@ import type { Employee } from '../types/employee';
 import { EMPTY_EMPLOYEE } from '../types/employee';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
 import * as XLSX from 'xlsx';
+import { sameScopeOption, scopeOptionIncludes, cleanScopeList, hasAllScope } from '../lib/scopeOptions';
 
 type StatusFilter = 'all' | 'Active' | 'Inactive';
 
@@ -75,11 +76,33 @@ export default function EmployeesPage() {
     }
   }, [searchParams, setSearchParams]);
 
+  // Scope employees to logged-in user's assigned locations and plants
+  const scopedEmployees = useMemo(() => {
+    if (!user || user.role === 'IT Admin' || hasAllScope(user.locations)) {
+      return employees;
+    }
+    const userLocs = cleanScopeList(user.locations).filter((l) => !sameScopeOption(l, 'All'));
+    const userPlants = cleanScopeList(user.plants).filter((p) => !sameScopeOption(p, 'All'));
+
+    return employees.filter((emp) => {
+      const empLoc = String(emp.location || '').trim();
+      const empPlant = String(emp.plant || '').trim();
+
+      const matchLoc = userLocs.length === 0 || userLocs.some((l) => sameScopeOption(l, empLoc) || scopeOptionIncludes(empLoc, l));
+      const matchPlant = userPlants.length === 0 || userPlants.some((p) => sameScopeOption(p, empPlant) || scopeOptionIncludes(empPlant, p));
+
+      if (userLocs.length > 0 && userPlants.length > 0) {
+        return matchLoc && matchPlant;
+      }
+      return matchLoc || matchPlant;
+    });
+  }, [employees, user]);
+
   // Unique departments & plants for filter dropdown
   const { departments, plants } = useMemo(() => {
     const dSet = new Set<string>();
     const pSet = new Set<string>();
-    employees.forEach((e) => {
+    scopedEmployees.forEach((e) => {
       if (e.department) dSet.add(e.department.trim());
       if (e.plant) pSet.add(e.plant.trim());
     });
@@ -87,15 +110,15 @@ export default function EmployeesPage() {
       departments: Array.from(dSet).sort(),
       plants: Array.from(pSet).sort(),
     };
-  }, [employees]);
+  }, [scopedEmployees]);
 
   const activeCount = useMemo(
-    () => employees.filter((e) => !isInactiveStatus(e.status)).length,
-    [employees]
+    () => scopedEmployees.filter((e) => !isInactiveStatus(e.status)).length,
+    [scopedEmployees]
   );
 
   const filtered = useMemo(() => {
-    let list = employees;
+    let list = scopedEmployees;
 
     if (statusFilter === 'Active') {
       list = list.filter((e) => !isInactiveStatus(e.status));
@@ -117,7 +140,7 @@ export default function EmployeesPage() {
     }
 
     return list;
-  }, [employees, search, statusFilter, departmentFilter, plantFilter]);
+  }, [scopedEmployees, search, statusFilter, departmentFilter, plantFilter]);
 
   const exportExcel = () => {
     try {
