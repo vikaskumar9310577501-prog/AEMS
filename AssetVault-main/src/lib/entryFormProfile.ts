@@ -41,7 +41,17 @@ export function getEntryFormProfile(
   const mainCategory = formData.mainCategory || 'IT Assets';
   const isItAssets = mainCategory === 'IT Assets';
   const isItPrimaryDevice = isItAssets && ['Laptop', 'Desktop'].includes(formData.assetType);
-  const isItPeripheral = isItAssets && (PERIPHERAL_TYPES as readonly string[]).includes(formData.assetType);
+  const isInputOutput =
+    isItAssets &&
+    (
+      formData.assetType === 'Input/Output Device' ||
+      (PERIPHERAL_TYPES as readonly string[]).includes(formData.assetType) ||
+      formData.subCategory === 'Input Device' ||
+      formData.subCategory === 'Output Device' ||
+      formData.subCategory?.toLowerCase().includes('input') ||
+      formData.subCategory?.toLowerCase().includes('output')
+    );
+  const isItPeripheral = isInputOutput;
   const isCctvSecurity =
     activeTypeDef?.id === 'cctv_security' ||
     formData.assetType === 'Camera' ||
@@ -67,7 +77,7 @@ export function getEntryFormProfile(
     useBrandModelFields: true,
     requireModelField: !isSoftware,
     requireMacAddress: isItPrimaryDevice,
-    showNetworkFields: isItAssets && !isCctvSecurity,
+    showNetworkFields: isItAssets && !isInputOutput && !isCctvSecurity,
     showLegacyItSpecs,
     showDynamicSpecs,
     isCctvSecurityDevice: !!isCctvSecurity,

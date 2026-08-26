@@ -2546,75 +2546,149 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           ref={step3TopRef}
           className="scroll-mt-6 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3"
         >
-          <MapPin className="text-emerald-600 shrink-0" size={22} />
+          <User className="text-emerald-600 shrink-0" size={22} />
           <div>
             <p className="text-[10px] font-black uppercase text-emerald-700">Step 3</p>
             <h4 className="font-black text-slate-900">
-              {hideAssignee ? "Location & Plant" : "Location, Plant & Assignment"}
+              {hideAssignee ? "Location & Plant" : "Assignment & Location"}
             </h4>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div ref={step3LocationRef} className="space-y-1.5">
-            <SmartSelect
-              label="Location"
-              required
-              value={formData.location}
-              options={optionsWithValue(allowedLocations, formData.location)}
-              onChange={(location) => {
+        {/* 1. Assigned To (Employee / In House) */}
+        {!hideAssignee && (
+        <section className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="label-caps flex items-center gap-2">
+               <User size={12} className="text-blue-500" />
+               Assigned To
+            </h3>
+            <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => selectAssignmentMode('employee')}
+                className={cn(
+                  "py-2 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer",
+                  assignmentMode === 'employee'
+                    ? "bg-white text-blue-600 shadow-md ring-1 ring-slate-200"
+                    : "text-slate-400 hover:text-slate-600 hover:bg-white/70"
+                )}
+              >
+                Employee
+              </button>
+              <button
+                type="button"
+                onClick={() => selectAssignmentMode('in_house')}
+                className={cn(
+                  "py-2 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer",
+                  assignmentMode === 'in_house'
+                    ? "bg-white text-emerald-600 shadow-md ring-1 ring-slate-200"
+                    : "text-slate-400 hover:text-slate-600 hover:bg-white/70"
+                )}
+              >
+                In House
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-5">
+            {assignmentMode === 'employee' ? (
+            <EmployeeSelector
+              values={{
+                employeeId: formData.employeeId || '',
+                contactName: formData.contactName,
+                contactEmail: formData.contactEmail,
+                contactMobile: formData.contactMobile,
+                department: formData.department,
+                location: formData.location,
+                plantCode: formData.plantCode,
+              }}
+              onChange={(patch) =>
                 setFormData((prev) => ({
                   ...prev,
-                  location,
-                  plantCode: "",
-                }));
-              }}
+                  ...normalizeItPatch(patch as Record<string, unknown>, isItCategory),
+                }))
+              }
+              onEmployeeResolved={setLinkedEmployee}
             />
+            ) : (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-emerald-800">Company / department use</p>
+                <p className="text-sm text-emerald-950">
+                  This asset stays <strong>In House</strong> for shared company use. Select location & department below — no employee assignment needed.
+                </p>
+              </div>
+            )}
           </div>
-          {formData.location && (
-            <div className="space-y-1.5">
-              <label className="label-caps font-black text-xs text-slate-700 font-sans">
-                Plant Code / Name<span className="text-red-500 ml-0.5">*</span>
-              </label>
-              <select
-                required
-                value={formData.plantCode}
-                onChange={(e) => setFormData((prev) => ({ ...prev, plantCode: e.target.value }))}
-                className="w-full input-geometric bg-white font-bold text-slate-800"
-              >
-                <option value="" disabled>
-                  Select plant
-                </option>
-                {plantsForLocation.map((plant) => (
-                  <option key={plant.code} value={plant.code}>
-                    {plant.code} — {plant.name}
-                  </option>
-                ))}
-                {formData.plantCode &&
-                  !plantsForLocation.some((p) => sameSettingValue(p.code, formData.plantCode) || sameSettingValue(p.name, formData.plantCode)) && (
-                    <option value={formData.plantCode}>{formData.plantCode}</option>
-                  )}
-              </select>
-            </div>
-          )}
-          {!hideAssignee && assignmentMode === 'in_house' && (
-            <div className="space-y-1.5">
+        </section>
+        )}
+
+        {/* 2. Location & Plant */}
+        <section className="space-y-4 border-t border-slate-100 pt-6">
+          <h3 className="label-caps flex items-center gap-2">
+             <MapPin size={12} className="text-emerald-600" />
+             Location & Plant
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div ref={step3LocationRef} className="space-y-1.5">
               <SmartSelect
-                label="Department"
+                label="Location"
                 required
-                value={formData.department}
-                options={optionsWithValue(departmentOptions, formData.department)}
-                onChange={(department) => setFormData((prev) => ({ ...prev, department }))}
-                onAddCustom={(department) => {
-                  const trimmed = department.trim();
-                  if (!trimmed) return;
-                  persistCatalog((c) => addDepartment(c, trimmed));
-                  setFormData((prev) => ({ ...prev, department: trimmed }));
+                value={formData.location}
+                options={optionsWithValue(allowedLocations, formData.location)}
+                onChange={(location) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    location,
+                    plantCode: "",
+                  }));
                 }}
               />
             </div>
-          )}
-        </div>
+            {formData.location && (
+              <div className="space-y-1.5">
+                <label className="label-caps font-black text-xs text-slate-700 font-sans">
+                  Plant Code / Name<span className="text-red-500 ml-0.5">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.plantCode}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, plantCode: e.target.value }))}
+                  className="w-full input-geometric bg-white font-bold text-slate-800"
+                >
+                  <option value="" disabled>
+                    Select plant
+                  </option>
+                  {plantsForLocation.map((plant) => (
+                    <option key={plant.code} value={plant.code}>
+                      {plant.code} — {plant.name}
+                    </option>
+                  ))}
+                  {formData.plantCode &&
+                    !plantsForLocation.some((p) => sameSettingValue(p.code, formData.plantCode) || sameSettingValue(p.name, formData.plantCode)) && (
+                      <option value={formData.plantCode}>{formData.plantCode}</option>
+                    )}
+                </select>
+              </div>
+            )}
+            {!hideAssignee && assignmentMode === 'in_house' && (
+              <div className="space-y-1.5">
+                <SmartSelect
+                  label="Department"
+                  required
+                  value={formData.department}
+                  options={optionsWithValue(departmentOptions, formData.department)}
+                  onChange={(department) => setFormData((prev) => ({ ...prev, department }))}
+                  onAddCustom={(department) => {
+                    const trimmed = department.trim();
+                    if (!trimmed) return;
+                    persistCatalog((c) => addDepartment(c, trimmed));
+                    setFormData((prev) => ({ ...prev, department: trimmed }));
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </section>
 
       {(formData.assetType === 'Desktop' || formData.assetTypeId === 'desktop' || hasAttachedPeripheralDetails(formData)) && (
         <section className="space-y-5 bg-slate-50 p-5 rounded-2xl border border-slate-200">
@@ -2914,125 +2988,63 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         </section>
       )}
 
-      {!hideAssignee && (
+      {/* Additional Items, Assigned Date & Metadata */}
       <section className="space-y-5 border-t border-slate-100 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="label-caps flex items-center gap-2">
-             <User size={12} className="text-blue-500" />
-             Assigned To
-          </h3>
-          <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button
-              type="button"
-              onClick={() => selectAssignmentMode('employee')}
-              className={cn(
-                "py-2 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all",
-                assignmentMode === 'employee'
-                  ? "bg-white text-blue-600 shadow-md ring-1 ring-slate-200"
-                  : "text-slate-400 hover:text-slate-600 hover:bg-white/70"
-              )}
-            >
-              Employee
-            </button>
-            <button
-              type="button"
-              onClick={() => selectAssignmentMode('in_house')}
-              className={cn(
-                "py-2 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all",
-                assignmentMode === 'in_house'
-                  ? "bg-white text-emerald-600 shadow-md ring-1 ring-slate-200"
-                  : "text-slate-400 hover:text-slate-600 hover:bg-white/70"
-              )}
-            >
-              In House
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-col gap-5">
-          {assignmentMode === 'employee' ? (
-          <EmployeeSelector
-            values={{
-              employeeId: formData.employeeId || '',
-              contactName: formData.contactName,
-              contactEmail: formData.contactEmail,
-              contactMobile: formData.contactMobile,
-              department: formData.department,
-              location: formData.location,
-              plantCode: formData.plantCode,
-            }}
-            onChange={(patch) =>
-              setFormData((prev) => ({
+        <div className="w-full space-y-1.5 font-mono">
+          <label className="label-caps">Additional Items / Remarks</label>
+          <textarea
+            name="additionalItems"
+            value={formData.additionalItems}
+            onChange={(e) =>
+              setFormData(prev => ({
                 ...prev,
-                ...normalizeItPatch(patch as Record<string, unknown>, isItCategory),
+                additionalItems: normalizeItTextValue('additionalItems', e.target.value, isItCategory),
               }))
             }
-            onEmployeeResolved={setLinkedEmployee}
+            placeholder="Case, Charger, Adapter, etc."
+            rows={3}
+            className="w-full input-geometric min-h-[100px] py-3"
           />
-          ) : (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 space-y-2">
-              <p className="text-xs font-black uppercase tracking-widest text-emerald-800">Company / department use</p>
-              <p className="text-sm text-emerald-950">
-                This asset stays <strong>In House</strong> for shared company use. Select department above — no employee assignment needed.
-              </p>
-            </div>
-          )}
-          <div className="w-full space-y-1.5 font-mono">
-            <label className="label-caps">Additional Items / Remarks</label>
-            <textarea
-              name="additionalItems"
-              value={formData.additionalItems}
-              onChange={(e) =>
-                setFormData(prev => ({
-                  ...prev,
-                  additionalItems: normalizeItTextValue('additionalItems', e.target.value, isItCategory),
-                }))
-              }
-              placeholder="Case, Charger, Adapter, etc."
-              rows={3}
-              className="w-full input-geometric min-h-[100px] py-3"
-            />
-          </div>
-          {assignmentMode === 'employee' && (
-          <div className="space-y-1.5 font-mono max-w-md">
-            <label className="label-caps">Assigned Date *</label>
-            <input
-              type="text"
-              name="assignedDate"
-              placeholder="DD/MM/YYYY"
-              required={!!formData.employeeId?.trim() || !!formData.contactName?.trim()}
-              value={formData.assignedDate || ""}
-              onChange={handleChange}
-              className="w-full input-geometric"
-            />
-          </div>
-          )}
+        </div>
+        {!hideAssignee && assignmentMode === 'employee' && (
+        <div className="space-y-1.5 font-mono max-w-md">
+          <label className="label-caps">Assigned Date *</label>
+          <input
+            type="text"
+            name="assignedDate"
+            placeholder="DD/MM/YYYY"
+            required={!!formData.employeeId?.trim() || !!formData.contactName?.trim()}
+            value={formData.assignedDate || ""}
+            onChange={handleChange}
+            className="w-full input-geometric"
+          />
+        </div>
+        )}
 
-          {initialData && (
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 mt-4">
-              <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500">Audit & Metadata</h4>
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <p className="text-slate-400 uppercase text-[9px] font-black">Created By</p>
-                  <p className="font-bold text-slate-800">{formData.createdBy || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 uppercase text-[9px] font-black">Created Date</p>
-                  <p className="font-bold text-slate-800">{formatStoredDateTime(formData.createdDate)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 uppercase text-[9px] font-black">Last Updated By</p>
-                  <p className="font-bold text-slate-800">{formData.updatedBy || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 uppercase text-[9px] font-black">Last Updated Date</p>
-                  <p className="font-bold text-slate-800">{formatStoredDateTime(formData.updatedDate)}</p>
-                </div>
+        {initialData && (
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 mt-4">
+            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500">Audit & Metadata</h4>
+            <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+              <div>
+                <p className="text-slate-400 uppercase text-[9px] font-black">Created By</p>
+                <p className="font-bold text-slate-800">{formData.createdBy || "—"}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 uppercase text-[9px] font-black">Created Date</p>
+                <p className="font-bold text-slate-800">{formatStoredDateTime(formData.createdDate)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 uppercase text-[9px] font-black">Last Updated By</p>
+                <p className="font-bold text-slate-800">{formData.updatedBy || "—"}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 uppercase text-[9px] font-black">Last Updated Date</p>
+                <p className="font-bold text-slate-800">{formatStoredDateTime(formData.updatedDate)}</p>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
-      )}
       </section>
       )}
 
