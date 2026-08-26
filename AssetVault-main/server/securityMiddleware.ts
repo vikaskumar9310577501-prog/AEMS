@@ -106,6 +106,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/settings" ||
       req.path === "/api/type-definitions" ||
       req.path === "/api/employees" ||
+      req.path === "/api/employees/lookup" ||
       req.path === "/api/users" ||
       req.path === "/api/users/local" ||
       req.path === "/api/inventory" ||

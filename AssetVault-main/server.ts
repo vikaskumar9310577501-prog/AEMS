@@ -2344,21 +2344,18 @@ app.get("/api/employees", async (req, res) => {
 
 app.get("/api/employees/lookup", async (req, res) => {
   try {
-    const employeeId = String(req.query.employeeId || "");
-    const email = String(req.query.email || "");
+    const employeeId = String(req.query.employeeId || "").trim();
+    const email = String(req.query.email || "").trim();
     let list = readEmployees();
-    if (GAS_WEBAPP_URL || SPREADSHEET_ID || list.length === 0 || employeeId) {
+    let employee = employeeId ? findEmployeeById(list, employeeId) : (email ? findEmployeeByEmail(list, email) : null);
+
+    if (!employee && (GAS_WEBAPP_URL || SPREADSHEET_ID) && list.length === 0) {
       try {
         list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
+        employee = employeeId ? findEmployeeById(list, employeeId) : (email ? findEmployeeByEmail(list, email) : null);
       } catch {
         /* use local cache */
       }
-    }
-    let employee = null;
-    if (employeeId) {
-      employee = findEmployeeById(list, employeeId);
-    } else if (email) {
-      employee = findEmployeeByEmail(list, email);
     }
 
     if (!employee) {
@@ -2366,9 +2363,13 @@ app.get("/api/employees/lookup", async (req, res) => {
     }
 
     let assetCount = 0;
-    if (GAS_WEBAPP_URL) {
-      const { assets } = await getAssetsWithCache(GAS_WEBAPP_URL);
-      assetCount = countAssetsForEmployee(assets, employee);
+    try {
+      const cached = getCachedAssets();
+      if (cached) {
+        assetCount = countAssetsForEmployee(cached, employee);
+      }
+    } catch {
+      /* ignore */
     }
 
     res.json({ employee, assetCount });

@@ -106,10 +106,21 @@ export default function EmployeeSelector({
 
     setLookupLoading(true);
     try {
+      let userEmail = '';
+      try {
+        const stored = localStorage.getItem('ams_user_data') || localStorage.getItem('asset_vault_user');
+        if (stored) userEmail = JSON.parse(stored)?.email || '';
+      } catch {
+        /* ignore */
+      }
       const params = new URLSearchParams();
       if (id) params.set('employeeId', id);
       if (em) params.set('email', em);
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/employees/lookup?${params}`);
+      if (userEmail) params.set('userEmail', userEmail);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/employees/lookup?${params}`, {
+        credentials: 'include',
+        headers: userEmail ? { 'X-User-Email': userEmail } : {},
+      });
       const data = await parseJsonResponse<{ employee?: Employee; assetCount?: number }>(res);
       if (!active) return;
       if (data.employee) {
