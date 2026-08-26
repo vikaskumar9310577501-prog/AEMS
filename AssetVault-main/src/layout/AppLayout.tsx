@@ -28,7 +28,7 @@ import {
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
-import { canAccessUserManagement, canAccessMaintenance, isItAdminRole, isHrRole } from '../lib/userPermissions';
+import { canAccessUserManagement, canAccessMaintenance, isItAdminRole, isHrRole, canAccessHr } from '../lib/userPermissions';
 import { SIDEBAR_CCTV_CATEGORY } from '../lib/dashboardCategories';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -224,7 +224,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {!isHr && isUserAdmin && (
+        {!isHr && canAccessHr(user) && (
           <NavLink to="/hr-dashboard" className={navClass} title="HR Operations" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <Building2 size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />

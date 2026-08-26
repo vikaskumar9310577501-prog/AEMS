@@ -45,7 +45,7 @@ export default function NewMaintenanceMachinePage() {
   const [customPlanDates, setCustomPlanDates] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!user || !canAddMaintenanceMachine(user.role)) return;
+    if (!user || !canAddMaintenanceMachine(user.role, user.categories)) return;
     const base = import.meta.env.VITE_API_BASE_URL || '';
     void (async () => {
       try {
@@ -70,7 +70,7 @@ export default function NewMaintenanceMachinePage() {
         /* keep defaults */
       }
     })();
-  }, [user?.role]);
+  }, [user?.role, user?.categories]);
 
   const allowedLocations = useMemo(
     () => buildScopedLocationOptions(locations, plants, user, [form.location]),
@@ -96,7 +96,7 @@ export default function NewMaintenanceMachinePage() {
     [allowedPlants, form.location]
   );
 
-  if (!user || !canAddMaintenanceMachine(user.role)) {
+  if (!user || !canAddMaintenanceMachine(user.role, user.categories)) {
     return <Navigate to={user?.role === 'HR' ? '/employees' : '/dashboard'} replace />;
   }
 

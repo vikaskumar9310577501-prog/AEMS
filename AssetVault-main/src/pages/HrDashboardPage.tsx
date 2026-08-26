@@ -24,6 +24,7 @@ import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
 import { isInactiveEmployee } from '../lib/employeeStatus';
+import { canAccessHr } from '../lib/userPermissions';
 
 const PAGE_SIZE = 8;
 
@@ -32,6 +33,10 @@ export default function HrDashboardPage() {
   const { assets, user } = useApp();
   const { employees } = useEmployees();
   const { headerPortalNode } = useOutletContext<{ headerPortalNode: HTMLDivElement | null }>() || {};
+
+  if (!user || !canAccessHr(user)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive'>('all');

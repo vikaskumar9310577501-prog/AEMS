@@ -324,9 +324,9 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     if (!user || !canAccessMaintenance(user.role, user.categories)) return;
-    const next = defaultMaintenanceTab(user.role);
-    setTab((prev) => (canAccessMaintenanceTab(user.role, prev) ? prev : next));
-  }, [user?.role]);
+    const next = defaultMaintenanceTab(user.role, user.categories);
+    setTab((prev) => (canAccessMaintenanceTab(user.role, prev, user.categories) ? prev : next));
+  }, [user?.role, user?.categories]);
 
   useEffect(() => {
     if (!machineMenuId) return;
@@ -750,11 +750,11 @@ export default function MaintenancePage() {
     return <Navigate to={user?.role === 'HR' ? '/employees' : '/dashboard'} replace />;
   }
 
-  const canDash = canViewMaintenanceDashboard(user.role);
-  const canComplaintDash = canViewMaintenanceComplaintDashboard(user.role);
-  const canComplaintsInbox = canViewMaintenanceComplaintsInbox(user.role);
+  const canDash = canViewMaintenanceDashboard(user.role, user.categories);
+  const canComplaintDash = canViewMaintenanceComplaintDashboard(user.role, user.categories);
+  const canComplaintsInbox = canViewMaintenanceComplaintsInbox(user.role, user.categories);
   const canFhPh = canManageMaintenanceFhPh(user.role);
-  const canAddMachine = canAddMaintenanceMachine(user.role);
+  const canAddMachine = canAddMaintenanceMachine(user.role, user.categories);
   const canDeleteMachine = isItAdminRole(user.role);
 
   const goTab = (id: Tab) => {
