@@ -964,9 +964,42 @@ app.get("/api/assets", async (req, res) => {
 
     res.setHeader("X-AMS-Cache", fromCache ? "hit" : "miss");
     res.setHeader("X-AMS-Syncing", syncing ? "1" : "0");
-    if (sheetRows.length > 0) {
-      const last = sheetRows[sheetRows.length - 1];
-      console.log("[AMS] GET /api/assets — returning", sheetRows.length, "rows; latest:", {
+
+    const user = resolveRequestUser(req);
+    let scopedRows = sheetRows;
+    if (user && !isItAdminRole(user.role)) {
+      const uLocs = (user.locations || []).map((l) => l.trim().toLowerCase()).filter((l) => l && l !== "all");
+      const uPlants = (user.plants || []).map((p) => p.trim().toLowerCase()).filter((p) => p && p !== "all");
+      const uCats = (user.categories || []).map((c) => c.trim().toLowerCase()).filter((c) => c && c !== "all");
+      const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
+      const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
+      const hasAllCats = (user.categories || []).some((c) => c.trim().toLowerCase() === "all");
+
+      if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
+        scopedRows = [];
+      } else if (!hasAllCats && uCats.length === 0) {
+        scopedRows = [];
+      } else {
+        scopedRows = scopedRows.filter((row) => {
+          const rowLoc = String(row.Location || "").trim().toLowerCase();
+          const rowPlant = String(row["Plant Code"] || "").trim().toLowerCase();
+          const rowCat = String(row["Main Category"] || row["Asset Type"] || "").trim().toLowerCase();
+
+          const matchLoc = hasAllLocs || uLocs.length === 0 || uLocs.some((l) => rowLoc === l || rowLoc.includes(l) || l.includes(rowLoc));
+          const matchPlant = hasAllPlants || uPlants.length === 0 || uPlants.some((p) => rowPlant === p || rowPlant.includes(p) || p.includes(rowPlant));
+          const matchCat = hasAllCats || uCats.length === 0 || uCats.some((c) => rowCat === c || rowCat.includes(c) || c.includes(rowCat));
+
+          if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+            return matchLoc && matchPlant && matchCat;
+          }
+          return matchLoc && matchPlant && matchCat;
+        });
+      }
+    }
+
+    if (scopedRows.length > 0) {
+      const last = scopedRows[scopedRows.length - 1];
+      console.log("[AMS] GET /api/assets — returning", scopedRows.length, "rows; latest:", {
         id: last["S No"],
         CPU: last.CPU,
         RAM: last.RAM,
@@ -974,7 +1007,7 @@ app.get("/api/assets", async (req, res) => {
         "Contact Person Email": last["Contact Person Email"],
       });
     }
-    res.json(sheetRows);
+    res.json(scopedRows);
   } catch (error: any) {
     console.error("Fetch assets error:", error);
     res.status(500).json({ error: error.message || "Failed to fetch assets" });
@@ -2336,6 +2369,28 @@ app.get("/api/employees", async (req, res) => {
     if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(force, list.length)) {
       list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
+    const user = resolveRequestUser(req);
+    if (user && !isItAdminRole(user.role)) {
+      const uLocs = (user.locations || []).map((l) => l.trim().toLowerCase()).filter((l) => l && l !== "all");
+      const uPlants = (user.plants || []).map((p) => p.trim().toLowerCase()).filter((p) => p && p !== "all");
+      const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
+      const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
+
+      if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
+        return res.json([]);
+      }
+
+      list = list.filter((emp) => {
+        const empLoc = String(emp.location || "").trim().toLowerCase();
+        const empPlant = String(emp.plant || "").trim().toLowerCase();
+        const matchLoc = hasAllLocs || uLocs.length === 0 || uLocs.some((l) => empLoc === l || empLoc.includes(l) || l.includes(empLoc));
+        const matchPlant = hasAllPlants || uPlants.length === 0 || uPlants.some((p) => empPlant === p || empPlant.includes(p) || p.includes(empPlant));
+        if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+          return matchLoc && matchPlant;
+        }
+        return matchLoc || matchPlant;
+      });
+    }
     res.json(list);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to load employees" });
@@ -3369,6 +3424,28 @@ app.get("/api/missing-items", async (req, res) => {
     if (shouldRefreshSheetBackedData(force, items.length)) {
       items = await fetchMissingItemsFromGas(proxyToGas);
     }
+    const user = resolveRequestUser(req);
+    if (user && !isItAdminRole(user.role)) {
+      const uLocs = (user.locations || []).map((l) => l.trim().toLowerCase()).filter((l) => l && l !== "all");
+      const uPlants = (user.plants || []).map((p) => p.trim().toLowerCase()).filter((p) => p && p !== "all");
+      const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
+      const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
+
+      if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
+        return res.json({ items: [] });
+      }
+
+      items = items.filter((item) => {
+        const itemLoc = String(item.Location || "").trim().toLowerCase();
+        const itemPlant = String(item["Plant Code"] || item.Plant || "").trim().toLowerCase();
+        const matchLoc = hasAllLocs || uLocs.length === 0 || uLocs.some((l) => itemLoc === l || itemLoc.includes(l) || l.includes(itemLoc));
+        const matchPlant = hasAllPlants || uPlants.length === 0 || uPlants.some((p) => itemPlant === p || itemPlant.includes(p) || p.includes(itemPlant));
+        if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+          return matchLoc && matchPlant;
+        }
+        return matchLoc || matchPlant;
+      });
+    }
     res.json({ items });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to load missing items" });
@@ -3548,6 +3625,28 @@ app.get("/api/damaged-items", async (req, res) => {
     let items = readDamagedItems();
     if (shouldRefreshSheetBackedData(force, items.length)) {
       items = await fetchDamagedItemsFromGas(proxyToGas);
+    }
+    const user = resolveRequestUser(req);
+    if (user && !isItAdminRole(user.role)) {
+      const uLocs = (user.locations || []).map((l) => l.trim().toLowerCase()).filter((l) => l && l !== "all");
+      const uPlants = (user.plants || []).map((p) => p.trim().toLowerCase()).filter((p) => p && p !== "all");
+      const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
+      const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
+
+      if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
+        return res.json({ items: [] });
+      }
+
+      items = items.filter((item) => {
+        const itemLoc = String(item.Location || "").trim().toLowerCase();
+        const itemPlant = String(item["Plant Code"] || item.Plant || "").trim().toLowerCase();
+        const matchLoc = hasAllLocs || uLocs.length === 0 || uLocs.some((l) => itemLoc === l || itemLoc.includes(l) || l.includes(itemLoc));
+        const matchPlant = hasAllPlants || uPlants.length === 0 || uPlants.some((p) => itemPlant === p || itemPlant.includes(p) || p.includes(itemPlant));
+        if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+          return matchLoc && matchPlant;
+        }
+        return matchLoc || matchPlant;
+      });
     }
     res.json({ items });
   } catch (error: any) {

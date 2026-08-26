@@ -259,15 +259,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const filterAssetsForHr = useCallback(
-    (list: Asset[]) => {
-      if (user?.role !== 'HR') return list;
-      return list.filter(
-        (asset) =>
-          !!String(asset.employeeId || '').trim() ||
-          !!String(asset.contactName || '').trim() ||
-          !!String(asset.contactEmail || '').trim()
-      );
+  const filterAssetsForScope = useCallback(
+    (list: Asset[]): Asset[] => {
+      let filtered = list;
+      if (user?.role === 'HR') {
+        filtered = filtered.filter(
+          (asset) =>
+            !!String(asset.employeeId || '').trim() ||
+            !!String(asset.contactName || '').trim() ||
+            !!String(asset.contactEmail || '').trim()
+        );
+      }
+
+      if (!user || isItAdminRole(user.role)) {
+        return filtered;
+      }
+
+      const scopedLocations = cleanScopeValues(user.locations).filter((v) => !sameScopeValue(v, 'All'));
+      const scopedPlants = cleanScopeValues(user.plants).filter((v) => !sameScopeValue(v, 'All'));
+      const scopedCategories = cleanScopeValues(user.categories).filter((v) => !sameScopeValue(v, 'All'));
+
+      const hasLocationAll = hasAllScope(user.locations);
+      const hasPlantAll = hasAllScope(user.plants);
+      const hasCategoryAll = hasAllScope(user.categories);
+
+      if (!hasLocationAll && scopedLocations.length === 0 && !hasPlantAll && scopedPlants.length === 0) {
+        return [];
+      }
+      if (!hasCategoryAll && scopedCategories.length === 0) {
+        return [];
+      }
+
+      return filtered.filter((a) => {
+        const matchLoc =
+          hasLocationAll ||
+          scopedLocations.length === 0 ||
+          scopedLocations.some((loc) => sameScopeValue(a.location, loc) || scopeValueIncludes(a.location, loc));
+
+        const matchPlant =
+          hasPlantAll ||
+          scopedPlants.length === 0 ||
+          scopedPlants.some((p) => sameScopeValue(a.plantCode, p) || scopeValueIncludes(a.plantCode, p));
+
+        const matchCat =
+          hasCategoryAll ||
+          scopedCategories.length === 0 ||
+          scopeListIncludes(scopedCategories, resolveAssetMainCategory(a));
+
+        if (scopedLocations.length > 0 && scopedPlants.length > 0 && !hasLocationAll && !hasPlantAll) {
+          return matchLoc && matchPlant && matchCat;
+        }
+
+        return matchLoc && matchPlant && matchCat;
+      });
     },
     [user]
   );
@@ -297,23 +341,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!raw) return false;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        setAssets(filterAssetsForHr(renormalizeCachedAssets(parsed)));
+        setAssets(filterAssetsForScope(renormalizeCachedAssets(parsed)));
         return true;
       }
     } catch {
       /* ignore */
     }
     return false;
-  }, [filterAssetsForHr, renormalizeCachedAssets]);
+  }, [filterAssetsForScope, renormalizeCachedAssets]);
 
   const fetchAssets = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
     const silent = opts?.silent ?? false;
     const force = opts?.force ?? false;
     if (!silent) setLoading(true);
     try {
+      const userEmail = user?.email || '';
       const base = import.meta.env.VITE_API_BASE_URL || '';
-      const url = force ? `${base}/api/assets?refresh=1` : `${base}/api/assets`;
-      const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
+      const sep = force ? '?refresh=1' : '';
+      const emailParam = userEmail ? (sep ? `&userEmail=${encodeURIComponent(userEmail)}` : `?userEmail=${encodeURIComponent(userEmail)}`) : '';
+      const url = `${base}/api/assets${sep}${emailParam}`;
+      const res = await fetch(url, {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: userEmail ? { 'X-User-Email': userEmail } : {},
+      });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         throw new Error(
@@ -322,7 +373,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       const data = await res.json();
       const mapped = mapAssetsFromApi(data);
-      const nextAssets = filterAssetsForHr(mapped);
+      const nextAssets = filterAssetsForScope(mapped);
       if (import.meta.env.DEV && mapped.length > 0) {
         const latest = mapped[mapped.length - 1];
         console.log("[AMS] Recent entries data source — fetched assets:", mapped.length, {
