@@ -11,19 +11,28 @@ export interface ScopedUser {
 }
 
 function norm(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '').trim().toLowerCase().replace(/\s*,\s*/g, ',');
+}
+
+function getTokens(value: unknown): string[] {
+  const n = norm(value);
+  if (!n) return [];
+  const parts = n.split(',').map((s) => s.trim()).filter(Boolean);
+  return Array.from(new Set([n, ...parts]));
 }
 
 export function sameScopeOption(left: unknown, right: unknown): boolean {
-  const l = norm(left);
-  const r = norm(right);
-  return !!l && !!r && l === r;
+  const lTokens = getTokens(left);
+  const rTokens = getTokens(right);
+  if (lTokens.length === 0 || rTokens.length === 0) return false;
+  return lTokens.some((l) => rTokens.some((r) => l === r));
 }
 
 export function scopeOptionIncludes(left: unknown, right: unknown): boolean {
-  const l = norm(left);
-  const r = norm(right);
-  return !!l && !!r && (l === r || l.includes(r) || r.includes(l));
+  const lTokens = getTokens(left);
+  const rTokens = getTokens(right);
+  if (lTokens.length === 0 || rTokens.length === 0) return false;
+  return lTokens.some((l) => rTokens.some((r) => l === r || l.includes(r) || r.includes(l)));
 }
 
 export function cleanScopeList(values: string[] | undefined): string[] {

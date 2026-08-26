@@ -968,9 +968,9 @@ app.get("/api/assets", async (req, res) => {
     const user = resolveRequestUser(req);
     let scopedRows = sheetRows;
     if (user && !isItAdminRole(user.role)) {
-      const uLocs = (user.locations || []).map((l) => l.trim().toLowerCase()).filter((l) => l && l !== "all");
-      const uPlants = (user.plants || []).map((p) => p.trim().toLowerCase()).filter((p) => p && p !== "all");
-      const uCats = (user.categories || []).map((c) => c.trim().toLowerCase()).filter((c) => c && c !== "all");
+      const uLocs = (user.locations || []).flatMap((l) => l.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
+      const uPlants = (user.plants || []).flatMap((p) => p.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
+      const uCats = (user.categories || []).flatMap((c) => c.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
       const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
       const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
       const hasAllCats = (user.categories || []).some((c) => c.trim().toLowerCase() === "all");
@@ -981,12 +981,14 @@ app.get("/api/assets", async (req, res) => {
         scopedRows = [];
       } else {
         scopedRows = scopedRows.filter((row) => {
-          const rowLoc = String(row.Location || "").trim().toLowerCase();
+          const rawLoc = String(row.Location || "").trim().toLowerCase().replace(/\s*,\s*/g, ',');
+          const rowLocTokens = rawLoc ? [rawLoc, ...rawLoc.split(',').map((s) => s.trim()).filter(Boolean)] : [];
           const rowPlant = String(row["Plant Code"] || "").trim().toLowerCase();
-          const rowCat = String(row["Main Category"] || row["Asset Type"] || "").trim().toLowerCase();
+          const rawCat = String(row["Main Category"] || row["Asset Type"] || "").trim().toLowerCase();
+          const rowCat = rawCat || "it assets";
 
-          const matchLoc = hasAllLocs || uLocs.length === 0 || uLocs.some((l) => rowLoc === l || rowLoc.includes(l) || l.includes(rowLoc));
-          const matchPlant = hasAllPlants || uPlants.length === 0 || uPlants.some((p) => rowPlant === p || rowPlant.includes(p) || p.includes(rowPlant));
+          const matchLoc = hasAllLocs || uLocs.length === 0 || rowLocTokens.length === 0 || uLocs.some((l) => rowLocTokens.some((t) => t === l || t.includes(l) || l.includes(t)));
+          const matchPlant = hasAllPlants || uPlants.length === 0 || !rowPlant || uPlants.some((p) => rowPlant === p || rowPlant.includes(p) || p.includes(rowPlant));
           const matchCat = hasAllCats || uCats.length === 0 || uCats.some((c) => rowCat === c || rowCat.includes(c) || c.includes(rowCat));
 
           if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
@@ -2371,8 +2373,8 @@ app.get("/api/employees", async (req, res) => {
     }
     const user = resolveRequestUser(req);
     if (user && !isItAdminRole(user.role)) {
-      const uLocs = (user.locations || []).map((l) => l.trim().toLowerCase()).filter((l) => l && l !== "all");
-      const uPlants = (user.plants || []).map((p) => p.trim().toLowerCase()).filter((p) => p && p !== "all");
+      const uLocs = (user.locations || []).flatMap((l) => l.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
+      const uPlants = (user.plants || []).flatMap((p) => p.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
       const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
       const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
 
@@ -2381,10 +2383,11 @@ app.get("/api/employees", async (req, res) => {
       }
 
       list = list.filter((emp) => {
-        const empLoc = String(emp.location || "").trim().toLowerCase();
+        const rawLoc = String(emp.location || "").trim().toLowerCase().replace(/\s*,\s*/g, ',');
+        const empLocTokens = rawLoc ? [rawLoc, ...rawLoc.split(',').map((s) => s.trim()).filter(Boolean)] : [];
         const empPlant = String(emp.plant || "").trim().toLowerCase();
-        const matchLoc = hasAllLocs || uLocs.length === 0 || uLocs.some((l) => empLoc === l || empLoc.includes(l) || l.includes(empLoc));
-        const matchPlant = hasAllPlants || uPlants.length === 0 || uPlants.some((p) => empPlant === p || empPlant.includes(p) || p.includes(empPlant));
+        const matchLoc = hasAllLocs || uLocs.length === 0 || empLocTokens.length === 0 || uLocs.some((l) => empLocTokens.some((t) => t === l || t.includes(l) || l.includes(t)));
+        const matchPlant = hasAllPlants || uPlants.length === 0 || !empPlant || uPlants.some((p) => empPlant === p || empPlant.includes(p) || p.includes(empPlant));
         if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
           return matchLoc && matchPlant;
         }

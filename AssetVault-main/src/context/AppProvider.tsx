@@ -82,19 +82,28 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 function normalizedScopeValue(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '').trim().toLowerCase().replace(/\s*,\s*/g, ',');
+}
+
+function getScopeTokens(value: unknown): string[] {
+  const n = normalizedScopeValue(value);
+  if (!n) return [];
+  const parts = n.split(',').map((s) => s.trim()).filter(Boolean);
+  return Array.from(new Set([n, ...parts]));
 }
 
 function sameScopeValue(left: unknown, right: unknown): boolean {
-  const l = normalizedScopeValue(left);
-  const r = normalizedScopeValue(right);
-  return !!l && !!r && l === r;
+  const lTokens = getScopeTokens(left);
+  const rTokens = getScopeTokens(right);
+  if (lTokens.length === 0 || rTokens.length === 0) return false;
+  return lTokens.some((l) => rTokens.some((r) => l === r));
 }
 
 function scopeValueIncludes(left: unknown, right: unknown): boolean {
-  const l = normalizedScopeValue(left);
-  const r = normalizedScopeValue(right);
-  return !!l && !!r && (l === r || l.includes(r));
+  const lTokens = getScopeTokens(left);
+  const rTokens = getScopeTokens(right);
+  if (lTokens.length === 0 || rTokens.length === 0) return false;
+  return lTokens.some((l) => rTokens.some((r) => l === r || l.includes(r) || r.includes(l)));
 }
 
 function hasAllScope(values: string[] | undefined): boolean {

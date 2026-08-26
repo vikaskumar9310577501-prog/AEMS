@@ -14,20 +14,29 @@ export function getSessionEmail(req: Request): string {
 export function resolveRequestUser(req: Request): AppUser | null {
   const email = getSessionEmail(req);
   if (!email) return null;
+  const session = req.authUser?.email?.trim().toLowerCase() === email ? req.authUser : null;
   const cached =
     getCachedUsers().find((u) => u.email.trim().toLowerCase() === email) ||
     readAppData().users.find((u) => u.email.trim().toLowerCase() === email) ||
     null;
-  const session = req.authUser;
-  const role = (session?.email === email && session.role) || cached?.role || "";
+
   if (!cached && !session) return null;
+
+  const role = session?.role || cached?.role || "User";
+  const locations =
+    (cached?.locations && cached.locations.length > 0 ? cached.locations : session?.locations) || [];
+  const plants =
+    (cached?.plants && cached.plants.length > 0 ? cached.plants : session?.plants) || [];
+  const categories =
+    (cached?.categories && cached.categories.length > 0 ? cached.categories : session?.categories) || [];
+
   return {
     email,
-    role: role || "User",
-    locations: cached?.locations || [],
-    plants: cached?.plants || [],
-    categories: cached?.categories || [],
-    allowDelete: cached?.allowDelete,
+    role,
+    locations,
+    plants,
+    categories,
+    allowDelete: cached?.allowDelete ?? session?.allowDelete,
   };
 }
 
