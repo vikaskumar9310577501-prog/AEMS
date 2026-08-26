@@ -24,6 +24,7 @@ import {
   X,
   ChevronRight,
   Boxes,
+  MapPin,
 } from 'lucide-react';
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
@@ -74,6 +75,16 @@ export default function AppLayout() {
     user.categories &&
     user.categories.length > 0 &&
     !user.categories.includes('All');
+
+  const scopeLocation =
+    user.role === 'IT Admin' || !user.locations?.length || user.locations.includes('All')
+      ? 'All Locations'
+      : user.locations.join(', ');
+
+  const scopePlant =
+    user.role === 'IT Admin' || !user.plants?.length || user.plants.includes('All')
+      ? 'All Plants'
+      : user.plants.join(', ');
 
   const closeSidebar = () => setSidebarOpen(false);
   const openSidebar = () => setSidebarOpen(true);
@@ -391,6 +402,18 @@ export default function AppLayout() {
                     : 'Asset Management'}
                 </span>
               </>
+            )}
+
+            {/* Location & Plant Scope indicator */}
+            {user && (
+              <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15 text-white text-xs font-semibold shadow-xs shrink-0 select-none ml-2">
+                <MapPin size={12} className="text-emerald-400 shrink-0" />
+                <span className="text-blue-200/80 font-medium">Loc:</span>
+                <span className="text-white font-bold max-w-[120px] truncate">{scopeLocation}</span>
+                <span className="text-white/30">|</span>
+                <span className="text-blue-200/80 font-medium">Plant:</span>
+                <span className="text-white font-bold max-w-[140px] truncate">{scopePlant}</span>
+              </div>
             )}
           </div>
 

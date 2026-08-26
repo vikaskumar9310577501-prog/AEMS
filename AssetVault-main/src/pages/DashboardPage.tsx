@@ -715,25 +715,30 @@ function DashboardPageContent() {
     return user?.role || 'User';
   }, [user?.role]);
 
-  const headerLocationPlant = useMemo(() => {
-    const location =
-      selectedLocation !== 'All'
-        ? selectedLocation
-        : user?.locations?.[0] || locations[0] || '—';
+  const userScopeBadge = useMemo(() => {
+    const isGlobal =
+      user?.role === 'IT Admin' ||
+      !user?.locations?.length ||
+      user.locations.some((l) => l.trim().toLowerCase() === 'all');
 
-    const plantCode =
-      selectedPlant !== 'All' ? selectedPlant : user?.plants?.[0];
+    const loc = isGlobal ? 'All Locations' : (user?.locations || []).join(', ');
 
-    if (plantCode) {
-      const plantRec = plantOptions.find(
-        (p) => sameFilterValue(p.code, plantCode) || sameFilterValue(p.name, plantCode)
-      );
-      const plantName = plantRec?.name || plantCode;
-      return `${location} (${plantName})`;
-    }
+    const plantList = isGlobal
+      ? 'All Plants'
+      : (user?.plants || [])
+          .map((pCode) => {
+            const clean = pCode.trim();
+            const rec = plants.find(
+              (p) => sameFilterValue(p.code, clean) || sameFilterValue(p.name, clean)
+            );
+            return rec && rec.name && rec.name.toLowerCase() !== rec.code.toLowerCase()
+              ? `${rec.name} (${rec.code})`
+              : clean;
+          })
+          .join(', ') || 'All Plants';
 
-    return location;
-  }, [selectedLocation, selectedPlant, user, locations, plantOptions]);
+    return { isGlobal, location: loc, plant: plantList };
+  }, [user, plants]);
 
   const hasActiveFilters =
     selectedLocation !== 'All' || selectedPlant !== 'All' || selectedStatus !== 'All';
@@ -973,7 +978,24 @@ function DashboardPageContent() {
       )}
 
       {/* Top 5-Column Modern KPI Cards Bar */}
-      <div className="px-4 lg:px-6 pt-3.5 pb-2 shrink-0">
+      <div className="px-4 lg:px-6 pt-3.5 pb-2 shrink-0 space-y-2.5">
+        {/* Active Location & Plant Access Scope Display */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-white border border-slate-200/90 text-slate-800 shadow-xs text-xs">
+              <div className="w-5 h-5 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <MapPin size={12} />
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Assigned Scope:</span>
+                <span className="font-bold text-slate-800">{userScopeBadge.location}</span>
+                <span className="text-slate-300">·</span>
+                <span className="font-bold text-blue-600">{userScopeBadge.plant}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3`}>
           {/* Card 1: TOTAL ASSETS */}
           <div
