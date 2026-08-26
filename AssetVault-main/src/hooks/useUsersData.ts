@@ -85,9 +85,20 @@ export function useUsersData() {
     }
 
     try {
-      const res = await fetch(`/api/users?refresh=1&_=${Date.now()}`, {
+      const base = import.meta.env.VITE_API_BASE_URL || '';
+      let email = '';
+      try {
+        const stored = localStorage.getItem('ams_user_data') || localStorage.getItem('asset_vault_user');
+        if (stored) email = JSON.parse(stored)?.email || '';
+      } catch {
+        /* ignore */
+      }
+      const emailQuery = email ? `&userEmail=${encodeURIComponent(email)}` : '';
+      const res = await fetch(`${base}/api/users?refresh=1&_=${Date.now()}${emailQuery}`, {
         signal: controller.signal,
         cache: 'no-store',
+        credentials: 'include',
+        headers: email ? { 'X-User-Email': email } : {},
       });
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('text/html')) {

@@ -252,14 +252,19 @@ export default function UserManagement() {
 
     setSaving(true);
     try {
+      const base = import.meta.env.VITE_API_BASE_URL || '';
       const url = editingEmail
-        ? `/api/users/${encodeURIComponent(editingEmail)}`
-        : '/api/users';
+        ? `${base}/api/users/${encodeURIComponent(editingEmail)}`
+        : `${base}/api/users`;
       const method = editingEmail ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(loggedInUser?.email ? { 'X-User-Email': loggedInUser.email } : {}),
+        },
+        body: JSON.stringify({ ...payload, userEmail: loggedInUser?.email }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');
@@ -282,9 +287,15 @@ export default function UserManagement() {
       return;
     }
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/users/${encodeURIComponent(deleteConfirmEmail)}`, {
-        method: 'DELETE',
-      });
+      const emailQuery = loggedInUser?.email ? `?userEmail=${encodeURIComponent(loggedInUser.email)}` : '';
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || ''}/api/users/${encodeURIComponent(deleteConfirmEmail)}${emailQuery}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: loggedInUser?.email ? { 'X-User-Email': loggedInUser.email } : {},
+        }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Delete failed');
       toast.success('User deleted');

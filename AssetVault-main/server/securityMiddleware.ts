@@ -71,6 +71,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/assets" ||
       req.path === "/api/assets/bulk" ||
       req.path === "/api/assets/sync" ||
+      req.path === "/api/users" ||
       req.path === "/api/missing-items" ||
       req.path === "/api/damaged-items" ||
       /^\/api\/assets\/[^/]+\/deassign$/.test(req.path) ||
@@ -82,6 +83,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
   if (
     req.method === "PUT" &&
     (/^\/api\/assets\/[^/]+$/.test(req.path) ||
+      /^\/api\/users\/[^/]+$/.test(req.path) ||
       /^\/api\/damaged-items\/[^/]+$/.test(req.path))
   ) {
     return true;
@@ -90,6 +92,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
   if (
     req.method === "DELETE" &&
     (/^\/api\/assets\/[^/]+$/.test(req.path) ||
+      /^\/api\/users\/[^/]+$/.test(req.path) ||
       /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
       /^\/api\/damaged-items\/[^/]+$/.test(req.path))
   ) {
@@ -103,6 +106,8 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/settings" ||
       req.path === "/api/type-definitions" ||
       req.path === "/api/employees" ||
+      req.path === "/api/users" ||
+      req.path === "/api/users/local" ||
       req.path === "/api/inventory" ||
       req.path === "/api/missing-items" ||
       req.path === "/api/damaged-items" ||

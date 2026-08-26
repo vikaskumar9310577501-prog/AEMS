@@ -211,8 +211,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (now - loginTime < DAY_MS) {
             if (!cancelled) setUser(parsedUser);
             if (!cancelled) {
-              fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/users?refresh=1', {
+              const base = import.meta.env.VITE_API_BASE_URL || '';
+              const emailParam = parsedUser.email ? `&userEmail=${encodeURIComponent(parsedUser.email)}` : '';
+              fetch(`${base}/api/users?refresh=1${emailParam}`, {
                 credentials: 'include',
+                headers: parsedUser.email ? { 'X-User-Email': parsedUser.email } : {},
               })
                 .then((r) => (r.ok ? r.json() : null))
                 .then((usersList) => {
