@@ -418,7 +418,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [filterAssetsForHr, loadAssetsFromCache]);
+  }, [filterAssetsForScope, loadAssetsFromCache]);
 
   useEffect(() => {
     if (user && !assetsLoadedRef.current) {
