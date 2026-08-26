@@ -775,7 +775,8 @@ app.get("/api/assets/sync-meta", async (req, res) => {
     res.setHeader("X-AMS-Syncing", meta.syncing ? "1" : "0");
     res.json(meta);
   } catch (err: unknown) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Sync meta failed" });
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.json({ count: 0, fingerprint: "", cacheAgeMs: null, syncing: false, lastRemovedCount: 0 });
   }
 });
 

@@ -334,13 +334,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAssets(nextAssets);
       localStorage.setItem(ASSETS_CACHE_KEY, JSON.stringify(nextAssets));
       try {
-        const metaRes = await fetch(`${base}/api/assets/sync-meta`, {
-          credentials: 'include',
-          cache: 'no-store',
-        });
-        if (metaRes.ok) {
-          const meta = (await metaRes.json()) as { fingerprint?: string };
-          if (meta.fingerprint) assetsFingerprintRef.current = meta.fingerprint;
+        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const metaRes = await fetch(`${base}/api/assets/sync-meta`, {
+            credentials: 'include',
+            cache: 'no-store',
+            signal: controller.signal,
+          }).catch(() => null);
+          clearTimeout(timeoutId);
+          if (metaRes && metaRes.ok) {
+            const meta = (await metaRes.json().catch(() => null)) as { fingerprint?: string } | null;
+            if (meta?.fingerprint) assetsFingerprintRef.current = meta.fingerprint;
+          }
         }
       } catch {
         /* meta optional */
@@ -374,19 +380,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
+    let isPolling = false;
+
     const pollSheetChanges = async () => {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (isPolling) return;
+
+      isPolling = true;
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL || ''}/api/assets/sync-meta`,
-          { credentials: 'include', cache: 'no-store' }
-        );
-        if (!res.ok) return;
+          { credentials: 'include', cache: 'no-store', signal: controller.signal }
+        ).catch(() => null);
 
-        const meta = (await res.json()) as {
+        clearTimeout(timeoutId);
+        if (!res || !res.ok) return;
+
+        const meta = (await res.json().catch(() => null)) as {
           fingerprint?: string;
           syncing?: boolean;
-        };
+        } | null;
+
+        if (!meta) return;
 
         const nextFp = meta.fingerprint || '';
         const prevFp = assetsFingerprintRef.current;
@@ -404,6 +423,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {
         /* silent poll */
+      } finally {
+        isPolling = false;
       }
     };
 
