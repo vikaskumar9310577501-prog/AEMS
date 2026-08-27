@@ -204,17 +204,17 @@ export default function AppLayout() {
             );
           })}
 
-        {/* Prevention / Maintenance placed directly under Maintenance Assets */}
+        {/* Preventive Setup placed directly under Maintenance Assets */}
         {!isHr && canAccessMaintenance(user.role, user.categories) && (
           <NavLink
             to="/maintenance"
             className={navClass}
-            title="Prevention / Maintenance"
+            title="Preventive Setup"
             onClick={closeSidebar}
           >
             <div className="flex items-center gap-3">
               <Wrench size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
-              <span className="truncate">Prevention / Maintenance</span>
+              <span className="truncate">Preventive Setup</span>
             </div>
             <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
           </NavLink>
@@ -390,7 +390,7 @@ export default function AppLayout() {
                     : location.pathname.startsWith('/employees')
                     ? 'Employee Directory'
                     : location.pathname.startsWith('/maintenance')
-                    ? 'Prevention / Maintenance'
+                    ? 'Preventive Setup'
                     : location.pathname.startsWith('/damaged-scrap')
                     ? 'Damaged & Scrap'
                     : location.pathname.startsWith('/missing')
