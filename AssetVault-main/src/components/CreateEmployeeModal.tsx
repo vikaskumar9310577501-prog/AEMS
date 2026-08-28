@@ -140,7 +140,8 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
       phone: normalizeEmployeePhoneInput(String(initial?.phone || '')),
       status: initial?.status === 'Inactive' ? 'Inactive' : 'Active',
     });
-  }, [open, initial, allowedLocations, allowedPlants]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial?.employeeId, initial?.email]);
 
   const departments = useMemo(() => {
     const fromCatalog = settings.catalog?.departments ?? [];
@@ -356,14 +357,17 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
             value={form.location}
             options={optionsWithValue(allowedLocations, form.location)}
             onChange={(location) => {
-              const matchingPlants = allowedPlants.filter(
-                (p) => !location || !p.location || sameScopeOption(p.location, location)
-              );
-              setForm((f) => ({
-                ...f,
-                location,
-                plant: matchingPlants.length === 1 ? matchingPlants[0].code : '',
-              }));
+              setForm((f) => {
+                const matchingPlants = allowedPlants.filter(
+                  (p) => !location || !p.location || sameScopeOption(p.location, location)
+                );
+                const keepsCurrentPlant = matchingPlants.some((p) => sameScopeOption(p.code, f.plant));
+                return {
+                  ...f,
+                  location,
+                  plant: keepsCurrentPlant ? f.plant : (matchingPlants.length === 1 ? matchingPlants[0].code : ''),
+                };
+              });
             }}
             placeholder="Select location"
           />

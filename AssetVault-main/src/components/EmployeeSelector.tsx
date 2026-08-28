@@ -154,6 +154,8 @@ export default function EmployeeSelector({
     };
   }, [values.employeeId, values.contactEmail]);
 
+  const [createModalInitial, setCreateModalInitial] = useState<Partial<Employee> | null>(null);
+
   const draftFromForm = (): Partial<Employee> => ({
     employeeId: normId(values.employeeId) || '',
     name: values.contactName,
@@ -189,6 +191,7 @@ export default function EmployeeSelector({
       return toast.error('Enter Employee ID, name and email first');
     }
 
+    setCreateModalInitial(draftFromForm());
     setCreateModalOpen(true);
   };
 
@@ -462,8 +465,11 @@ export default function EmployeeSelector({
       <CreateEmployeeModal
         open={createModalOpen}
         mode="create"
-        initial={draftFromForm()}
-        onClose={() => setCreateModalOpen(false)}
+        initial={createModalInitial}
+        onClose={() => {
+          setCreateModalOpen(false);
+          setCreateModalInitial(null);
+        }}
         onSaved={onProfileCreated}
       />
     </>
