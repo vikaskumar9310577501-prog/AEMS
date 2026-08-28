@@ -59,15 +59,21 @@ export default function DeviceThumb({ assetType, mainCategory, subCategory, imag
     });
   }, []);
 
+  const isItAsset = !mainCategory || mainCategory === "IT Assets";
+
+  // For IT assets: always use original studio device previews (/device-previews/*.jpg)
+  // unless a local file (data:image, blob, local-) was explicitly uploaded.
   const isDirectPhoto =
     !!imageUrl &&
-    (imageUrl.startsWith('http://') ||
-      imageUrl.startsWith('https://') ||
-      imageUrl.startsWith('/') ||
-      imageUrl.startsWith('data:image') ||
+    (imageUrl.startsWith('data:image') ||
       imageUrl.startsWith('blob:') ||
       imageUrl.startsWith('local-') ||
-      imageUrl.includes('/custom-assets/'));
+      imageUrl.includes('/custom-assets/') ||
+      (!isItAsset &&
+        (imageUrl.startsWith('http://') ||
+          imageUrl.startsWith('https://') ||
+          imageUrl.startsWith('/'))));
+
   const src = isDirectPhoto
     ? getDeviceImageUrl(imageUrl)
     : getAssetPreviewUrl(
