@@ -10,7 +10,7 @@ export const MANIFEST_PATH = path.join(process.cwd(), "data", "demo_data_manifes
 
 export const DEMO_ASSETS: MappedAsset[] = [
   // =========================================================================
-  // 1. ELECTRICAL ASSETS (Bhiwadi)
+  // 1. ELECTRICAL ASSETS (Bhiwadi) - All with distinct, unique images
   // =========================================================================
   {
     id: "DEMO-BHW-ELE-001",
@@ -33,7 +33,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1590373977797-4028bc166d3a?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|ELE-2026-00001",
     uniqueCode: "AEMS-DEMO-BHIWADI-001",
     binaryCode: "",
@@ -74,7 +76,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|ELE-2026-00002",
     uniqueCode: "AEMS-DEMO-BHIWADI-002",
     binaryCode: "",
@@ -115,7 +119,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1601524909162-be87252be298?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|ELE-2026-00003",
     uniqueCode: "AEMS-DEMO-BHIWADI-003",
     binaryCode: "",
@@ -156,7 +162,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|ELE-2026-00004",
     uniqueCode: "AEMS-DEMO-BHIWADI-004",
     binaryCode: "",
@@ -197,7 +205,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|ELE-2026-00005",
     uniqueCode: "AEMS-DEMO-BHIWADI-005",
     binaryCode: "",
@@ -219,7 +229,7 @@ export const DEMO_ASSETS: MappedAsset[] = [
   },
 
   // =========================================================================
-  // 2. PRODUCTION ASSETS (Bhiwadi)
+  // 2. PRODUCTION ASSETS (Bhiwadi) - All with distinct, unique images
   // =========================================================================
   {
     id: "DEMO-BHW-PRD-001",
@@ -242,7 +252,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|PRD-2026-00001",
     uniqueCode: "AEMS-DEMO-BHIWADI-006",
     binaryCode: "",
@@ -283,7 +295,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|PRD-2026-00002",
     uniqueCode: "AEMS-DEMO-BHIWADI-007",
     binaryCode: "",
@@ -324,7 +338,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|PRD-2026-00003",
     uniqueCode: "AEMS-DEMO-BHIWADI-008",
     binaryCode: "",
@@ -365,7 +381,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|PRD-2026-00004",
     uniqueCode: "AEMS-DEMO-BHIWADI-009",
     binaryCode: "",
@@ -406,7 +424,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|PRD-2026-00005",
     uniqueCode: "AEMS-DEMO-BHIWADI-010",
     binaryCode: "",
@@ -447,7 +467,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|PRD-2026-00006",
     uniqueCode: "AEMS-DEMO-BHIWADI-011",
     binaryCode: "",
@@ -469,7 +491,7 @@ export const DEMO_ASSETS: MappedAsset[] = [
   },
 
   // =========================================================================
-  // 3. SAFETY ASSETS (Bhiwadi)
+  // 3. SAFETY ASSETS (Bhiwadi) - All with distinct, unique images
   // =========================================================================
   {
     id: "DEMO-BHW-SAF-001",
@@ -492,7 +514,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|SAF-2026-00001",
     uniqueCode: "AEMS-DEMO-BHIWADI-012",
     binaryCode: "",
@@ -533,7 +557,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|SAF-2026-00002",
     uniqueCode: "AEMS-DEMO-BHIWADI-013",
     binaryCode: "",
@@ -574,7 +600,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|SAF-2026-00003",
     uniqueCode: "AEMS-DEMO-BHIWADI-014",
     binaryCode: "",
@@ -615,7 +643,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1584744982491-665216d95f8b?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|SAF-2026-00004",
     uniqueCode: "AEMS-DEMO-BHIWADI-015",
     binaryCode: "",
@@ -656,7 +686,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|SAF-2026-00005",
     uniqueCode: "AEMS-DEMO-BHIWADI-016",
     binaryCode: "",
@@ -678,7 +710,7 @@ export const DEMO_ASSETS: MappedAsset[] = [
   },
 
   // =========================================================================
-  // 4. VEHICLE ASSETS (Bhiwadi)
+  // 4. VEHICLE ASSETS (Bhiwadi) - All with distinct, unique images
   // =========================================================================
   {
     id: "DEMO-BHW-VEH-001",
@@ -701,7 +733,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1586864387789-628af9feed72?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|VEH-2026-00001",
     uniqueCode: "AEMS-DEMO-BHIWADI-017",
     binaryCode: "",
@@ -742,7 +776,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|VEH-2026-00002",
     uniqueCode: "AEMS-DEMO-BHIWADI-018",
     binaryCode: "",
@@ -783,7 +819,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1580674285054-bed31e145f59?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|VEH-2026-00003",
     uniqueCode: "AEMS-DEMO-BHIWADI-019",
     binaryCode: "",
@@ -824,7 +862,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|VEH-2026-00004",
     uniqueCode: "AEMS-DEMO-BHIWADI-020",
     binaryCode: "",
@@ -846,7 +886,7 @@ export const DEMO_ASSETS: MappedAsset[] = [
   },
 
   // =========================================================================
-  // 5. FURNITURE ASSETS (Bhiwadi)
+  // 5. FURNITURE ASSETS (Bhiwadi) - All with distinct, unique images
   // =========================================================================
   {
     id: "DEMO-BHW-FUR-001",
@@ -869,7 +909,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|FUR-2026-00001",
     uniqueCode: "AEMS-DEMO-BHIWADI-021",
     binaryCode: "",
@@ -910,7 +952,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|FUR-2026-00002",
     uniqueCode: "AEMS-DEMO-BHIWADI-022",
     binaryCode: "",
@@ -951,7 +995,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1580481077197-987829288e40?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|FUR-2026-00003",
     uniqueCode: "AEMS-DEMO-BHIWADI-023",
     binaryCode: "",
@@ -992,7 +1038,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|FUR-2026-00004",
     uniqueCode: "AEMS-DEMO-BHIWADI-024",
     binaryCode: "",
@@ -1033,7 +1081,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1523362628745-0c100150b504?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|FUR-2026-00005",
     uniqueCode: "AEMS-DEMO-BHIWADI-025",
     binaryCode: "",
@@ -1055,7 +1105,7 @@ export const DEMO_ASSETS: MappedAsset[] = [
   },
 
   // =========================================================================
-  // 6. MAINTENANCE ASSETS (Bhiwadi) - Regular Maintenance Tool Assets
+  // 6. MAINTENANCE ASSETS (Bhiwadi) - All with distinct, unique images
   // =========================================================================
   {
     id: "DEMO-BHW-MNT-001",
@@ -1078,7 +1128,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|MNT-2026-00001",
     uniqueCode: "AEMS-DEMO-BHIWADI-026",
     binaryCode: "",
@@ -1119,7 +1171,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|MNT-2026-00002",
     uniqueCode: "AEMS-DEMO-BHIWADI-027",
     binaryCode: "",
@@ -1160,7 +1214,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|MNT-2026-00003",
     uniqueCode: "AEMS-DEMO-BHIWADI-028",
     binaryCode: "",
@@ -1201,7 +1257,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|MNT-2026-00004",
     uniqueCode: "AEMS-DEMO-BHIWADI-029",
     binaryCode: "",
@@ -1242,7 +1300,9 @@ export const DEMO_ASSETS: MappedAsset[] = [
     mouseSerial: "", mouseAssetCode: "", mouseMake: "", mouseModel: "", mouseConnectivity: "",
     upsSerial: "", upsAssetCode: "", upsMake: "", upsModel: "",
     contactName: "", contactEmail: "", contactMobile: "",
-    documentUrl: "", imageUrl: "", additionalItems: "",
+    documentUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=900&q=85",
+    additionalItems: "",
     qrCodeText: "AEMS-DEMO-BHIWADI-2026|MNT-2026-00005",
     uniqueCode: "AEMS-DEMO-BHIWADI-030",
     binaryCode: "",
@@ -1265,17 +1325,10 @@ export const DEMO_ASSETS: MappedAsset[] = [
 ];
 
 async function run() {
-  console.log("=== AEMS SAFE DEMO DATA POPULATION ===");
+  console.log("=== AEMS SAFE DEMO DATA POPULATION & IMAGE SYNC ===");
   console.log(`Demo Marker: ${DEMO_MARKER}`);
   console.log(`Target Location: BHIWADI ONLY`);
   console.log(`Target Count: ${DEMO_ASSETS.length} records`);
-
-  // Verify DB mode
-  console.log("DB Modes:", {
-    isDbMode: isDbMode(),
-    isSupabaseMode: isSupabaseMode(),
-    isSqlMode: isSqlMode(),
-  });
 
   // Verify before state
   const existingAssets = await listJsonRows<MappedAsset>("Assets");
@@ -1287,8 +1340,7 @@ async function run() {
   ).length;
   console.log(`Pre-check: Real IT/Software Assets = ${realItCount} (Will remain 100% UNTOUCHED)`);
 
-  let insertedCount = 0;
-  let skippedCount = 0;
+  let updatedCount = 0;
   const manifestRecords: Array<{
     id: string;
     uniqueCode: string;
@@ -1316,24 +1368,17 @@ async function run() {
       throw new Error(`CRITICAL ABORT: Zero-touch rule violated on record: ${demoAsset.id}`);
     }
 
-    // 3. Idempotent check
-    const existing = await getJsonRow<MappedAsset>("Assets", demoAsset.id);
-    if (existing) {
-      console.log(`[SKIP] Already exists: ${demoAsset.id} (${demoAsset.assetName})`);
-      skippedCount++;
-    } else {
-      await upsertJsonRow("Assets", demoAsset.id, demoAsset, {
-        AssetCode: demoAsset.assetCode,
-        SerialNumber: demoAsset.serialNumber,
-        MainCategory: demoAsset.mainCategory,
-        Location: demoAsset.location,
-        PlantCode: demoAsset.plantCode,
-        EmployeeId: demoAsset.employeeId,
-        Status: demoAsset.status,
-      });
-      console.log(`[INSERTED] ${demoAsset.id} -> ${demoAsset.mainCategory} | ${demoAsset.assetName}`);
-      insertedCount++;
-    }
+    await upsertJsonRow("Assets", demoAsset.id, demoAsset, {
+      AssetCode: demoAsset.assetCode,
+      SerialNumber: demoAsset.serialNumber,
+      MainCategory: demoAsset.mainCategory,
+      Location: demoAsset.location,
+      PlantCode: demoAsset.plantCode,
+      EmployeeId: demoAsset.employeeId,
+      Status: demoAsset.status,
+    });
+    console.log(`[UPSERTED WITH IMAGE] ${demoAsset.id} -> ${demoAsset.assetName}`);
+    updatedCount++;
 
     manifestRecords.push({
       id: demoAsset.id,
@@ -1353,8 +1398,7 @@ async function run() {
     generatedAt: new Date().toISOString(),
     location: "BHIWADI",
     totalRecords: manifestRecords.length,
-    insertedCount,
-    skippedCount,
+    updatedCount,
     records: manifestRecords,
   };
 
@@ -1370,15 +1414,7 @@ async function run() {
   ).length;
   console.log(`Post-check: Real IT/Software Assets = ${postItCount} (Verified EQUAL: ${realItCount === postItCount})`);
 
-  console.log("\nCategory breakdown in DB:");
-  const catBreakdown: Record<string, number> = {};
-  postAssets.forEach((a) => {
-    const cat = a.mainCategory || a.assetType || "Uncategorized";
-    catBreakdown[cat] = (catBreakdown[cat] || 0) + 1;
-  });
-  console.table(catBreakdown);
-
-  console.log("\n=== DEMO DATA POPULATION COMPLETED SUCCESSFULLY ===");
+  console.log("\n=== DEMO DATA IMAGE SYNC COMPLETED SUCCESSFULLY ===");
 }
 
 run().catch((err) => {

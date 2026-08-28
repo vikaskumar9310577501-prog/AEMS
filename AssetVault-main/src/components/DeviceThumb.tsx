@@ -59,7 +59,15 @@ export default function DeviceThumb({ assetType, mainCategory, subCategory, imag
     });
   }, []);
 
-  const isDirectPhoto = !!imageUrl && (imageUrl.startsWith('data:image') || imageUrl.startsWith('blob:') || imageUrl.startsWith('local-') || imageUrl.includes('/custom-assets/'));
+  const isDirectPhoto =
+    !!imageUrl &&
+    (imageUrl.startsWith('http://') ||
+      imageUrl.startsWith('https://') ||
+      imageUrl.startsWith('/') ||
+      imageUrl.startsWith('data:image') ||
+      imageUrl.startsWith('blob:') ||
+      imageUrl.startsWith('local-') ||
+      imageUrl.includes('/custom-assets/'));
   const src = isDirectPhoto
     ? getDeviceImageUrl(imageUrl)
     : getAssetPreviewUrl(

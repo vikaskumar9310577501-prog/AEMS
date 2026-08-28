@@ -1,10 +1,9 @@
 {
   "demoMarker": "AEMS-DEMO-BHIWADI-2026",
-  "generatedAt": "2026-08-28T06:24:55.293Z",
+  "generatedAt": "2026-08-28T06:39:16.654Z",
   "location": "BHIWADI",
   "totalRecords": 30,
-  "insertedCount": 0,
-  "skippedCount": 30,
+  "updatedCount": 30,
   "records": [
     {
       "id": "DEMO-BHW-ELE-001",
