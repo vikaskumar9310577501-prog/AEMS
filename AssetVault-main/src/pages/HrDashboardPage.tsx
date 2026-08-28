@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, Navigate } from 'react-router-dom';
 import {
   Users,
   ShieldCheck,
@@ -25,6 +25,7 @@ import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
 import { isInactiveEmployee } from '../lib/employeeStatus';
 import { canAccessHr } from '../lib/userPermissions';
+import HrKpiModal, { HrKpiType } from '../components/HrKpiModal';
 
 const PAGE_SIZE = 8;
 
@@ -44,6 +45,7 @@ export default function HrDashboardPage() {
   const [sortBy, setSortBy] = useState<'name' | 'assets' | 'id'>('name');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeMenuEmployeeId, setActiveMenuEmployeeId] = useState<string | null>(null);
+  const [activeKpiModal, setActiveKpiModal] = useState<HrKpiType | null>(null);
 
   // Department list for dropdown
   const departments = useMemo(() => {
@@ -229,64 +231,76 @@ export default function HrDashboardPage() {
       {/* STICKY TOP COMPACT KPI CARDS */}
       <div className="sticky top-0 z-20 bg-[#F8F6F0]/95 backdrop-blur-md border-b border-[#E8E5DF] px-4 sm:px-6 py-2.5 shadow-2xs">
         <div className="max-w-7xl mx-auto w-full">
-          {/* 4 Compact Highlighted KPI Cards with exact requested color themes */}
+          {/* 4 Compact Highlighted KPI Cards with exact requested color themes and clickable modal trigger */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {/* Card 1: TOTAL EMPLOYEES (Warm White Theme) */}
-            <div className="bg-[#FAF8F5] border border-[#E5E0D8] rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs flex items-center justify-between">
+            <div
+              onClick={() => setActiveKpiModal('total_employees')}
+              className="bg-[#FAF8F5] border border-[#E5E0D8] hover:border-amber-400 rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between group"
+              title="Click to view all employees list"
+            >
               <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 group-hover:text-amber-800 transition-colors">
                   TOTAL EMPLOYEES
                 </span>
                 <p className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-0.5">{stats.total}</p>
               </div>
-              <div className="w-7 h-7 rounded-lg bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                 <Users size={15} />
               </div>
             </div>
 
             {/* Card 2: ASSETS ASSIGNED (Blue Theme) */}
-            <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs flex items-center justify-between">
+            <div
+              onClick={() => setActiveKpiModal('assigned_assets')}
+              className="bg-[#EFF6FF] border border-[#BFDBFE] hover:border-blue-500 rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between group"
+              title="Click to view all assigned assets"
+            >
               <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-blue-700">
+                <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 group-hover:text-blue-900 transition-colors">
                   ASSETS ASSIGNED
                 </span>
                 <p className="text-xl sm:text-2xl font-black text-blue-950 leading-none mt-0.5">{stats.totalAssignedAssets}</p>
               </div>
-              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 transition-transform">
                 <Laptop size={15} />
               </div>
             </div>
 
             {/* Card 3: ACTIVE STAFF (Green Theme) */}
-            <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs flex items-center justify-between">
+            <div
+              onClick={() => setActiveKpiModal('active_staff')}
+              className="bg-[#ECFDF5] border border-[#A7F3D0] hover:border-emerald-500 rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between group"
+              title="Click to view active staff"
+            >
               <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700">
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700 group-hover:text-emerald-900 transition-colors">
                   ACTIVE STAFF
                 </span>
                 <p className="text-xl sm:text-2xl font-black text-emerald-950 leading-none mt-0.5">{stats.active}</p>
               </div>
-              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 transition-transform">
                 <UserCheck size={15} />
               </div>
             </div>
 
             {/* Card 4: INACTIVE RECORDS (Darker Red Theme + Heartbeat Animation) */}
             <div
-              onClick={() => setStatusFilter(statusFilter === 'Inactive' ? 'all' : 'Inactive')}
-              className={`border-2 rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-xs transition-all cursor-pointer flex items-center justify-between ${
+              onClick={() => setActiveKpiModal('inactive_records')}
+              className={`border-2 rounded-xl p-2.5 sm:px-3.5 sm:py-2.5 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                 statusFilter === 'Inactive'
                   ? 'bg-rose-200 border-rose-600 ring-2 ring-rose-500'
-                  : 'bg-[#FFE4E6] border-rose-400'
+                  : 'bg-[#FFE4E6] border-rose-400 hover:border-rose-600'
               } animate-heartbeat-subtle`}
-              title="Click to filter Inactive records"
+              title="Click to view inactive records"
             >
               <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-rose-800">
+                <span className="text-[9px] font-black uppercase tracking-wider text-rose-800 group-hover:text-rose-950 transition-colors">
                   INACTIVE RECORDS
                 </span>
                 <p className="text-xl sm:text-2xl font-black text-rose-950 leading-none mt-0.5">{stats.inactive}</p>
               </div>
-              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 transition-transform">
                 <UserX size={15} />
               </div>
             </div>
@@ -531,6 +545,17 @@ export default function HrDashboardPage() {
           </div>
         </footer>
       </div>
+
+      {/* HR Dashboard KPI Detail Popup Modal */}
+      <HrKpiModal
+        isOpen={!!activeKpiModal}
+        onClose={() => setActiveKpiModal(null)}
+        kpiType={activeKpiModal}
+        employees={employees}
+        assets={assets}
+        onSelectEmployee={(emp) => navigate(`/employees/${encodeURIComponent(emp.employeeId)}`)}
+        onSelectAsset={(asset) => navigate(`/asset/${encodeURIComponent(asset.id)}`)}
+      />
     </div>
   );
 }
