@@ -93,9 +93,13 @@ export default function DeviceThumb({ assetType, mainCategory, subCategory, imag
           loading="lazy"
           onError={(e) => {
             const img = e.target as HTMLImageElement;
-            const fallback = mainCategory && mainCategory !== "IT Assets"
-              ? "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=85"
-              : getDevicePreviewFallbackUrl(assetType);
+            const fallback = getAssetPreviewUrl(
+              mainCategory || "IT Assets",
+              subCategory || "",
+              assetType,
+              previewImages?.subCategoryImages,
+              previewImages?.softwareSubCategoryImages
+            );
             if (img.src !== fallback) img.src = fallback;
           }}
         />

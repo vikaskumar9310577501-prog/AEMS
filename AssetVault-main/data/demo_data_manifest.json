@@ -1,9 +1,9 @@
 {
   "demoMarker": "AEMS-DEMO-BHIWADI-2026",
-  "generatedAt": "2026-08-28T06:39:16.654Z",
+  "generatedAt": "2026-08-28T07:05:56.336Z",
   "location": "BHIWADI",
-  "totalRecords": 30,
-  "updatedCount": 30,
+  "totalRecords": 36,
+  "updatedCount": 36,
   "records": [
     {
       "id": "DEMO-BHW-ELE-001",
@@ -301,6 +301,66 @@
       "assetCode": "MNT-2026-00005",
       "assetName": "Youngman 12-Foot Heavy-Duty Non-Conductive Fibreglass Platform Ladder",
       "category": "Maintenance Assets",
+      "location": "BHIWADI",
+      "plantCode": "4020",
+      "marker": "AEMS-DEMO-BHIWADI-2026"
+    },
+    {
+      "id": "DEMO-BHW-SW-001",
+      "uniqueCode": "AEMS-DEMO-BHIWADI-031",
+      "assetCode": "SW-2026-00001",
+      "assetName": "Microsoft Windows 11 Enterprise Volume License (50 Seats)",
+      "category": "Software / License Assets",
+      "location": "BHIWADI",
+      "plantCode": "4020",
+      "marker": "AEMS-DEMO-BHIWADI-2026"
+    },
+    {
+      "id": "DEMO-BHW-SW-002",
+      "uniqueCode": "AEMS-DEMO-BHIWADI-032",
+      "assetCode": "SW-2026-00002",
+      "assetName": "Microsoft 365 Business Premium Enterprise Cloud Suite",
+      "category": "Software / License Assets",
+      "location": "BHIWADI",
+      "plantCode": "4020",
+      "marker": "AEMS-DEMO-BHIWADI-2026"
+    },
+    {
+      "id": "DEMO-BHW-SW-003",
+      "uniqueCode": "AEMS-DEMO-BHIWADI-033",
+      "assetCode": "SW-2026-00003",
+      "assetName": "Autodesk AutoCAD 2024 Engineering Design Commercial License",
+      "category": "Software / License Assets",
+      "location": "BHIWADI",
+      "plantCode": "2040",
+      "marker": "AEMS-DEMO-BHIWADI-2026"
+    },
+    {
+      "id": "DEMO-BHW-SW-004",
+      "uniqueCode": "AEMS-DEMO-BHIWADI-034",
+      "assetCode": "SW-2026-00004",
+      "assetName": "SAP S/4HANA Enterprise Resource Planning User License",
+      "category": "Software / License Assets",
+      "location": "BHIWADI",
+      "plantCode": "4020",
+      "marker": "AEMS-DEMO-BHIWADI-2026"
+    },
+    {
+      "id": "DEMO-BHW-SW-005",
+      "uniqueCode": "AEMS-DEMO-BHIWADI-035",
+      "assetCode": "SW-2026-00005",
+      "assetName": "TallyPrime Gold Multi-User GST Accounting & Inventory License",
+      "category": "Software / License Assets",
+      "location": "BHIWADI",
+      "plantCode": "2040",
+      "marker": "AEMS-DEMO-BHIWADI-2026"
+    },
+    {
+      "id": "DEMO-BHW-SW-006",
+      "uniqueCode": "AEMS-DEMO-BHIWADI-036",
+      "assetCode": "SW-2026-00006",
+      "assetName": "CrowdStrike Falcon Enterprise Endpoint Protection & EDR",
+      "category": "Software / License Assets",
       "location": "BHIWADI",
       "plantCode": "4020",
       "marker": "AEMS-DEMO-BHIWADI-2026"

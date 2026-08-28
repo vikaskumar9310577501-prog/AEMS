@@ -56,13 +56,12 @@ async function run() {
       process.exit(1);
     }
 
-    // SAFETY CHECK: Ensure it is not an IT asset or Employee asset
+    // SAFETY CHECK: Ensure it is not an IT Hardware asset or Employee asset
     if (
       existing.mainCategory === "IT Assets" ||
-      existing.mainCategory === "Software / License Assets" ||
       existing.employeeId
     ) {
-      console.error(`CRITICAL SAFETY ABORT: Record ${id} is a protected IT/Employee asset! Aborting cleanup immediately.`);
+      console.error(`CRITICAL SAFETY ABORT: Record ${id} is a protected IT Hardware/Employee asset! Aborting cleanup immediately.`);
       process.exit(1);
     }
 

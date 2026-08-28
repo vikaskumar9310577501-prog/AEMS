@@ -313,11 +313,11 @@ export function mapSheetRow(item: Record<string, unknown>): MappedAsset {
       return mobile;
     })(),
     documentUrl: getVal(item, ["Document URL / Attached Documents", "Document Link", "Document URL", "Document"], "documentUrl"),
-    imageUrl: getVal(item, ["Photo URL", "Photo URL / Photo Upload", "Asset Image", "Image", "Image URL"]),
-    additionalItems: getVal(item, ["Remarks", "Remarks", "Additional Items"]),
-    qrCodeText: getVal(item, ["QR Code / Barcode", "QR Code Text"]),
-    uniqueCode: getVal(item, ["Unique Code"]),
-    binaryCode: getVal(item, ["Binary Code"]),
+    imageUrl: getVal(item, ["Photo URL", "Photo URL / Photo Upload", "Asset Image", "Image", "Image URL", "imageUrl"], "imageUrl"),
+    additionalItems: getVal(item, ["Remarks", "Remarks", "Additional Items"], "additionalItems"),
+    qrCodeText: getVal(item, ["QR Code / Barcode", "QR Code Text", "qrCodeText"], "qrCodeText"),
+    uniqueCode: getVal(item, ["Unique Code", "uniqueCode"], "uniqueCode"),
+    binaryCode: getVal(item, ["Binary Code", "binaryCode"], "binaryCode"),
 
     // New columns
     assetName: getVal(item, ["Asset Name"]) || getVal(item, ["Model"]) || "",
