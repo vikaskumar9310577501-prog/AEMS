@@ -1301,10 +1301,12 @@ async function validateAssetPayload(
   const isSoftware = mainCat === "Software / License Assets";
   const isCctv = isCctvSecurityAsset(assetData);
 
+  const isInHouse = String(assetData.contactName || "").trim().toLowerCase() === "in house" && !String(assetData.employeeId || "").trim();
   const hasAssignee =
-    !!String(assetData.contactName || "").trim() ||
-    !!String(assetData.contactEmail || "").trim() ||
-    !!String(assetData.employeeId || "").trim();
+    !isInHouse &&
+    (!!String(assetData.contactName || "").trim() ||
+     !!String(assetData.contactEmail || "").trim() ||
+     !!String(assetData.employeeId || "").trim());
 
   if (!isSoftware && !String(assetData.serialNumber || "").trim()) {
     throw new Error("Serial number is required");
@@ -1315,11 +1317,11 @@ async function validateAssetPayload(
   if (!String(assetData.plantCode || "").trim()) {
     throw new Error("Plant code is required");
   }
-  if (!isCctv && hasAssignee && !String(assetData.department || "").trim()) {
+  if (!isCctv && (hasAssignee || isInHouse) && !String(assetData.department || "").trim()) {
     throw new Error("Department is required");
   }
 
-  if (!isCctv) {
+  if (!isCctv && !isInHouse) {
     if (hasAssignee) {
       if (!String(assetData.contactName || "").trim()) {
         throw new Error("Assignee name is required");
