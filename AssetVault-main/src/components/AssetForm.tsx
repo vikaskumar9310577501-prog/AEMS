@@ -1078,14 +1078,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
           setFormData((prev) => ({ 
             ...prev, 
             assetCode: data.code,
-            id: prev.id || data.id
+            id: initialData?.id ?? prev.id
           }));
           setIsAssetCodeEdited(false);
         } else if (data?.manual) {
           setFormData((prev) => ({ 
             ...prev, 
             assetCode: prev.assetCode || "",
-            id: prev.id || data.id
+            id: initialData?.id ?? prev.id
           }));
           setIsAssetCodeEdited(false);
         }

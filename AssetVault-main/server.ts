@@ -4689,8 +4689,14 @@ app.post("/api/assets", async (req, res) => {
       await assertAssetUnique(assetData);
 
     // Use generateNextAssetId so concurrent requests get unique IDs atomically
-    const assetId = assetData.id?.toString() || generateNextAssetId(assets);
+    const requestedId = assetData.id ? String(assetData.id).trim() : "";
+    const isIdAlreadyTaken = requestedId && (
+      assets.some(a => String(a.id || "").trim() === requestedId) ||
+      isAssetIdReserved(parseInt(requestedId, 10) || 0)
+    );
+    const assetId = (requestedId && !isIdAlreadyTaken) ? requestedId : generateNextAssetId(assets);
     reservedIdNum = parseInt(assetId, 10) || 0;
+    reserveAssetId(reservedIdNum);
     // Stamp the resolved id onto the payload so the sheet row carries it and the
     // GAS backend does not auto-generate a different id (which would drift the
     // local cache vs sheet and cause dedupe/reconcile to drop the entry).
