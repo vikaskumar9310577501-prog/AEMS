@@ -100,7 +100,8 @@
   ],
   "settings": {
     "locations": [
-      "BHIWADI"
+      "BHIWADI",
+      "PUNE,SUPA"
     ],
     "plants": [
       {
@@ -112,6 +113,21 @@
         "code": "4020",
         "name": "NEXT GENRATION MANUFACTURES",
         "location": "BHIWADI"
+      },
+      {
+        "code": "4010",
+        "name": "NEXT GENRATION MANUFACTURES",
+        "location": "PUNE,SUPA"
+      },
+      {
+        "code": "2020",
+        "name": "PG TECHNOPLAST",
+        "location": "PUNE,SUPA"
+      },
+      {
+        "code": "1040",
+        "name": "PGEL-4",
+        "location": "PUNE,SUPA"
       }
     ],
     "assetFields": [
