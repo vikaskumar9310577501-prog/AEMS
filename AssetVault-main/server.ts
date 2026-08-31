@@ -32,7 +32,7 @@ import {
   getAssetsSyncMeta,
   scheduleAssetsSyncIfStale,
 } from "./server/assetCache.js";
-import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode, generateNextAssetId, releaseAssetId } from "./server/assetCodeGenerator.js";
+import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode, generateNextAssetId, reserveAssetId, releaseAssetId } from "./server/assetCodeGenerator.js";
 import { healMisalignedAssetFields } from "./src/lib/healAssetFields.js";
 import { mapMasterRowToSheetHeaders } from "./server/sheetRowMapper.js";
 import { getUsersWithCache, syncUsersNow, getCachedUsers, getUsersSyncMeta, invalidateUsersCache } from "./server/usersSync.js";
@@ -279,7 +279,8 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 app.use(applySecurityHeaders);
 app.use(configureCors(buildAllowedOrigins()));
 app.use(rateLimitAuth);
-app.use(express.json({ limit: "25mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(requireApiAuth);
 
 const GAS_WEBAPP_URL = GAS_ENV.value;
