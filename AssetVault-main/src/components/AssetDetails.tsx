@@ -631,7 +631,7 @@ export default function AssetDetails({
                 disabled={deassigning}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-xs font-black uppercase text-amber-800 hover:bg-amber-100 disabled:opacity-50"
               >
-                <RotateCcw size={14} /> {deassigning ? "Deassigning..." : "Deassign from employee"}
+                <RotateCcw size={14} /> {deassigning ? "Deassigning..." : "Deassign"}
               </button>
             </div>
           )}

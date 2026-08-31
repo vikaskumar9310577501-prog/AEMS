@@ -1420,7 +1420,7 @@ function DashboardPageContent() {
       <AvailableAssetsModal
         isOpen={showAvailableModal}
         onClose={() => setShowAvailableModal(false)}
-        assets={assets}
+        assets={locationPlantFilteredAssets}
         onSelectAsset={(asset) => navigate(`/assets/${assetRouteId(asset)}`)}
       />
 
