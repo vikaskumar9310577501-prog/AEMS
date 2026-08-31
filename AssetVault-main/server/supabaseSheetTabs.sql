@@ -79,8 +79,20 @@ select * from asset_sheet where "Plant Name" = '2040';
 create or replace view "4020" as
 select * from asset_sheet where "Plant Name" = '4020';
 
+create or replace view "4010" as
+select * from asset_sheet where "Plant Name" = '4010';
+
+create or replace view "2020" as
+select * from asset_sheet where "Plant Name" = '2020';
+
+create or replace view "1040" as
+select * from asset_sheet where "Plant Name" = '1040';
+
 create or replace view "BHIWADI" as
-select * from asset_sheet where "Location" ilike 'BHIWADI';
+select * from asset_sheet where "Location" ilike '%BHIWADI%';
+
+create or replace view "PUNE,SUPA" as
+select * from asset_sheet where "Location" ilike '%PUNE%' or "Location" ilike '%SUPA%';
 
 create or replace view "Users" as
 select email as "Email", role as "Role", locations as "Locations", plants as "Plants", categories as "Categories"
@@ -116,7 +128,11 @@ grant select on "Admin Facility Assets" to postgres, service_role;
 grant select on "Maintenance Assets" to postgres, service_role;
 grant select on "2040" to postgres, service_role;
 grant select on "4020" to postgres, service_role;
+grant select on "4010" to postgres, service_role;
+grant select on "2020" to postgres, service_role;
+grant select on "1040" to postgres, service_role;
 grant select on "BHIWADI" to postgres, service_role;
+grant select on "PUNE,SUPA" to postgres, service_role;
 grant select on "Users" to postgres, service_role;
 grant select on "OTP_Log" to postgres, service_role;
 grant select on "Employees" to postgres, service_role;
