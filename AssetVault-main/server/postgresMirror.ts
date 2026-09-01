@@ -146,6 +146,29 @@ export async function deleteMirroredOtp(email: string): Promise<void> {
   await sbJson(`/rest/v1/otp_log?email=eq.${encodeURIComponent(email)}`, { method: "DELETE" }).catch(() => undefined);
 }
 
+export async function mirrorAuditLogToPostgres(
+  record: Record<string, unknown>
+): Promise<void> {
+  const probe = await sbFetch("/rest/v1/audit_logs?select=log_id&limit=1");
+  if (!probe.ok) return;
+  const row = {
+    log_id: txt(record["Log ID"] || record.log_id || record.id),
+    user_email: txt(record["User Email"] || record.user_email || record.userEmail),
+    action: txt(record["Action"] || record.action),
+    target_id: txt(record["Target ID"] || record.target_id || record.targetId),
+    date_time: txt(record["Date & Time"] || record.date_time || record.dateTime || new Date().toISOString()),
+    old_value: txt(record["Old Value"] || record.old_value || record.oldValue),
+    new_value: txt(record["New Value"] || record.new_value || record.newValue),
+    remarks: txt(record["Remarks"] || record.remarks),
+  };
+  await sbJson("/rest/v1/audit_logs?on_conflict=log_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" } as unknown as HeadersInit,
+    body: JSON.stringify(row),
+  }).catch(() => undefined);
+}
+
 export async function deleteMirroredAsset(id: string): Promise<void> {
   await sbJson(`/rest/v1/assets?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
 }
+

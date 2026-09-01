@@ -32,6 +32,7 @@ import {
   saveTypeDefinitionsJson,
   upsertJsonRow,
 } from "./sqlStore.js";
+import { mirrorAuditLogToPostgres } from "./postgresMirror.js";
 
 type Payload = Record<string, unknown>;
 
@@ -421,7 +422,9 @@ export async function handleSqlAction(payload: Payload): Promise<Record<string, 
     if (action === "add_audit_log") {
       const rec = asRecord(payload.row ?? payload);
       const id = String(rec["Log ID"] || `L-${Math.floor(100000 + Math.random() * 900000)}`);
-      await upsertJsonRow("AuditLogs", id, { ...rec, "Log ID": id });
+      const row = { ...rec, "Log ID": id };
+      await upsertJsonRow("AuditLogs", id, row);
+      mirrorAuditLogToPostgres(row).catch(() => undefined);
       return ok();
     }
 

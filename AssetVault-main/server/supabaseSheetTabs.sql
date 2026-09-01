@@ -115,6 +115,18 @@ select
   status as "Status"
 from employees;
 
+create or replace view "Audit_Logs" as
+select
+  log_id as "Log ID",
+  json_data->>'User Email' as "User Email",
+  json_data->>'Action' as "Action",
+  json_data->>'Target ID' as "Target ID",
+  json_data->>'Date & Time' as "Date & Time",
+  json_data->>'Remarks' as "Remarks",
+  json_data->>'Old Value' as "Old Value",
+  json_data->>'New Value' as "New Value"
+from audit_logs;
+
 grant select on asset_sheet to postgres, service_role;
 grant select on "IT Assets" to postgres, service_role;
 grant select on "Office Assets" to postgres, service_role;
@@ -136,5 +148,6 @@ grant select on "PUNE,SUPA" to postgres, service_role;
 grant select on "Users" to postgres, service_role;
 grant select on "OTP_Log" to postgres, service_role;
 grant select on "Employees" to postgres, service_role;
+grant select on "Audit_Logs" to postgres, service_role;
 
 notify pgrst, 'reload schema';
