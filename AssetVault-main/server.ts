@@ -4834,10 +4834,6 @@ app.put("/api/assets/:id", async (req, res) => {
     try {
       await assertAssetUnique(assetData, canonicalId);
 
-    if (existing && existing.employeeId && assetData.employeeId && String(existing.employeeId).trim() !== "" && String(existing.employeeId).trim() !== String(assetData.employeeId).trim()) {
-      return res.status(400).json({ error: "Asset already assigned" });
-    }
-
     const baseUrl = getBaseUrl(req);
     assetData.qrCodeText = getScanUrl(baseUrl, { ...(existing || {}), ...assetData, id: canonicalId } as any);
 
