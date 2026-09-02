@@ -209,6 +209,8 @@ import {
   addAuditLog,
   fetchAuditLogsFromGas,
 } from "./server/auditLogsStore.js";
+import { mirrorAuditLogToPostgres } from "./server/postgresMirror.js";
+import { upsertJsonRow, listJsonRows } from "./server/supabaseStore.js";
 import { getDefaultAssetHeaders } from "./server/sheetHeaders.js";
 import { logAssetMappingAudit } from "./server/sheetRowMapper.js";
 import { getDb, insertAssetLocal, updateAssetLocal, deleteAssetLocal, isLocalSqliteEnabled } from "./server/sqlDb.js";
@@ -622,8 +624,9 @@ app.get("/api/auth/session", async (req, res) => {
   }
 });
 
-app.post("/api/auth/logout", (_req, res) => {
-  clearSessionCookie(res);
+app.post("/api/auth/logout", (req, res) => {
+  const session = getSessionFromRequest(req);
+  clearSessionCookie(res, session?.email);
   res.json({ success: true });
 });
 
@@ -765,6 +768,59 @@ app.get("/api/assignment-history", async (req, res) => {
     res.json(normalizeHistoryForUi(history));
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to load assignment history" });
+  }
+});
+
+export async function recordAudit(
+  userEmail: string | undefined | null,
+  action: string,
+  targetId: string,
+  remarks: string,
+  oldVal?: unknown,
+  newVal?: unknown
+) {
+  try {
+    const logId = "L-" + Math.floor(100000 + Math.random() * 900000).toString();
+    const now = new Date().toISOString();
+    const email = String(userEmail || "system@aems.local").trim().toLowerCase();
+    const row = {
+      "Log ID": logId,
+      "User Email": email,
+      "Action": action,
+      "Target ID": String(targetId || "-"),
+      "Date & Time": now,
+      "Old Value": typeof oldVal === "object" ? JSON.stringify(oldVal) : String(oldVal || ""),
+      "New Value": typeof newVal === "object" ? JSON.stringify(newVal) : String(newVal || ""),
+      "Remarks": remarks || "",
+    };
+
+    addAuditLog(row["User Email"], row.Action, row["Target ID"], row["Old Value"], row["New Value"], row.Remarks);
+    await upsertJsonRow("AuditLogs", logId, row).catch(() => {});
+    await mirrorAuditLogToPostgres(row).catch(() => {});
+  } catch (err) {
+    console.warn("[Audit] Failed to record audit log:", err);
+  }
+}
+
+app.get("/api/audit-logs", async (req, res) => {
+  try {
+    let logs: any[] = [];
+    try {
+      logs = await listJsonRows("AuditLogs");
+    } catch {
+      logs = readAuditLogs();
+    }
+    if (!logs || logs.length === 0) {
+      logs = readAuditLogs();
+    }
+    logs.sort((a, b) => {
+      const ta = Date.parse(a["Date & Time"] || a.dateTime || a.date || "0");
+      const tb = Date.parse(b["Date & Time"] || b.dateTime || b.date || "0");
+      return tb - ta;
+    });
+    res.json({ success: true, logs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch audit logs" });
   }
 });
 
@@ -1930,6 +1986,14 @@ app.post("/api/users", async (req, res) => {
     upsertLocalUser(user);
     invalidateUsersCache();
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [user];
+    recordAudit(
+      req.authUser?.email || getFallbackEmail(req),
+      "User Created",
+      user.email,
+      `Created user account ${user.email} (Role: ${user.role}, Plants: ${(user.plants || []).join(', ') || 'All'})`,
+      null,
+      user
+    );
     res.json({ success: true, user, users: synced, savedTo: sheetSave.via });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to add user" });
@@ -1943,9 +2007,9 @@ app.put("/api/users/:email", async (req, res) => {
 
     const data = readAppData();
     const idx = data.users.findIndex((u) => u.email === email);
-    if (idx === -1) return res.status(404).json({ error: "User not found" });
+    const action = idx === -1 ? "add_user" : "update_user";
 
-    const sheetSave = await persistUserToSheet("update_user", user, {
+    const sheetSave = await persistUserToSheet(action, user, {
       proxyToGas,
       spreadsheetId: SPREADSHEET_ID,
       usersSheetGid: USERS_SHEET_GID_VALID,
@@ -1957,6 +2021,14 @@ app.put("/api/users/:email", async (req, res) => {
     upsertLocalUser(user);
     invalidateUsersCache();
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : data.users;
+    recordAudit(
+      req.authUser?.email || getFallbackEmail(req),
+      "User Updated",
+      email,
+      `Updated user permissions for ${email} (Role: ${user.role}, Plants: ${(user.plants || []).join(', ') || 'All'})`,
+      null,
+      user
+    );
     res.json({ success: true, user, users: synced, savedTo: sheetSave.via });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to update user" });
@@ -1985,6 +2057,14 @@ app.delete("/api/users/:email", async (req, res) => {
     deleteLocalUser(email);
     invalidateUsersCache();
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [];
+    recordAudit(
+      req.authUser?.email || getFallbackEmail(req),
+      "User Deleted",
+      email,
+      `Deleted user account ${email}`,
+      target,
+      null
+    );
     res.json({ success: true, users: synced, savedTo: sheetSave.via });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to delete user" });

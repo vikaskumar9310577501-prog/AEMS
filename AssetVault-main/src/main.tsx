@@ -28,7 +28,19 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
         /* ignore stale local user */
       }
     }
-    return nativeFetch(input, { ...init, headers, credentials: init?.credentials ?? 'include' });
+    return nativeFetch(input, { ...init, headers, credentials: init?.credentials ?? 'include' }).then(
+      (response) => {
+        if (
+          response.status === 401 &&
+          !url.includes('/api/auth/session') &&
+          !url.includes('/api/auth/request-otp') &&
+          !url.includes('/api/auth/verify-otp')
+        ) {
+          window.dispatchEvent(new CustomEvent('aems:session_expired'));
+        }
+        return response;
+      }
+    );
   }
   return nativeFetch(input, init);
 };

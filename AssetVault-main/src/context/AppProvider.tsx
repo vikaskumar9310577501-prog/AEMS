@@ -184,6 +184,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    const onSessionExpired = () => {
+      if (user) {
+        toast.error('Session ended: Your account was logged in on another device.');
+        handleLogout();
+      }
+    };
+    window.addEventListener('aems:session_expired', onSessionExpired);
+    return () => window.removeEventListener('aems:session_expired', onSessionExpired);
+  }, [user, handleLogout]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const restoreSession = async () => {

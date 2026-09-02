@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, MapPin, Building2, List, Layers, Edit2, Check, X, Archive, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, MapPin, Building2, List, Layers, Edit2, Check, X, Archive, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useApp } from '../context/AppProvider';
 import { canAccessSettings, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import TypeDefinitionsAdmin from '../components/TypeDefinitionsAdmin';
+import AuditLogsViewer from '../components/AuditLogsViewer';
 
 interface PlantRecord {
   code: string;
@@ -24,7 +25,7 @@ interface AppSettings {
   assetFields: AssetFieldRecord[];
 }
 
-type Tab = 'locations' | 'plants' | 'fields' | 'types';
+type Tab = 'locations' | 'plants' | 'fields' | 'types' | 'audit-logs';
 
 const getInitialTab = (): Tab => {
   try {
@@ -312,11 +313,12 @@ export default function SettingsPage() {
     { id: 'plants', label: 'Plants', icon: <Building2 size={16} /> },
     { id: 'fields', label: 'Asset Fields', icon: <List size={16} /> },
     { id: 'types', label: 'Asset Types', icon: <Layers size={16} /> },
+    { id: 'audit-logs', label: 'Audit Logs', icon: <ShieldCheck size={16} /> },
   ].filter((t) => {
     if (['Admin', 'ADMIN', 'admin'].includes(userRole)) {
       return t.id === 'fields';
     }
-    if (t.id === 'types') return isItAdmin;
+    if (t.id === 'types' || t.id === 'audit-logs') return isItAdmin;
     return true;
   });
 
@@ -638,6 +640,7 @@ export default function SettingsPage() {
           )}
 
           {tab === 'types' && isItAdmin && <TypeDefinitionsAdmin />}
+          {tab === 'audit-logs' && isItAdmin && <AuditLogsViewer />}
         </div>
       </div>
 

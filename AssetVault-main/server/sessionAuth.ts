@@ -29,11 +29,23 @@ function fromB64url(input: string): string {
   return Buffer.from(input, "base64url").toString("utf8");
 }
 
+const activeUserSessions = new Map<string, string>();
+
+export function invalidateUserSession(email: string): void {
+  if (!email) return;
+  activeUserSessions.delete(email.toLowerCase());
+}
+
 export function createSessionToken(user: SessionUser): string {
   const secret = getSecret();
+  const sessionId = crypto.randomUUID();
+  const emailKey = user.email.toLowerCase();
+  activeUserSessions.set(emailKey, sessionId);
+
   const payload = {
-    email: user.email.toLowerCase(),
+    email: emailKey,
     role: user.role,
+    sid: sessionId,
     exp: Date.now() + SESSION_TTL_MS,
   };
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -56,9 +68,22 @@ export function verifySessionToken(token: string): SessionUser | null {
     if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       return null;
     }
-    const payload = JSON.parse(fromB64url(body)) as { email?: string; role?: string; exp?: number };
+    const payload = JSON.parse(fromB64url(body)) as { email?: string; role?: string; sid?: string; exp?: number };
     if (!payload.email || !payload.exp || Date.now() > payload.exp) return null;
-    return { email: payload.email.toLowerCase(), role: String(payload.role || "User") };
+
+    const emailKey = payload.email.toLowerCase();
+    if (payload.sid) {
+      const activeSid = activeUserSessions.get(emailKey);
+      if (activeSid && activeSid !== payload.sid) {
+        // Logged in from another device! Invalidate previous session
+        return null;
+      }
+      if (!activeSid) {
+        activeUserSessions.set(emailKey, payload.sid);
+      }
+    }
+
+    return { email: emailKey, role: String(payload.role || "User") };
   } catch {
     return null;
   }
@@ -105,7 +130,8 @@ export function setSessionCookie(res: Response, user: SessionUser): string {
   return token;
 }
 
-export function clearSessionCookie(res: Response): void {
+export function clearSessionCookie(res: Response, email?: string): void {
+  if (email) invalidateUserSession(email);
   const secure = process.env.NODE_ENV === "production";
   const parts = [`${SESSION_COOKIE}=`, "HttpOnly", "Path=/", "Max-Age=0", "SameSite=Lax"];
   if (secure) parts.push("Secure");
