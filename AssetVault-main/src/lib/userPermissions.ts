@@ -1,3 +1,5 @@
+import { MISSING_ITEMS_FEATURE_ENABLED } from './features';
+
 const IT_ADMIN_ROLES = new Set(['it admin', 'it_admin']);
 const ADMIN_ROLES = new Set(['admin', ...IT_ADMIN_ROLES]);
 
@@ -106,8 +108,7 @@ export function canAddMaintenanceMachine(
   role: string | undefined | null,
   categories?: string[]
 ): boolean {
-  if (!canAccessMaintenance(role, categories)) return false;
-  return isAdminRole(role);
+  return canAccessMaintenance(role, categories);
 }
 
 /** Complaint analytics dashboard — Admin + IT Admin with Prevention access. */
@@ -210,7 +211,11 @@ export function canAccessDamagedScrap(
 export function canAccessMissingItems(
   user: { role?: string; categories?: string[] } | null | undefined
 ): boolean {
-  return canAccessAssetManagement(user) && !isHrRole(user?.role);
+  return (
+    MISSING_ITEMS_FEATURE_ENABLED &&
+    canAccessAssetManagement(user) &&
+    !isHrRole(user?.role)
+  );
 }
 
 /** Employee management access */
