@@ -29,8 +29,11 @@ export function readLastRoute(): string | null {
   }
 }
 
-/** After login always land on dashboard (HR → employees). Do not restore last form page. */
+import { isHrRole } from './userPermissions';
+
+/** After login always land on authorized dashboard */
 export function resolvePostAuthRoute(_from?: string | null, role?: string | null): string {
-  if (role === 'HR') return '/employees';
+  if (isHrRole(role)) return '/hr-dashboard';
   return '/dashboard';
 }
+

@@ -169,3 +169,86 @@ export function canAccessMaintenanceTab(
   if (tab === 'settings') return canManageMaintenanceFhPh(role);
   return false;
 }
+
+/** Check if user can access core Asset Management features (Dashboard, New Asset, Edit Asset, Asset Details) */
+export function canAccessAssetManagement(
+  user: { role?: string; categories?: string[] } | null | undefined
+): boolean {
+  if (!user) return false;
+  if (isItAdminRole(user.role)) return true;
+  if (isHrRole(user.role)) return false;
+
+  const cats = user.categories || [];
+  if (cats.length === 0 || cats.includes('All')) return true;
+
+  // Check if user has any category other than purely Prevention/Maintenance or HR
+  const nonAssetCategories = new Set([
+    PREVENTION_MODULE_CATEGORY.toLowerCase(),
+    'prevention',
+    'prevention (pm)',
+    'maintenance assets',
+    'hr',
+    'hr operations',
+    'hr dashboard',
+  ]);
+
+  const hasGeneralAssetCategory = cats.some(
+    (c) => !nonAssetCategories.has(String(c || '').trim().toLowerCase())
+  );
+
+  return hasGeneralAssetCategory;
+}
+
+/** Damaged & Scrap module access */
+export function canAccessDamagedScrap(
+  user: { role?: string; categories?: string[] } | null | undefined
+): boolean {
+  return canAccessAssetManagement(user) && !isHrRole(user?.role);
+}
+
+/** Missing items module access */
+export function canAccessMissingItems(
+  user: { role?: string; categories?: string[] } | null | undefined
+): boolean {
+  return canAccessAssetManagement(user) && !isHrRole(user?.role);
+}
+
+/** Employee management access */
+export function canAccessEmployees(
+  user: { role?: string; categories?: string[] } | null | undefined
+): boolean {
+  if (!user) return false;
+  return canAccessHr(user) || isAdminRole(user.role);
+}
+
+/** User management access */
+export function canAccessUsers(
+  user: { role?: string; categories?: string[] } | null | undefined
+): boolean {
+  if (!user) return false;
+  return canAccessUserManagement(user.role) && !isHrRole(user.role);
+}
+
+/** System settings access */
+export function canAccessSettings(
+  user: { role?: string; categories?: string[] } | null | undefined
+): boolean {
+  if (!user) return false;
+  return isItAdminRole(user.role);
+}
+
+/** Automatically determine the best landing route based on user permissions */
+export function resolveDefaultRouteForUser(
+  user: { role?: string; categories?: string[] } | null | undefined
+): string {
+  if (!user) return '/login';
+  if (isHrRole(user.role)) return '/hr-dashboard';
+  if (!canAccessAssetManagement(user) && canAccessMaintenance(user.role, user.categories)) {
+    return '/maintenance';
+  }
+  if (canAccessAssetManagement(user)) return '/dashboard';
+  if (canAccessHr(user)) return '/hr-dashboard';
+  if (canAccessMaintenance(user.role, user.categories)) return '/maintenance';
+  return '/dashboard';
+}
+

@@ -29,7 +29,20 @@ import {
 import { APP_NAME, LOGO_SRC } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
 import { useApp } from '../context/AppProvider';
-import { canAccessUserManagement, canAccessMaintenance, isItAdminRole, isHrRole, canAccessHr } from '../lib/userPermissions';
+import {
+  canAccessUserManagement,
+  canAccessMaintenance,
+  isItAdminRole,
+  isHrRole,
+  canAccessHr,
+  canAccessAssetManagement,
+  canAccessDamagedScrap,
+  canAccessMissingItems,
+  canAccessEmployees,
+  canAccessSettings,
+  canAccessUsers,
+  resolveDefaultRouteForUser,
+} from '../lib/userPermissions';
 import { SIDEBAR_CCTV_CATEGORY } from '../lib/dashboardCategories';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -67,9 +80,15 @@ export default function AppLayout() {
   const selectedCategory = searchParams.get('category') || 'All';
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
   const isMaintenance = location.pathname.startsWith('/maintenance');
-  const isUserAdmin = canAccessUserManagement(user.role);
-  const isItAdmin = isItAdminRole(user.role);
+  const isAssetAdminOrUser = canAccessAssetManagement(user);
+  const isUserAdmin = canAccessUsers(user);
+  const isItAdmin = canAccessSettings(user);
   const isHr = isHrRole(user.role);
+  const hasHrAccess = canAccessHr(user);
+  const hasMaintenanceAccess = canAccessMaintenance(user.role, user.categories);
+  const hasDamagedScrapAccess = canAccessDamagedScrap(user);
+  const hasMissingItemsAccess = canAccessMissingItems(user);
+  const hasEmployeeAccess = canAccessEmployees(user);
   const hideAllDashboard =
     user.role !== 'IT Admin' &&
     user.categories &&
@@ -154,7 +173,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {!hideAllDashboard && !isHr && (
+        {isAssetAdminOrUser && !hideAllDashboard && !isHr && (
           <NavLink
             to="/dashboard"
             end
@@ -171,7 +190,7 @@ export default function AppLayout() {
         )}
 
         {/* Categories Section */}
-        {!isHr && (
+        {isAssetAdminOrUser && !isHr && visibleCategories.length > 0 && (
           <div className="pt-4 pb-1.5 px-3 flex items-center justify-between text-[10px] font-black uppercase text-slate-400 tracking-[0.16em]">
             <span>Asset Categories</span>
             <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-mono font-bold">
@@ -180,7 +199,8 @@ export default function AppLayout() {
           </div>
         )}
 
-        {!isHr &&
+        {isAssetAdminOrUser &&
+          !isHr &&
           visibleCategories.map((cat) => {
             const Icon = CATEGORY_ICONS[cat] || Cpu;
             const active = isDashboard && selectedCategory === cat;
@@ -204,8 +224,8 @@ export default function AppLayout() {
             );
           })}
 
-        {/* Preventive Setup placed directly under Maintenance Assets */}
-        {!isHr && canAccessMaintenance(user.role, user.categories) && (
+        {/* Preventive Setup */}
+        {hasMaintenanceAccess && (
           <NavLink
             to="/maintenance"
             className={navClass}
@@ -220,12 +240,14 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {/* Management Section */}
-        <div className="pt-4 pb-1.5 px-3 text-[10px] font-black uppercase text-slate-400 tracking-[0.16em]">
-          Management
-        </div>
+        {/* Management Section Header (Show only if user has access to at least one management module) */}
+        {(hasEmployeeAccess || (!isHr && hasHrAccess) || hasDamagedScrapAccess || hasMissingItemsAccess || isUserAdmin || isItAdmin) && (
+          <div className="pt-4 pb-1.5 px-3 text-[10px] font-black uppercase text-slate-400 tracking-[0.16em]">
+            Management
+          </div>
+        )}
 
-        {(isUserAdmin || isHr) && (
+        {hasEmployeeAccess && (
           <NavLink to="/employees" className={navClass} title="Employees" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <UserCircle size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
@@ -235,7 +257,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {!isHr && canAccessHr(user) && (
+        {!isHr && hasHrAccess && (
           <NavLink to="/hr-dashboard" className={navClass} title="HR Operations" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <Building2 size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
@@ -245,7 +267,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {!isHr && (
+        {hasDamagedScrapAccess && (
           <NavLink to="/damaged-scrap" className={navClass} title="Damaged / Scrap" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <Trash2 size={18} className="shrink-0 text-rose-500" />
@@ -255,7 +277,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {MISSING_ITEMS_FEATURE_ENABLED && !isHr && (
+        {hasMissingItemsAccess && (
           <NavLink to="/missing" className={navClass} title="Missing Items" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <AlertTriangle size={18} className="shrink-0 text-amber-500" />
@@ -265,7 +287,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {isUserAdmin && !isHr && (
+        {isUserAdmin && (
           <NavLink to="/users" className={navClass} title="User Management" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <Users size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
@@ -275,7 +297,7 @@ export default function AppLayout() {
           </NavLink>
         )}
 
-        {isItAdmin && !isHr && (
+        {isItAdmin && (
           <NavLink to="/settings" className={navClass} title="Settings" onClick={closeSidebar}>
             <div className="flex items-center gap-3">
               <Settings size={18} className="shrink-0 text-slate-500 group-hover:text-blue-600" />
@@ -356,7 +378,7 @@ export default function AppLayout() {
 
             {/* White Pill Container for PG Logo */}
             <div
-              onClick={() => navigate(isHr ? '/hr-dashboard' : '/dashboard')}
+              onClick={() => navigate(resolveDefaultRouteForUser(user))}
               className="bg-white px-2.5 sm:px-3 py-1 rounded-xl flex items-center justify-center shadow-xs shrink-0 h-9 cursor-pointer hover:opacity-95 transition-opacity"
               title="Home"
             >
@@ -365,7 +387,7 @@ export default function AppLayout() {
 
             {/* A.E.M.S Brand Title with Underline and Subtitle */}
             <div
-              onClick={() => navigate(isHr ? '/hr-dashboard' : '/dashboard')}
+              onClick={() => navigate(resolveDefaultRouteForUser(user))}
               className="flex flex-col justify-center cursor-pointer select-none shrink-0"
             >
               <div className="border-b border-blue-300/40 pb-0.5">

@@ -26,6 +26,20 @@ import MaintenanceReportPage from './pages/MaintenanceReportPage';
 
 import HrDashboardPage from './pages/HrDashboardPage';
 
+import RouteGuard from './components/RouteGuard';
+import {
+  canAccessAssetManagement,
+  canAccessHr,
+  canAccessDamagedScrap,
+  canAccessMissingItems,
+  canAccessEmployees,
+  canAccessMaintenance,
+  canAddMaintenanceMachine,
+  canAccessSettings,
+  canAccessUsers,
+  resolveDefaultRouteForUser,
+} from './lib/userPermissions';
+
 function AuthLoading() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center gap-4">
@@ -40,20 +54,18 @@ function LoginRoute() {
   const { user, authChecked } = useApp();
   if (!authChecked) return <AuthLoading />;
   if (user) {
-    return <Navigate to={resolvePostAuthRoute(null, user.role)} replace />;
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
   return <LoginScreen />;
 }
 
 function IndexRedirect() {
   const { user } = useApp();
-  if (user?.role === 'HR') {
-    return <Navigate to="/hr-dashboard" replace />;
-  }
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
 }
 
 function AppRoutes() {
+  const { user } = useApp();
   const [splashDone, setSplashDone] = useState(() => !shouldShowSplash());
 
   if (!splashDone) {
@@ -69,22 +81,115 @@ function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route index element={<IndexRedirect />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="hr-dashboard" element={<HrDashboardPage />} />
-            <Route path="assets/new" element={<NewAssetPage />} />
-            <Route path="assets/:assetId" element={<AssetDetailPage />} />
-            <Route path="assets/:assetId/edit" element={<EditAssetPage />} />
-            <Route path="employees" element={<EmployeesPage />} />
-            <Route path="employees/:employeeId" element={<EmployeeProfilePage />} />
-            {MISSING_ITEMS_FEATURE_ENABLED && <Route path="missing" element={<MissingItemsPage />} />}
-            <Route path="damaged-scrap" element={<DamagedScrapPage />} />
-            <Route path="maintenance" element={<MaintenancePage />} />
-            <Route path="maintenance/machines/new" element={<NewMaintenanceMachinePage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="users" element={<UserManagement key="users-page" />} />
+            <Route
+              path="dashboard"
+              element={
+                <RouteGuard allowed={canAccessAssetManagement(user)}>
+                  <DashboardPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="hr-dashboard"
+              element={
+                <RouteGuard allowed={canAccessHr(user)}>
+                  <HrDashboardPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="assets/new"
+              element={
+                <RouteGuard allowed={canAccessAssetManagement(user)}>
+                  <NewAssetPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="assets/:assetId"
+              element={
+                <RouteGuard allowed={canAccessAssetManagement(user)}>
+                  <AssetDetailPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="assets/:assetId/edit"
+              element={
+                <RouteGuard allowed={canAccessAssetManagement(user)}>
+                  <EditAssetPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="employees"
+              element={
+                <RouteGuard allowed={canAccessEmployees(user)}>
+                  <EmployeesPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="employees/:employeeId"
+              element={
+                <RouteGuard allowed={canAccessEmployees(user)}>
+                  <EmployeeProfilePage />
+                </RouteGuard>
+              }
+            />
+            {MISSING_ITEMS_FEATURE_ENABLED && (
+              <Route
+                path="missing"
+                element={
+                  <RouteGuard allowed={canAccessMissingItems(user)}>
+                    <MissingItemsPage />
+                  </RouteGuard>
+                }
+              />
+            )}
+            <Route
+              path="damaged-scrap"
+              element={
+                <RouteGuard allowed={canAccessDamagedScrap(user)}>
+                  <DamagedScrapPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="maintenance"
+              element={
+                <RouteGuard allowed={canAccessMaintenance(user?.role, user?.categories)}>
+                  <MaintenancePage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="maintenance/machines/new"
+              element={
+                <RouteGuard allowed={canAddMaintenanceMachine(user?.role, user?.categories)}>
+                  <NewMaintenanceMachinePage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <RouteGuard allowed={canAccessSettings(user)}>
+                  <SettingsPage />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <RouteGuard allowed={canAccessUsers(user)}>
+                  <UserManagement key="users-page" />
+                </RouteGuard>
+              }
+            />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<IndexRedirect />} />
       </Routes>
       </>
   );
