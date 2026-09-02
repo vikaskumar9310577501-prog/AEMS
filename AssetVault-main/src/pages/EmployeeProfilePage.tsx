@@ -33,6 +33,7 @@ import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
 import { employeeStatusLabel, isInactiveEmployee } from '../lib/employeeStatus';
 import type { AssignmentHistoryEntry, Employee } from '../types/employee';
+import { resolveDefaultRouteForUser } from '../lib/userPermissions';
 import { normalizeEmployeeId } from '../lib/employeeLookup';
 import { parseJsonResponse } from '../lib/apiFetch';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
@@ -222,7 +223,7 @@ export default function EmployeeProfilePage() {
   };
 
   if (!canView) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   if (!employee) {

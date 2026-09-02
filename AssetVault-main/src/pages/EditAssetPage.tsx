@@ -6,6 +6,7 @@ import AssetForm from '../components/AssetForm';
 import { useApp } from '../context/AppProvider';
 import { findAssetByRouteId } from '../lib/assetLookup';
 import { healMisalignedAssetFields } from '../lib/healAssetFields';
+import { canAccessAssetManagement, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import type { AssetFormData } from '../types';
 
 export default function EditAssetPage() {
@@ -19,8 +20,8 @@ export default function EditAssetPage() {
     return raw ? healMisalignedAssetFields(raw) : undefined;
   }, [assets, assetId]);
 
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+  if (!canAccessAssetManagement(user)) {
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   const onSubmit = async (data: AssetFormData) => {
@@ -91,9 +92,7 @@ export default function EditAssetPage() {
                 loading={loading}
               />
             </div>
-          ) : (
-            <div className="py-20 text-center text-slate-500 font-bold animate-pulse">Loading asset…</div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -10,10 +10,12 @@ import { useApp } from '../context/AppProvider';
 import {
   assignableRoles,
   canAccessUserManagement,
+  canAccessUsers,
   canAddUser,
   canDeleteUser,
   canEditUser,
   isItAdminRole,
+  resolveDefaultRouteForUser,
   PREVENTION_MODULE_CATEGORY,
   hasPreventionModuleCategory,
 } from '../lib/userPermissions';
@@ -67,8 +69,8 @@ function scopeIncludes(values: string[] | undefined, target: string): boolean {
 
 export default function UserManagement() {
   const { user: loggedInUser } = useApp();
-  if (!loggedInUser || !canAccessUserManagement(loggedInUser.role) || loggedInUser.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+  if (!loggedInUser || !canAccessUsers(loggedInUser)) {
+    return <Navigate to={resolveDefaultRouteForUser(loggedInUser)} replace />;
   }
   const { users, initialLoading, syncing, syncHint, refreshUsers } = useUsersData();
   const [settings, setSettings] = useState<AppSettings>({ locations: [], plants: [] });
@@ -161,7 +163,7 @@ export default function UserManagement() {
   }, [users, loggedInUser, isITAdmin]);
 
   if (!canManageUsers) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={resolveDefaultRouteForUser(loggedInUser)} replace />;
   }
 
   const toggleLocation = (loc: string) => {

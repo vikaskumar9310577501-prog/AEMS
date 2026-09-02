@@ -19,7 +19,7 @@ import {
   trendMonthsLabel,
   type WarrantyStatus,
 } from '../types/maintenance';
-import { canAddMaintenanceMachine } from '../lib/userPermissions';
+import { canAddMaintenanceMachine, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import { CustomPlanDatesField } from '../components/MaintenanceMachineEditModal';
 
 export default function NewMaintenanceMachinePage() {
@@ -97,7 +97,7 @@ export default function NewMaintenanceMachinePage() {
   );
 
   if (!user || !canAddMaintenanceMachine(user.role, user.categories)) {
-    return <Navigate to={user?.role === 'HR' ? '/employees' : '/dashboard'} replace />;
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   const onSubmit = async (e: React.FormEvent) => {

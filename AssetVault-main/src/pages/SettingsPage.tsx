@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { Plus, Trash2, MapPin, Building2, List, Layers, Edit2, Check, X, Archive, AlertTriangle } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useApp } from '../context/AppProvider';
+import { canAccessSettings, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import TypeDefinitionsAdmin from '../components/TypeDefinitionsAdmin';
 
 interface PlantRecord {
@@ -40,8 +41,8 @@ const getInitialTab = (): Tab => {
 
 export default function SettingsPage() {
   const { user } = useApp();
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+  if (!canAccessSettings(user)) {
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   const [tab, setTab] = useState<Tab>(getInitialTab);

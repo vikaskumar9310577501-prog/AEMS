@@ -24,7 +24,7 @@ import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
 import { assetsForEmployee } from '../lib/employeeAssets';
 import { isInactiveEmployee } from '../lib/employeeStatus';
-import { canAccessHr } from '../lib/userPermissions';
+import { canAccessHr, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import HrKpiModal, { HrKpiType } from '../components/HrKpiModal';
 
 const PAGE_SIZE = 8;
@@ -36,7 +36,7 @@ export default function HrDashboardPage() {
   const { headerPortalNode } = useOutletContext<{ headerPortalNode: HTMLDivElement | null }>() || {};
 
   if (!user || !canAccessHr(user)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   const [search, setSearch] = useState('');

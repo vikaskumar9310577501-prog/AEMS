@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AssetForm from '../components/AssetForm';
 import { useApp } from '../context/AppProvider';
+import { canAccessAssetManagement, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import type { AssetFormData, AssetType } from '../types';
 import { newAssetPrefillFromCategory } from '../lib/dashboardCategories';
 
@@ -17,8 +18,8 @@ export default function NewAssetPage() {
   const { handleSubmit, user } = useApp();
   const [loading, setLoading] = useState(false);
 
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+  if (!canAccessAssetManagement(user)) {
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   const onSubmit = async (data: AssetFormData) => {

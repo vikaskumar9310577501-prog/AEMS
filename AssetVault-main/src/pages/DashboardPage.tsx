@@ -56,6 +56,7 @@ import { SYNC_DATABASE_MSG, SYNC_DATABASE_OK, SYNC_DATABASE_ERR } from '../lib/u
 import { syncDatabaseAssets } from '../lib/syncDatabase';
 import { assetRouteId, buildAssetLookupIndex, findAssetInLookup } from '../lib/assetLookup';
 import { useApp } from '../context/AppProvider';
+import { canAccessAssetManagement, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import { isAssetAssignedToEmployee } from '../lib/employeeAssets';
 import {
   isSoftwareLicenseExpired,
@@ -251,8 +252,8 @@ const emptyCategorySummaryStats = (): CategorySummaryStats => ({
 export default function DashboardPage() {
   const { user } = useApp();
 
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+  if (!canAccessAssetManagement(user)) {
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   return <DashboardPageContent />;

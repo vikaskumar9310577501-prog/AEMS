@@ -60,6 +60,7 @@ import {
   canViewMaintenanceDashboard,
   defaultMaintenanceTab,
   isItAdminRole,
+  resolveDefaultRouteForUser,
   type MaintenanceTabId,
 } from '../lib/userPermissions';
 import { toDisplayDateInput, toDateInputValue } from '../lib/formatDisplayDate';
@@ -747,7 +748,7 @@ export default function MaintenancePage() {
   };
 
   if (!user || !canAccessMaintenance(user.role, user.categories)) {
-    return <Navigate to={user?.role === 'HR' ? '/employees' : '/dashboard'} replace />;
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   const canDash = canViewMaintenanceDashboard(user.role, user.categories);

@@ -21,6 +21,7 @@ import type { Employee } from '../types/employee';
 import { EMPTY_EMPLOYEE } from '../types/employee';
 import CreateEmployeeModal from '../components/CreateEmployeeModal';
 import * as XLSX from 'xlsx';
+import { resolveDefaultRouteForUser } from '../lib/userPermissions';
 import { sameScopeOption, scopeOptionIncludes, cleanScopeList, hasAllScope } from '../lib/scopeOptions';
 
 type StatusFilter = 'all' | 'Active' | 'Inactive';
@@ -167,7 +168,7 @@ export default function EmployeesPage() {
   };
 
   if (!canView) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
   return (

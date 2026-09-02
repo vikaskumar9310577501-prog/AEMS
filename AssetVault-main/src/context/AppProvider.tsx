@@ -156,6 +156,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setAssets([]);
     assetsLoadedRef.current = false;
+    localStorage.removeItem(ASSETS_CACHE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem(LEGACY_USER_KEY);
     localStorage.removeItem(LOGIN_TIME_KEY);
@@ -166,6 +167,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginSuccess = useCallback(
     (userData: AppSessionUser, token?: string) => {
       setUser(userData);
+      assetsLoadedRef.current = false;
+      localStorage.removeItem(ASSETS_CACHE_KEY);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
       localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(userData));
       if (token) localStorage.setItem(SESSION_TOKEN_KEY, token);
@@ -427,17 +430,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [filterAssetsForScope, loadAssetsFromCache]);
+  }, [user, filterAssetsForScope, loadAssetsFromCache]);
+
+  const userScopeKey = useMemo(() => {
+    if (!user) return '';
+    return `${user.email}|${user.role}|${(user.categories || []).join(',')}|${(user.locations || []).join(',')}|${(user.plants || []).join(',')}`;
+  }, [user]);
 
   useEffect(() => {
-    if (user && !assetsLoadedRef.current) {
-      assetsLoadedRef.current = true;
+    if (user) {
       void fetchAssets();
-    }
-    if (!user) {
+    } else {
       assetsLoadedRef.current = false;
+      setAssets([]);
     }
-  }, [user, fetchAssets, loadAssetsFromCache]);
+  }, [userScopeKey, fetchAssets]);
 
   // Lightweight poll: sync-meta checks fingerprint; full fetch only when sheet data changed.
   useEffect(() => {

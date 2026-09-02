@@ -6,6 +6,7 @@ import type { DamagedItemRecord } from '../types/redesigned';
 import { parseJsonResponse } from '../lib/apiFetch';
 import { SYNC_DATABASE_MSG, SYNC_DATABASE_OK, SYNC_DATABASE_ERR } from '../lib/uiLabels';
 import { useApp } from '../context/AppProvider';
+import { canAccessDamagedScrap, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import MarkDamagedModal from '../components/MarkDamagedModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useEmployees } from '../hooks/useEmployees';
@@ -17,8 +18,8 @@ export default function DamagedScrapPage() {
   const navigate = useNavigate();
   const { user, assets, handleSubmit } = useApp();
 
-  if (user?.role === 'HR') {
-    return <Navigate to="/employees" replace />;
+  if (!canAccessDamagedScrap(user)) {
+    return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
   const { employees } = useEmployees({ autoLoad: true });
   
