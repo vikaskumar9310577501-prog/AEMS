@@ -123,13 +123,38 @@ function canUseEmailFallbackAuth(req: Request): boolean {
   return false;
 }
 
+const globalRateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+export function sanitizePayload(req: Request, _res: Response, next: NextFunction): void {
+  const cleanObject = (obj: any): any => {
+    if (!obj || typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(cleanObject);
+    for (const key of Object.keys(obj)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        delete obj[key];
+        continue;
+      }
+      obj[key] = cleanObject(obj[key]);
+    }
+    return obj;
+  };
+
+  if (req.body) req.body = cleanObject(req.body);
+  if (req.query) req.query = cleanObject(req.query);
+  if (req.params) req.params = cleanObject(req.params);
+  next();
+}
+
 export function applySecurityHeaders(_req: Request, res: Response, next: NextFunction): void {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   if (process.env.NODE_ENV === "production") {
-    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
   }
   next();
 }
@@ -145,7 +170,7 @@ export function configureCors(allowedOrigins: string[]) {
     }
 
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Email");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Email, X-Session-Token");
 
     if (req.method === "OPTIONS") {
       res.sendStatus(204);
@@ -155,8 +180,36 @@ export function configureCors(allowedOrigins: string[]) {
   };
 }
 
+export function rateLimitGlobal(req: Request, res: Response, next: NextFunction): void {
+  // Global anti-DDoS / flood rate limit across all API endpoints (max 300 requests per minute per IP)
+  if (!req.path.startsWith("/api/")) {
+    next();
+    return;
+  }
+  const forwarded = req.headers["x-forwarded-for"];
+  const ip =
+    (typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : "") ||
+    req.socket.remoteAddress ||
+    "unknown";
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const maxRequestsPerMinute = process.env.NODE_ENV === "production" ? 400 : 1000;
+
+  let entry = globalRateLimitStore.get(ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + windowMs };
+    globalRateLimitStore.set(ip, entry);
+  }
+  entry.count += 1;
+  if (entry.count > maxRequestsPerMinute) {
+    res.status(429).json({ error: "System rate limit exceeded. Too many requests. Please slow down." });
+    return;
+  }
+  next();
+}
+
 export function rateLimitAuth(req: Request, res: Response, next: NextFunction): void {
-  // Only throttle OTP attempts — session checks run on every page load.
+  // Strict rate limit on OTP endpoints (max 10 requests per 15 minutes)
   const isOtpRoute =
     req.method === "POST" &&
     (req.path === "/api/auth/request-otp" || req.path === "/api/auth/verify-otp");

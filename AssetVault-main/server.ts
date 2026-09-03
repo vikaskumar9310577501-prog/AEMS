@@ -224,8 +224,15 @@ import {
   buildAllowedOrigins,
   configureCors,
   rateLimitAuth,
+  rateLimitGlobal,
+  sanitizePayload,
   requireApiAuth,
 } from "./server/securityMiddleware.js";
+import {
+  createDatabaseSnapshot,
+  archiveDeletedAsset,
+  listLocalBackups,
+} from "./server/backupService.js";
 import { gasGetUrl, gasGet } from "./server/gasClient.js";
 import { resolveRequestUser } from "./server/requestUser.js";
 import { getEnv, maskValue, setCleanEnv, setCleanEnvAlias } from "./server/env.js";
@@ -280,9 +287,11 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(applySecurityHeaders);
 app.use(configureCors(buildAllowedOrigins()));
+app.use(rateLimitGlobal);
 app.use(rateLimitAuth);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(sanitizePayload);
 app.use(requireApiAuth);
 
 const GAS_WEBAPP_URL = GAS_ENV.value;
@@ -314,6 +323,11 @@ if (isSupabaseMode()) {
 if (!getEnv("SESSION_SECRET")) {
   console.warn("[Security] SESSION_SECRET is not set — using insecure dev default. Set a 32+ char secret before production.");
 }
+
+// Background automated disaster recovery snapshot
+setTimeout(() => {
+  createDatabaseSnapshot("Server Startup Automated Backup").catch(() => {});
+}, 10000);
 
 /** Drop stale disk cache when spreadsheet changes or cache has no spreadsheet binding. */
 if (SPREADSHEET_ID && !isDbMode()) {
@@ -821,6 +835,25 @@ app.get("/api/audit-logs", async (req, res) => {
     res.json({ success: true, logs });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to fetch audit logs" });
+  }
+});
+
+app.get("/api/admin/backups", async (_req, res) => {
+  try {
+    const backups = listLocalBackups();
+    res.json({ success: true, backups });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to list backups" });
+  }
+});
+
+app.post("/api/admin/backups/create", async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || "Manual IT Admin Backup").trim();
+    const meta = await createDatabaseSnapshot(reason);
+    res.json({ success: true, meta });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to create database snapshot" });
   }
 });
 
@@ -5188,6 +5221,10 @@ app.delete("/api/assets/:id", async (req, res) => {
     const assets = await getAssetsForOps();
     const existing = findMappedAssetByAnyId(assets, id);
     const canonicalId = String(existing?.id || id);
+
+    if (existing) {
+      await archiveDeletedAsset(existing as unknown as Record<string, unknown>, actorEmail).catch(() => {});
+    }
 
     let sheetWarning: string | undefined;
     if (GAS_WEBAPP_URL) {
