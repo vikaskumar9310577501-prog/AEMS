@@ -12,6 +12,25 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      sourcemap: false, // Prevents exposing original source code in DevTools
+      minify: 'esbuild',
+      cssMinify: true,
+      chunkSizeWarningLimit: 1200,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            icons: ['lucide-react'],
+            excel: ['xlsx'],
+          },
+        },
+      },
+    },
+    esbuild: {
+      drop: mode === 'production' ? ['console', 'debugger'] : [],
+      legalComments: 'none',
+    },
     server: {
       port: 5173,
       // Proxy API to Express — must match PORT in .env (default 3001)
