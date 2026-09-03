@@ -180,17 +180,40 @@ export function configureCors(allowedOrigins: string[]) {
   };
 }
 
+export function getClientIp(req: Request): string {
+  const cfIp = req.headers["cf-connecting-ip"];
+  if (typeof cfIp === "string" && cfIp.trim()) return cfIp.trim();
+
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0]?.trim() || "unknown";
+  }
+  return req.socket.remoteAddress || "unknown";
+}
+
+export function cloudflareWafShield(req: Request, res: Response, next: NextFunction): void {
+  const cfRay = req.headers["cf-ray"];
+  const threatScore = parseInt(String(req.headers["cf-threat-score"] || "0"), 10);
+
+  if (cfRay && typeof cfRay === "string") {
+    res.setHeader("X-AEMS-Ray", cfRay);
+  }
+
+  if (threatScore > 80) {
+    res.status(403).json({ error: "Access denied by Cloudflare WAF security policy." });
+    return;
+  }
+
+  next();
+}
+
 export function rateLimitGlobal(req: Request, res: Response, next: NextFunction): void {
   // Global anti-DDoS / flood rate limit across all API endpoints (max 300 requests per minute per IP)
   if (!req.path.startsWith("/api/")) {
     next();
     return;
   }
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip =
-    (typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : "") ||
-    req.socket.remoteAddress ||
-    "unknown";
+  const ip = getClientIp(req);
   const now = Date.now();
   const windowMs = 60 * 1000;
   const maxRequestsPerMinute = process.env.NODE_ENV === "production" ? 400 : 1000;

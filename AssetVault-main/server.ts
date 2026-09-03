@@ -223,6 +223,7 @@ import {
   applySecurityHeaders,
   buildAllowedOrigins,
   configureCors,
+  cloudflareWafShield,
   rateLimitAuth,
   rateLimitGlobal,
   sanitizePayload,
@@ -286,6 +287,7 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(applySecurityHeaders);
+app.use(cloudflareWafShield);
 app.use(configureCors(buildAllowedOrigins()));
 app.use(rateLimitGlobal);
 app.use(rateLimitAuth);
