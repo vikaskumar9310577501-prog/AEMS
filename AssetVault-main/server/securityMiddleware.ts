@@ -231,8 +231,58 @@ export function rateLimitGlobal(req: Request, res: Response, next: NextFunction)
   next();
 }
 
+const failedOtpIpStore = new Map<string, { failedCount: number; lockedUntil: number }>();
+const failedOtpEmailStore = new Map<string, { failedCount: number; lockedUntil: number }>();
+
+export function recordFailedOtpAttempt(ip: string, email: string): void {
+  const now = Date.now();
+  const lockoutMs = 15 * 60 * 1000;
+
+  const ipEntry = failedOtpIpStore.get(ip) || { failedCount: 0, lockedUntil: 0 };
+  ipEntry.failedCount += 1;
+  if (ipEntry.failedCount >= 5) {
+    ipEntry.lockedUntil = now + lockoutMs;
+  }
+  failedOtpIpStore.set(ip, ipEntry);
+
+  if (email) {
+    const emailKey = email.toLowerCase().trim();
+    const emailEntry = failedOtpEmailStore.get(emailKey) || { failedCount: 0, lockedUntil: 0 };
+    emailEntry.failedCount += 1;
+    if (emailEntry.failedCount >= 5) {
+      emailEntry.lockedUntil = now + lockoutMs;
+    }
+    failedOtpEmailStore.set(emailKey, emailEntry);
+  }
+}
+
+export function clearFailedOtpAttempt(ip: string, email: string): void {
+  failedOtpIpStore.delete(ip);
+  if (email) failedOtpEmailStore.delete(email.toLowerCase().trim());
+}
+
+export function isOtpLocked(ip: string, email: string): { locked: boolean; remainingMinutes: number; reason: string } {
+  const now = Date.now();
+
+  const ipEntry = failedOtpIpStore.get(ip);
+  if (ipEntry && ipEntry.lockedUntil > now) {
+    const mins = Math.ceil((ipEntry.lockedUntil - now) / 60000);
+    return { locked: true, remainingMinutes: mins, reason: `Too many failed OTP attempts from this device. Temporarily locked for ${mins} minute(s).` };
+  }
+
+  if (email) {
+    const emailKey = email.toLowerCase().trim();
+    const emailEntry = failedOtpEmailStore.get(emailKey);
+    if (emailEntry && emailEntry.lockedUntil > now) {
+      const mins = Math.ceil((emailEntry.lockedUntil - now) / 60000);
+      return { locked: true, remainingMinutes: mins, reason: `Account temporarily locked due to repeated failed OTP attempts. Try again in ${mins} minute(s).` };
+    }
+  }
+
+  return { locked: false, remainingMinutes: 0, reason: "" };
+}
+
 export function rateLimitAuth(req: Request, res: Response, next: NextFunction): void {
-  // Strict rate limit on OTP endpoints (max 10 requests per 15 minutes)
   const isOtpRoute =
     req.method === "POST" &&
     (req.path === "/api/auth/request-otp" || req.path === "/api/auth/verify-otp");
@@ -241,22 +291,27 @@ export function rateLimitAuth(req: Request, res: Response, next: NextFunction): 
     return;
   }
 
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip =
-    (typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : "") ||
-    req.socket.remoteAddress ||
-    "unknown";
+  const ip = getClientIp(req);
+  const email = String(req.body?.email || req.query?.email || "").trim().toLowerCase();
+
+  // Check 15-minute brute-force lockout for device and account
+  const lock = isOtpLocked(ip, email);
+  if (lock.locked) {
+    res.status(429).json({ error: lock.reason });
+    return;
+  }
+
   const key = `${ip}:${req.path}`;
   const now = Date.now();
   const windowMs = 15 * 60 * 1000;
   const max =
     process.env.NODE_ENV === "production"
       ? req.path.includes("request-otp")
-        ? 10
-        : 20
+        ? 6
+        : 10
       : req.path.includes("request-otp")
-        ? 30
-        : 60;
+        ? 20
+        : 30;
 
   let entry = rateLimitStore.get(key);
   if (!entry || now > entry.resetAt) {
@@ -265,7 +320,7 @@ export function rateLimitAuth(req: Request, res: Response, next: NextFunction): 
   }
   entry.count += 1;
   if (entry.count > max) {
-    res.status(429).json({ error: "Too many OTP attempts. Wait a few minutes and try again." });
+    res.status(429).json({ error: "Too many OTP requests from this device. Please wait 15 minutes and try again." });
     return;
   }
   next();

@@ -228,6 +228,9 @@ import {
   rateLimitGlobal,
   sanitizePayload,
   requireApiAuth,
+  recordFailedOtpAttempt,
+  clearFailedOtpAttempt,
+  getClientIp,
 } from "./server/securityMiddleware.js";
 import {
   createDatabaseSnapshot,
@@ -569,13 +572,21 @@ app.post("/api/auth/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+    const ip = getClientIp(req);
 
     if (isDbMode()) {
       const dbResult = await proxyToGas({ action: "verify_otp", email, otp });
       const dbErr = gasAuthError(dbResult);
-      if (dbErr) return res.status(400).json({ error: dbErr });
+      if (dbErr) {
+        recordFailedOtpAttempt(ip, email);
+        return res.status(400).json({ error: dbErr });
+      }
       const rawUser = (dbResult as { user?: Record<string, unknown> }).user;
-      if (!rawUser) return res.status(400).json({ error: "Invalid or expired OTP" });
+      if (!rawUser) {
+        recordFailedOtpAttempt(ip, email);
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+      }
+      clearFailedOtpAttempt(ip, email);
       const normalized = normalizeUser(rawUser);
       upsertLocalUser(normalized);
       const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
@@ -589,7 +600,10 @@ app.post("/api/auth/verify-otp", async (req, res) => {
     }
 
     const check = verifyOtp(email, otp);
-    if (!check.ok) return res.status(400).json({ error: check.error });
+    if (!check.ok) {
+      recordFailedOtpAttempt(ip, email);
+      return res.status(400).json({ error: check.error });
+    }
 
     let user = findRegisteredUser(email);
     if (!user) {
@@ -601,9 +615,11 @@ app.post("/api/auth/verify-otp", async (req, res) => {
       user = findRegisteredUser(email);
     }
     if (!user) {
+      recordFailedOtpAttempt(ip, email);
       return res.status(403).json({ error: "User account not found after verification" });
     }
 
+    clearFailedOtpAttempt(ip, email);
     const normalized = normalizeUser(user as unknown as Record<string, unknown>);
     upsertLocalUser(normalized);
     const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
