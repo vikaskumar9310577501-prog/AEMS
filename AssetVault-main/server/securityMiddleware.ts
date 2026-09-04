@@ -62,6 +62,60 @@ export function getFallbackEmail(req: Request): string {
   ).trim();
 }
 
+export function isItAdminRole(role?: string | null): boolean {
+  const norm = String(role || "").trim().toLowerCase();
+  return norm === "it admin" || norm === "it_admin";
+}
+
+export function userCanAccessPlantLocation(
+  user: { role?: string; locations?: string[]; plants?: string[] } | null | undefined,
+  itemLocation?: string | null,
+  itemPlantCode?: string | null,
+  settingsPlants: Array<{ code: string; name?: string; location?: string }> = []
+): boolean {
+  if (!user) return false;
+  if (isItAdminRole(user.role)) return true;
+
+  const uLocs = (user.locations || []).flatMap((l) =>
+    l.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s && s !== "all")
+  );
+  const uPlants = (user.plants || []).flatMap((p) =>
+    p.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s && s !== "all")
+  );
+  const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
+  const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
+
+  if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
+    return false;
+  }
+
+  const rawLoc = String(itemLocation || "").trim().toLowerCase();
+  const rawPlant = String(itemPlantCode || "").trim().toLowerCase();
+
+  let resolvedLoc = rawLoc;
+  if (!resolvedLoc && rawPlant) {
+    const found = settingsPlants.find((p) => p.code.toLowerCase() === rawPlant);
+    if (found?.location) resolvedLoc = found.location.trim().toLowerCase();
+  }
+
+  const matchLoc =
+    hasAllLocs ||
+    uLocs.length === 0 ||
+    !resolvedLoc ||
+    uLocs.some((l) => resolvedLoc === l || resolvedLoc.includes(l) || l.includes(resolvedLoc));
+
+  const matchPlant =
+    hasAllPlants ||
+    uPlants.length === 0 ||
+    !rawPlant ||
+    uPlants.some((p) => rawPlant === p || rawPlant.includes(p) || p.includes(rawPlant));
+
+  if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+    return matchLoc && matchPlant;
+  }
+  return matchLoc && matchPlant;
+}
+
 function canUseEmailFallbackAuth(req: Request): boolean {
   if (!getFallbackEmail(req)) return false;
 

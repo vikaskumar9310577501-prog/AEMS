@@ -73,6 +73,7 @@ import MaintenanceResolveModal, { type ResolveComplaintPayload } from '../compon
 import MaintenanceMachineEditModal from '../components/MaintenanceMachineEditModal';
 import { plantShortName, plantTableLabel, plantFilterLabel, locationDisplayTag } from '../lib/plantDisplay';
 import { formatTechnicianNames } from '../lib/maintenanceTechnicians';
+import { buildScopedLocationOptions, buildScopedPlantOptions, sameScopeOption } from '../lib/scopeOptions';
 
 type Tab = MaintenanceTabId;
 
@@ -447,28 +448,34 @@ export default function MaintenancePage() {
     };
   }, [filterOpen]);
 
+  const allowedLocations = useMemo(
+    () => buildScopedLocationOptions(locations, plants, user, machines.map((m) => m.location || '').filter(Boolean)),
+    [locations, plants, user, machines]
+  );
+
+  const allowedPlants = useMemo(
+    () =>
+      buildScopedPlantOptions(
+        plants,
+        user,
+        machines.map((m) => ({ code: m.plantCode, name: m.plantCode, location: m.location })),
+        allowedLocations
+      ),
+    [plants, user, machines, allowedLocations]
+  );
+
   const locationOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const loc of locations) if (loc.trim()) set.add(loc.trim());
-    for (const m of machines) if (m.location?.trim()) set.add(m.location.trim());
-    for (const c of complaints) if (c.location?.trim()) set.add(c.location.trim());
-    for (const p of plants) if (p.location?.trim()) set.add(p.location.trim());
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [locations, machines, complaints, plants]);
+    return Array.from(new Set(allowedLocations.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  }, [allowedLocations]);
 
   const plantOptions = useMemo(() => {
-    return plants
+    return allowedPlants
       .filter((p) => !filterLocation || sameLoc(p.location, filterLocation))
       .map((p) => p.code)
-      .concat(
-        machines
-          .filter((m) => !filterLocation || sameLoc(m.location, filterLocation))
-          .map((m) => m.plantCode)
-      )
       .filter(Boolean)
       .filter((v, i, arr) => arr.indexOf(v) === i)
       .sort((a, b) => a.localeCompare(b));
-  }, [plants, machines, filterLocation]);
+  }, [allowedPlants, filterLocation]);
 
   const typeFilterOptions = useMemo(() => {
     const set = new Set<string>(machineTypes);
@@ -479,7 +486,44 @@ export default function MaintenancePage() {
   }, [machineTypes, machines]);
 
   const scopedMachines = useMemo(() => {
+    const isItAdmin = isItAdminRole(user?.role);
+    const uLocs = (user?.locations || []).flatMap((l) =>
+      l.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all')
+    );
+    const uPlants = (user?.plants || []).flatMap((p) =>
+      p.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all')
+    );
+    const hasAllLocs = (user?.locations || []).some((l) => l.trim().toLowerCase() === 'all');
+    const hasAllPlants = (user?.plants || []).some((p) => p.trim().toLowerCase() === 'all');
+
     return machines.filter((m) => {
+      if (!isItAdmin) {
+        if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) return false;
+        const rawLoc = String(m.location || '').trim().toLowerCase();
+        const rawPlant = String(m.plantCode || '').trim().toLowerCase();
+        let resolvedLoc = rawLoc;
+        if (!resolvedLoc && rawPlant) {
+          const found = plants.find((p) => p.code.toLowerCase() === rawPlant);
+          if (found?.location) resolvedLoc = found.location.trim().toLowerCase();
+        }
+        const matchLoc =
+          hasAllLocs ||
+          uLocs.length === 0 ||
+          !resolvedLoc ||
+          uLocs.some((l) => resolvedLoc === l || resolvedLoc.includes(l) || l.includes(resolvedLoc));
+        const matchPlant =
+          hasAllPlants ||
+          uPlants.length === 0 ||
+          !rawPlant ||
+          uPlants.some((p) => rawPlant === p || rawPlant.includes(p) || p.includes(rawPlant));
+
+        if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+          if (!matchLoc || !matchPlant) return false;
+        } else if (!matchLoc || !matchPlant) {
+          return false;
+        }
+      }
+
       if (filterLocation && !sameLoc(m.location, filterLocation)) return false;
       if (filterPlant && String(m.plantCode || '').toLowerCase() !== filterPlant.toLowerCase()) return false;
       if (filterMachineType && m.machineType !== filterMachineType) return false;
@@ -490,15 +534,52 @@ export default function MaintenancePage() {
       }
       return true;
     });
-  }, [machines, filterLocation, filterPlant, filterMachineType, filterMachineStatus]);
+  }, [machines, user, plants, filterLocation, filterPlant, filterMachineType, filterMachineStatus]);
 
   const scopedComplaints = useMemo(() => {
+    const isItAdmin = isItAdminRole(user?.role);
+    const uLocs = (user?.locations || []).flatMap((l) =>
+      l.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all')
+    );
+    const uPlants = (user?.plants || []).flatMap((p) =>
+      p.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all')
+    );
+    const hasAllLocs = (user?.locations || []).some((l) => l.trim().toLowerCase() === 'all');
+    const hasAllPlants = (user?.plants || []).some((p) => p.trim().toLowerCase() === 'all');
+
     return complaints.filter((c) => {
+      if (!isItAdmin) {
+        if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) return false;
+        const rawLoc = String(c.location || '').trim().toLowerCase();
+        const rawPlant = String(c.plantCode || '').trim().toLowerCase();
+        let resolvedLoc = rawLoc;
+        if (!resolvedLoc && rawPlant) {
+          const found = plants.find((p) => p.code.toLowerCase() === rawPlant);
+          if (found?.location) resolvedLoc = found.location.trim().toLowerCase();
+        }
+        const matchLoc =
+          hasAllLocs ||
+          uLocs.length === 0 ||
+          !resolvedLoc ||
+          uLocs.some((l) => resolvedLoc === l || resolvedLoc.includes(l) || l.includes(resolvedLoc));
+        const matchPlant =
+          hasAllPlants ||
+          uPlants.length === 0 ||
+          !rawPlant ||
+          uPlants.some((p) => rawPlant === p || rawPlant.includes(p) || p.includes(rawPlant));
+
+        if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+          if (!matchLoc || !matchPlant) return false;
+        } else if (!matchLoc || !matchPlant) {
+          return false;
+        }
+      }
+
       if (filterLocation && !sameLoc(c.location, filterLocation)) return false;
       if (filterPlant && String(c.plantCode || '').toLowerCase() !== filterPlant.toLowerCase()) return false;
       return true;
     });
-  }, [complaints, filterLocation, filterPlant]);
+  }, [complaints, user, plants, filterLocation, filterPlant]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

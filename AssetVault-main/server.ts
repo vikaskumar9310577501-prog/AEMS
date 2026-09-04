@@ -232,6 +232,8 @@ import {
   clearFailedOtpAttempt,
   getClientIp,
   getFallbackEmail,
+  userCanAccessPlantLocation,
+  isItAdminRole,
 } from "./server/securityMiddleware.js";
 import {
   createDatabaseSnapshot,
@@ -3819,10 +3821,16 @@ function maintenancePlantName(plantCode: string) {
   return plantShortName(plantCode, maintenanceSettingsPlants());
 }
 
-app.get("/api/maintenance/machines", async (_req, res) => {
+app.get("/api/maintenance/machines", async (req, res) => {
   try {
-    const machines = await listMaintenanceMachines();
+    const rawMachines = await listMaintenanceMachines();
     const meta = await getMaintenanceMeta();
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    const machines =
+      user && !isItAdminRole(user.role)
+        ? rawMachines.filter((m) => userCanAccessPlantLocation(user, m.location, m.plantCode, settingsPlants))
+        : rawMachines;
     res.json({ machines, machineTypes: meta.machineTypes, meta });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to load machines" });
@@ -3878,6 +3886,14 @@ app.post("/api/maintenance/machines", async (req, res) => {
     if (!location) return res.status(400).json({ error: "Location is required" });
     if (!plantCode) return res.status(400).json({ error: "Plant is required" });
     if (!nextMaintenanceDate) return res.status(400).json({ error: "Maintenance date is required" });
+
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessPlantLocation(user, location, plantCode, settingsPlants)) {
+      return res.status(403).json({
+        error: `Access Denied: You are not authorized to create machines for location "${location}" / plant "${plantCode}".`,
+      });
+    }
 
     const existing = await listMaintenanceMachines();
     const duplicate = existing.find(
@@ -3961,6 +3977,17 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
       return res.status(400).json({ error: "Type, number, location, plant and maintenance date are required" });
     }
 
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (
+      !userCanAccessPlantLocation(user, current.location, current.plantCode, settingsPlants) ||
+      !userCanAccessPlantLocation(user, location, plantCode, settingsPlants)
+    ) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to update machines in this location / plant.",
+      });
+    }
+
     if (machineType) await addMachineType(machineType);
 
     const actor = String(req.authUser?.email || body.updatedBy || "System");
@@ -4031,6 +4058,14 @@ app.patch("/api/maintenance/machines/:id/trend", async (req, res) => {
     const current = await getMaintenanceMachine(id);
     if (!current) return res.status(404).json({ error: "Machine not found" });
 
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessPlantLocation(user, current.location, current.plantCode, settingsPlants)) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to modify machine trend for this plant.",
+      });
+    }
+
     const newTrend = normalizeTrendMonths(req.body?.trendMonths, -1);
     if (newTrend < 0) {
       return res.status(400).json({ error: "Trend must be Custom or 1–24 months" });
@@ -4092,6 +4127,14 @@ app.patch("/api/maintenance/machines/:id/next-date", async (req, res) => {
     const current = await getMaintenanceMachine(id);
     if (!current) return res.status(404).json({ error: "Machine not found" });
 
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessPlantLocation(user, current.location, current.plantCode, settingsPlants)) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to update next maintenance date for this plant.",
+      });
+    }
+
     const nextMaintenanceDate = String(req.body?.nextMaintenanceDate || "").trim();
     if (!nextMaintenanceDate) {
       return res.status(400).json({ error: "Next maintenance date is required" });
@@ -4140,6 +4183,14 @@ app.patch("/api/maintenance/machines/:id/details", async (req, res) => {
     const current = await getMaintenanceMachine(id);
     if (!current) return res.status(404).json({ error: "Machine not found" });
 
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessPlantLocation(user, current.location, current.plantCode, settingsPlants)) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to update machine details for this plant.",
+      });
+    }
+
     const body = (req.body || {}) as Partial<MaintenanceMachine>;
     const patch: Partial<MaintenanceMachine> = {};
     if (body.equipmentName !== undefined) {
@@ -4170,8 +4221,9 @@ app.patch("/api/maintenance/machines/:id/details", async (req, res) => {
 
 app.delete("/api/maintenance/machines/:id", async (req, res) => {
   try {
-    const role = String(req.authUser?.role || "").trim().toLowerCase();
-    if (role !== "it admin" && role !== "it_admin") {
+    const user = resolveRequestUser(req);
+    const role = String(user?.role || req.authUser?.role || "").trim().toLowerCase();
+    if (!isItAdminRole(role)) {
       return res.status(403).json({ error: "Only IT Admin can delete machines" });
     }
     const ok = await deleteMaintenanceMachine(String(req.params.id || "").trim());
@@ -4227,6 +4279,14 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
     const id = String(req.params.id || "").trim();
     const current = await getMaintenanceMachine(id);
     if (!current) return res.status(404).json({ error: "Machine not found" });
+
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessPlantLocation(user, current.location, current.plantCode, settingsPlants)) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to mark maintenance done for this plant.",
+      });
+    }
 
     const days = daysUntilDate(effectiveNextMaintenanceDate(current));
     if (days == null || days > 7) {
@@ -4345,11 +4405,17 @@ app.post("/api/maintenance/machines/:id/done", async (req, res) => {
 
 app.get("/api/maintenance/complaints", async (req, res) => {
   try {
-    const role = String(req.authUser?.role || "").trim().toLowerCase();
+    const user = resolveRequestUser(req);
+    const role = String(user?.role || req.authUser?.role || "").trim().toLowerCase();
     if (role === "hr") {
       return res.status(403).json({ error: "Complaints are not available for HR role" });
     }
-    const complaints = await listMaintenanceComplaints();
+    const rawComplaints = await listMaintenanceComplaints();
+    const settingsPlants = maintenanceSettingsPlants();
+    const complaints =
+      user && !isItAdminRole(user.role)
+        ? rawComplaints.filter((c) => userCanAccessPlantLocation(user, c.location, c.plantCode, settingsPlants))
+        : rawComplaints;
     complaints.sort((a, b) => String(b.reportedAt).localeCompare(String(a.reportedAt)));
     res.json({ complaints });
   } catch (error: any) {
@@ -4498,7 +4564,8 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
 
 app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
   try {
-    const role = String(req.authUser?.role || "").trim().toLowerCase();
+    const user = resolveRequestUser(req);
+    const role = String(user?.role || req.authUser?.role || "").trim().toLowerCase();
     if (role === "hr") {
       return res.status(403).json({ error: "HR cannot resolve complaints" });
     }
@@ -4506,6 +4573,13 @@ app.post("/api/maintenance/complaints/:id/done", async (req, res) => {
     const current = await getMaintenanceComplaint(id);
     if (!current) return res.status(404).json({ error: "Complaint not found" });
     if (current.status === "Resolved") return res.json({ success: true, complaint: current });
+
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessPlantLocation(user, current.location, current.plantCode, settingsPlants)) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to resolve complaints for this plant.",
+      });
+    }
 
     const remarks = String((req.body || {}).remarks || "").trim();
     const wordCount = remarks.split(/\s+/).filter(Boolean).length;
