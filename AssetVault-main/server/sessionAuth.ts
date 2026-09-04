@@ -8,6 +8,10 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 export interface SessionUser {
   email: string;
   role: string;
+  locations?: string[];
+  plants?: string[];
+  categories?: string[];
+  allowDelete?: boolean;
 }
 
 function getSecret(): string {
@@ -48,6 +52,10 @@ export function createSessionToken(user: SessionUser): string {
   const payload = {
     email: emailKey,
     role: user.role,
+    locations: Array.isArray(user.locations) ? user.locations : [],
+    plants: Array.isArray(user.plants) ? user.plants : [],
+    categories: Array.isArray(user.categories) ? user.categories : [],
+    allowDelete: !!user.allowDelete,
     sid: sessionId,
     exp: Date.now() + SESSION_TTL_MS,
   };
@@ -71,7 +79,16 @@ export function verifySessionToken(token: string): SessionUser | null {
     if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       return null;
     }
-    const payload = JSON.parse(fromB64url(body)) as { email?: string; role?: string; sid?: string; exp?: number };
+    const payload = JSON.parse(fromB64url(body)) as {
+      email?: string;
+      role?: string;
+      locations?: string[];
+      plants?: string[];
+      categories?: string[];
+      allowDelete?: boolean;
+      sid?: string;
+      exp?: number;
+    };
     if (!payload.email || !payload.exp || Date.now() > payload.exp) return null;
 
     const emailKey = payload.email.toLowerCase();
@@ -86,7 +103,14 @@ export function verifySessionToken(token: string): SessionUser | null {
       }
     }
 
-    return { email: emailKey, role: String(payload.role || "User") };
+    return {
+      email: emailKey,
+      role: String(payload.role || "User"),
+      locations: Array.isArray(payload.locations) ? payload.locations : [],
+      plants: Array.isArray(payload.plants) ? payload.plants : [],
+      categories: Array.isArray(payload.categories) ? payload.categories : [],
+      allowDelete: !!payload.allowDelete,
+    };
   } catch {
     return null;
   }

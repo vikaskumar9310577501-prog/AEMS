@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { readAppData } from "./dataStore.js";
+import { getCachedUsers } from "./usersSync.js";
 import { APP_NAME, APP_SHORT_NAME } from "../src/lib/constants.js";
 import { buildOtpEmailHtml } from "./emailTemplates.js";
 import { getEnv } from "./env.js";
@@ -49,8 +50,10 @@ function getFromAddress() {
 
 export function findRegisteredUser(email: string) {
   const normalized = normalizeEmail(email);
+  const cached = getCachedUsers().find((u) => u.email.trim().toLowerCase() === normalized);
+  if (cached) return cached;
   const data = readAppData();
-  const local = data.users.find((u) => u.email === normalized);
+  const local = data.users.find((u) => u.email.trim().toLowerCase() === normalized);
   if (local) return local;
 
   return null;

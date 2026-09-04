@@ -592,7 +592,7 @@ app.post("/api/auth/verify-otp", async (req, res) => {
       clearFailedOtpAttempt(ip, email);
       const normalized = normalizeUser(rawUser);
       upsertLocalUser(normalized);
-      const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+      const token = setSessionCookie(res, normalized);
       return res.json({ success: true, user: normalized, token });
     }
 
@@ -625,7 +625,7 @@ app.post("/api/auth/verify-otp", async (req, res) => {
     clearFailedOtpAttempt(ip, email);
     const normalized = normalizeUser(user as unknown as Record<string, unknown>);
     upsertLocalUser(normalized);
-    const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+    const token = setSessionCookie(res, normalized);
     res.json({ success: true, user: normalized, token });
   } catch (error: any) {
     console.error("Verify OTP Error:", error);
@@ -661,15 +661,19 @@ app.get("/api/auth/session", async (req, res) => {
         role: session.role || "User",
         name: session.email.split("@")[0],
         status: "Active",
+        locations: session.locations || [],
+        plants: session.plants || [],
+        categories: session.categories || [],
       };
-      upsertLocalUser(normalizeUser(fallbackUser));
-      const token = setSessionCookie(res, { email: session.email, role: session.role || "User" });
+      const norm = normalizeUser(fallbackUser);
+      upsertLocalUser(norm);
+      const token = setSessionCookie(res, norm);
       return res.json({ success: true, user: fallbackUser, token });
     }
 
     const normalized = normalizeUser(user as unknown as Record<string, unknown>);
     upsertLocalUser(normalized);
-    const token = setSessionCookie(res, { email: normalized.email, role: normalized.role });
+    const token = setSessionCookie(res, normalized);
     res.json({ success: true, user: normalized, token });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Session check failed";
@@ -3814,6 +3818,10 @@ app.get("/api/damaged-items", async (req, res) => {
 
 // ——— Maintenance module (Preventive + Downtime machines) ———
 function maintenanceSettingsPlants() {
+  const cached = readCacheStale<{ locations: string[]; plants: any[] }>("locations_plants");
+  if (cached?.plants && Array.isArray(cached.plants) && cached.plants.length > 0) {
+    return cached.plants;
+  }
   return readAppData().settings?.plants || [];
 }
 

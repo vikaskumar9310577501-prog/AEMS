@@ -11,6 +11,14 @@ export function getSessionEmail(req: Request): string {
   );
 }
 
+function cleanList(arr?: string[]): string[] {
+  if (!arr || !Array.isArray(arr)) return [];
+  return arr
+    .flatMap((x) => String(x || "").split(","))
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function resolveRequestUser(req: Request): AppUser | null {
   const email = getSessionEmail(req);
   if (!email) return null;
@@ -23,12 +31,18 @@ export function resolveRequestUser(req: Request): AppUser | null {
   if (!cached && !session) return null;
 
   const role = session?.role || cached?.role || "User";
-  const locations =
-    (cached?.locations && cached.locations.length > 0 ? cached.locations : session?.locations) || [];
-  const plants =
-    (cached?.plants && cached.plants.length > 0 ? cached.plants : session?.plants) || [];
-  const categories =
-    (cached?.categories && cached.categories.length > 0 ? cached.categories : session?.categories) || [];
+
+  const cachedLocs = cleanList(cached?.locations);
+  const sessionLocs = cleanList(session?.locations);
+  const locations = cachedLocs.length > 0 ? cachedLocs : sessionLocs;
+
+  const cachedPlants = cleanList(cached?.plants);
+  const sessionPlants = cleanList(session?.plants);
+  const plants = cachedPlants.length > 0 ? cachedPlants : sessionPlants;
+
+  const cachedCats = cleanList(cached?.categories);
+  const sessionCats = cleanList(session?.categories);
+  const categories = cachedCats.length > 0 ? cachedCats : sessionCats;
 
   return {
     email,

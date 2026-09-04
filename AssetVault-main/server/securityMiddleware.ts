@@ -64,7 +64,13 @@ export function getFallbackEmail(req: Request): string {
 
 export function isItAdminRole(role?: string | null): boolean {
   const norm = String(role || "").trim().toLowerCase();
-  return norm === "it admin" || norm === "it_admin";
+  return (
+    norm === "it admin" ||
+    norm === "it_admin" ||
+    norm === "itadmin" ||
+    norm === "super admin" ||
+    norm === "super_admin"
+  );
 }
 
 export function userCanAccessPlantLocation(
@@ -77,41 +83,109 @@ export function userCanAccessPlantLocation(
   if (isItAdminRole(user.role)) return true;
 
   const uLocs = (user.locations || []).flatMap((l) =>
-    l.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s && s !== "all")
+    String(l || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
   );
   const uPlants = (user.plants || []).flatMap((p) =>
-    p.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s && s !== "all")
+    String(p || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
   );
-  const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
-  const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
 
-  if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
+  const hasAllLocs = uLocs.some((l) => l === "all");
+  const hasAllPlants = uPlants.some((p) => p === "all");
+
+  const cleanULocs = uLocs.filter((l) => l !== "all");
+  const cleanUPlants = uPlants.filter((p) => p !== "all");
+
+  // If user has NO assigned location AND NO assigned plant (and not "all"), they have no scope
+  if (!hasAllLocs && cleanULocs.length === 0 && !hasAllPlants && cleanUPlants.length === 0) {
     return false;
   }
 
   const rawLoc = String(itemLocation || "").trim().toLowerCase();
   const rawPlant = String(itemPlantCode || "").trim().toLowerCase();
 
-  let resolvedLoc = rawLoc;
-  if (!resolvedLoc && rawPlant) {
-    const found = settingsPlants.find((p) => p.code.toLowerCase() === rawPlant);
-    if (found?.location) resolvedLoc = found.location.trim().toLowerCase();
+  // Find any matching plant in settings to resolve code, name, and location
+  const matchingSettingsPlants = settingsPlants.filter((p) => {
+    const c = String(p.code || "").trim().toLowerCase();
+    const n = String(p.name || "").trim().toLowerCase();
+    return (
+      (rawPlant &&
+        (c === rawPlant ||
+          n === rawPlant ||
+          c.includes(rawPlant) ||
+          rawPlant.includes(c) ||
+          n.includes(rawPlant) ||
+          rawPlant.includes(n))) ||
+      (rawLoc &&
+        String(p.location || "").trim().toLowerCase() === rawLoc &&
+        (!rawPlant || c === rawPlant || n === rawPlant))
+    );
+  });
+
+  const plantCandidateIdentifiers = new Set<string>();
+  if (rawPlant) plantCandidateIdentifiers.add(rawPlant);
+  for (const sp of matchingSettingsPlants) {
+    if (sp.code) plantCandidateIdentifiers.add(sp.code.trim().toLowerCase());
+    if (sp.name) plantCandidateIdentifiers.add(sp.name.trim().toLowerCase());
   }
 
+  let resolvedLoc = rawLoc;
+  if (!resolvedLoc) {
+    for (const sp of matchingSettingsPlants) {
+      if (sp.location) {
+        resolvedLoc = sp.location.trim().toLowerCase();
+        break;
+      }
+    }
+  }
+
+  // Location match:
+  // - If user has "All" locations
+  // - If user has no specific locations assigned (cleanULocs is empty)
+  // - If item has no location
+  // - If any user location token matches resolved location (exact or substring)
+  // - Or if any matching settings plant has a location matching user locations
   const matchLoc =
     hasAllLocs ||
-    uLocs.length === 0 ||
+    cleanULocs.length === 0 ||
     !resolvedLoc ||
-    uLocs.some((l) => resolvedLoc === l || resolvedLoc.includes(l) || l.includes(resolvedLoc));
+    cleanULocs.some((l) => resolvedLoc === l || resolvedLoc.includes(l) || l.includes(resolvedLoc)) ||
+    matchingSettingsPlants.some((sp) => {
+      const spLoc = String(sp.location || "").trim().toLowerCase();
+      return spLoc && cleanULocs.some((l) => spLoc === l || spLoc.includes(l) || l.includes(spLoc));
+    });
 
+  // Plant match:
+  // - If user has "All" plants
+  // - If user has no specific plants assigned (cleanUPlants is empty)
+  // - If item has no plant specified
+  // - If any candidate plant identifier matches any user plant token
   const matchPlant =
     hasAllPlants ||
-    uPlants.length === 0 ||
-    !rawPlant ||
-    uPlants.some((p) => rawPlant === p || rawPlant.includes(p) || p.includes(rawPlant));
+    cleanUPlants.length === 0 ||
+    plantCandidateIdentifiers.size === 0 ||
+    cleanUPlants.some((up) => {
+      for (const cand of plantCandidateIdentifiers) {
+        if (cand === up || cand.includes(up) || up.includes(cand)) {
+          return true;
+        }
+      }
+      return false;
+    });
 
-  if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
+  if (cleanULocs.length > 0 && cleanUPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
     return matchLoc && matchPlant;
+  }
+  if (cleanULocs.length > 0 && !hasAllLocs) {
+    return matchLoc;
+  }
+  if (cleanUPlants.length > 0 && !hasAllPlants) {
+    return matchPlant;
   }
   return matchLoc && matchPlant;
 }
