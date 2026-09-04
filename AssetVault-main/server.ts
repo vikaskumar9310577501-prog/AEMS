@@ -641,7 +641,7 @@ app.get("/api/auth/session", async (req, res) => {
       session = { email: fallbackEmail, role: "IT Admin" };
     }
 
-    if (!session) return res.status(401).json({ error: "Not logged in" });
+    if (!session) return res.json({ success: true, authenticated: false, user: null });
 
     let user = findRegisteredUser(session.email);
     if (GAS_WEBAPP_URL || SPREADSHEET_ID || !user) {
