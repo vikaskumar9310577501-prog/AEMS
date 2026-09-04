@@ -53,7 +53,7 @@ export function isPublicApiRoute(req: Request): boolean {
   return false;
 }
 
-function getFallbackEmail(req: Request): string {
+export function getFallbackEmail(req: Request): string {
   return String(
     req.query.userEmail ||
       req.body?.userEmail ||

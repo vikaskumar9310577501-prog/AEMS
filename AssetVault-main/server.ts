@@ -231,6 +231,7 @@ import {
   recordFailedOtpAttempt,
   clearFailedOtpAttempt,
   getClientIp,
+  getFallbackEmail,
 } from "./server/securityMiddleware.js";
 import {
   createDatabaseSnapshot,

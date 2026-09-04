@@ -71,7 +71,7 @@ import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal, { type ResolveComplaintPayload } from '../components/MaintenanceResolveModal';
 import MaintenanceMachineEditModal from '../components/MaintenanceMachineEditModal';
-import { plantShortName, plantTableLabel, plantFilterLabel } from '../lib/plantDisplay';
+import { plantShortName, plantTableLabel, plantFilterLabel, locationDisplayTag } from '../lib/plantDisplay';
 import { formatTechnicianNames } from '../lib/maintenanceTechnicians';
 
 type Tab = MaintenanceTabId;

@@ -1,4 +1,4 @@
-import { X, Cpu, Monitor, ShieldCheck, User, Info, Edit2, Trash2, Settings, Link as LinkIcon, ExternalLink, ChevronDown, History, RotateCcw } from "lucide-react";
+import { X, Cpu, Monitor, ShieldCheck, User, Info, Edit2, Trash2, Settings, Link as LinkIcon, ExternalLink, ChevronDown, History, RotateCcw, AlertTriangle } from "lucide-react";
 import { Asset, type AssetFormData } from "../types";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
