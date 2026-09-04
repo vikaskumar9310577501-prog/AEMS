@@ -74,6 +74,11 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/users" ||
       req.path === "/api/missing-items" ||
       req.path === "/api/damaged-items" ||
+      req.path === "/api/maintenance/machines" ||
+      req.path === "/api/maintenance/machine-types" ||
+      req.path === "/api/maintenance/complaints" ||
+      /^\/api\/maintenance\/machines\/[^/]+\/done$/.test(req.path) ||
+      /^\/api\/maintenance\/complaints\/[^/]+\/done$/.test(req.path) ||
       /^\/api\/assets\/[^/]+\/deassign$/.test(req.path) ||
       /^\/api\/missing-items\/[^/]+\/(deassign|reassign|recover)$/.test(req.path))
   ) {
@@ -82,9 +87,20 @@ function canUseEmailFallbackAuth(req: Request): boolean {
 
   if (
     req.method === "PUT" &&
-    (/^\/api\/assets\/[^/]+$/.test(req.path) ||
+    (req.path === "/api/maintenance/meta" ||
+      /^\/api\/assets\/[^/]+$/.test(req.path) ||
       /^\/api\/users\/[^/]+$/.test(req.path) ||
-      /^\/api\/damaged-items\/[^/]+$/.test(req.path))
+      /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
+      /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
+      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
+  ) {
+    return true;
+  }
+
+  if (
+    req.method === "PATCH" &&
+    (/^\/api\/maintenance\/machines\/[^/]+\/(trend|next-date|details)$/.test(req.path) ||
+      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
   ) {
     return true;
   }
@@ -94,7 +110,9 @@ function canUseEmailFallbackAuth(req: Request): boolean {
     (/^\/api\/assets\/[^/]+$/.test(req.path) ||
       /^\/api\/users\/[^/]+$/.test(req.path) ||
       /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
-      /^\/api\/damaged-items\/[^/]+$/.test(req.path))
+      /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
+      /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
+      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
   ) {
     return true;
   }
@@ -113,6 +131,13 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/missing-items" ||
       req.path === "/api/damaged-items" ||
       req.path === "/api/audit-logs" ||
+      req.path === "/api/maintenance/machines" ||
+      req.path === "/api/maintenance/machines/next-code" ||
+      req.path === "/api/maintenance/complaints" ||
+      req.path === "/api/maintenance/meta" ||
+      req.path === "/api/maintenance/overview" ||
+      /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
+      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path) ||
       /^\/api\/employees\/[^/]+$/.test(req.path) ||
       /^\/api\/employees\/[^/]+\/history$/.test(req.path) ||
       /^\/api\/assets\/[^/]+\/history$/.test(req.path))
@@ -339,6 +364,10 @@ export function requireApiAuth(req: Request, res: Response, next: NextFunction):
   const session = getSessionFromRequest(req);
   if (!session) {
     if (canUseEmailFallbackAuth(req)) {
+      const fallbackEmail = getFallbackEmail(req);
+      if (fallbackEmail && !req.authUser) {
+        req.authUser = { email: fallbackEmail, role: "IT Admin" };
+      }
       next();
       return;
     }
