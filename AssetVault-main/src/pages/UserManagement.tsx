@@ -20,11 +20,11 @@ import {
   hasPreventionModuleCategory,
 } from '../lib/userPermissions';
 import { ViewModeToggle, useListViewMode } from '../components/ViewModeToggle';
+import { useTypeDefinitions } from '../hooks/useTypeDefinitions';
 
 interface PlantRecord {
   code: string;
   name: string;
-  location: string;
 }
 
 interface AppSettings {
@@ -69,6 +69,8 @@ function scopeIncludes(values: string[] | undefined, target: string): boolean {
 
 export default function UserManagement() {
   const { user: loggedInUser } = useApp();
+  const { config: typeConfig } = useTypeDefinitions();
+  
   if (!loggedInUser || !canAccessUsers(loggedInUser)) {
     return <Navigate to={resolveDefaultRouteForUser(loggedInUser)} replace />;
   }
@@ -127,12 +129,32 @@ export default function UserManagement() {
     return list;
   }, [allowedPlants, selectedLocations]);
 
+  const allCategories = useMemo(() => {
+    const list = new Set<string>(MANAGEABLE_CATEGORIES);
+    if (typeConfig?.types) {
+      typeConfig.types.forEach((t) => {
+        if (t.active !== false) {
+          if (t.name) list.add(t.name);
+          if (t.mainCategory) list.add(t.mainCategory);
+        }
+      });
+    }
+    if (typeConfig?.departments) {
+      typeConfig.departments.forEach((d) => {
+        if (d.active !== false && d.name) {
+          list.add(d.name);
+        }
+      });
+    }
+    return Array.from(list);
+  }, [typeConfig]);
+
   const allowedCategories = useMemo(() => {
     if (!loggedInUser) return [];
-    if (isITAdmin || hasAllScope(loggedInUser.categories)) return [...MANAGEABLE_CATEGORIES];
+    if (isITAdmin || hasAllScope(loggedInUser.categories)) return allCategories;
     const adminCats = loggedInUser.categories || [];
-    return MANAGEABLE_CATEGORIES.filter((cat) => scopeIncludes(adminCats, cat));
-  }, [loggedInUser, isITAdmin]);
+    return allCategories.filter((cat) => scopeIncludes(adminCats, cat));
+  }, [loggedInUser, isITAdmin, allCategories]);
 
   // Filter users list so Admins only see users who share location/plant access
   const displayedUsers = useMemo(() => {

@@ -306,17 +306,16 @@ export default function SettingsPage() {
     saveSettings(next, 'Removing field...');
   };
 
-  const isItAdmin = ['IT Admin', 'IT_ADMIN', 'it admin'].includes(userRole);
+  const isItAdmin = isItAdminRole(user?.role) || isAdminRole(user?.role) || ['IT Admin', 'IT_ADMIN', 'it admin', 'Admin', 'admin'].includes(userRole);
 
   const tabs = [
     { id: 'locations', label: 'Locations', icon: <MapPin size={16} /> },
     { id: 'plants', label: 'Plants', icon: <Building2 size={16} /> },
-    { id: 'fields', label: 'Asset Fields', icon: <List size={16} /> },
-    { id: 'types', label: 'Asset Types', icon: <Layers size={16} /> },
+    { id: 'types', label: 'Dynamic Categories & Form Fields', icon: <Layers size={16} /> },
     { id: 'audit-logs', label: 'Audit Logs', icon: <ShieldCheck size={16} /> },
   ].filter((t) => {
-    if (['Admin', 'ADMIN', 'admin'].includes(userRole)) {
-      return t.id === 'fields';
+    if (['Admin', 'ADMIN', 'admin'].includes(userRole) && !isItAdmin) {
+      return t.id === 'types';
     }
     if (t.id === 'types' || t.id === 'audit-logs') return isItAdmin;
     return true;
@@ -332,20 +331,20 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 overflow-auto p-8 bg-slate-50">
-      <div className={tab === 'types' ? 'max-w-6xl mx-auto' : 'max-w-3xl mx-auto'}>
+      <div className={tab === 'types' || tab === 'fields' ? 'max-w-6xl mx-auto' : 'max-w-3xl mx-auto'}>
         <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">Settings</h2>
         <p className="text-sm text-slate-500 mb-6">
-          Manage locations, plant codes, custom form fields, and asset types config.
+          Manage locations, plant codes, dynamic categories, departments, and custom entry form fields.
         </p>
 
         <div className="flex gap-2 mb-6 flex-wrap">
           {tabs.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => setTab(t.id as Tab)}
               disabled={saving}
               className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm ${
-                tab === t.id
+                tab === t.id || (tab === 'fields' && t.id === 'types')
                   ? 'bg-emerald-600 text-white shadow-emerald-600/10'
                   : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
@@ -575,71 +574,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {tab === 'fields' && (
-            <div className="space-y-4">
-              <h3 className="font-bold text-slate-800">Asset Form Fields</h3>
-              <p className="text-sm text-slate-500">
-                Enable or disable fields shown when registering assets. Add custom fields below.
-              </p>
-              <ul className="space-y-2">
-                {settings.assetFields.map((f) => (
-                  <li
-                    key={f.key}
-                    className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={f.enabled}
-                        onChange={() => toggleField(f.key)}
-                        disabled={saving}
-                        className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
-                      />
-                      <span className="text-slate-800 font-semibold text-sm">{f.label}</span>
-                      <span className="text-slate-400 text-xs font-mono">({f.key})</span>
-                    </div>
-                    {!['location', 'plantCode', 'department', 'make', 'model', 'serialNumber', 'assetCode'].includes(f.key) && (
-                      <button
-                        onClick={() => removeAssetField(f.key)}
-                        disabled={saving}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="pt-4 border-t border-slate-100">
-                <h4 className="font-bold text-slate-800 text-sm mb-2">Add Custom Field</h4>
-                <div className="flex gap-2 flex-wrap">
-                  <input
-                    value={fieldForm.key}
-                    disabled={saving}
-                    onChange={(e) => setFieldForm({ ...fieldForm, key: e.target.value })}
-                    placeholder="field_key"
-                    className="flex-1 min-w-[120px] px-3 py-2 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
-                  />
-                  <input
-                    value={fieldForm.label}
-                    disabled={saving}
-                    onChange={(e) => setFieldForm({ ...fieldForm, label: e.target.value })}
-                    placeholder="Display label"
-                    className="flex-1 min-w-[120px] px-3 py-2 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
-                  />
-                  <button
-                    onClick={addAssetField}
-                    disabled={saving}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                  >
-                    Add Field
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {tab === 'types' && isItAdmin && <TypeDefinitionsAdmin />}
+          {(tab === 'types' || tab === 'fields') && isItAdmin && <TypeDefinitionsAdmin />}
           {tab === 'audit-logs' && isItAdmin && <AuditLogsViewer />}
         </div>
       </div>

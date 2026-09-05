@@ -416,7 +416,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     const staticSubs = CATEGORY_SUBCATEGORIES[mainCategory] || [];
     const customSubs = catalog.subCategories?.[mainCategory] || [];
     const typeSubs = typeConfig.types
-      .filter((type) => type.mainCategory === mainCategory && type.subCategory)
+      .filter((type) => (type.mainCategory === mainCategory || type.name === mainCategory) && type.subCategory)
       .map((type) => String(type.subCategory));
     const all = Array.from(new Set([...staticSubs, ...customSubs, ...typeSubs]));
     const deleted = catalog.deletedOptions?.subCategories || [];
@@ -1148,9 +1148,29 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     }
   };
 
+  const allAvailableCategories = React.useMemo(() => {
+    const list = new Set<string>(MAIN_CATEGORIES);
+    if (typeConfig?.types) {
+      typeConfig.types.forEach((t) => {
+        if (t.active !== false) {
+          if (t.name) list.add(t.name);
+          if (t.mainCategory) list.add(t.mainCategory);
+        }
+      });
+    }
+    if (typeConfig?.departments) {
+      typeConfig.departments.forEach((d) => {
+        if (d.active !== false && d.name) {
+          list.add(d.name);
+        }
+      });
+    }
+    return Array.from(list);
+  }, [typeConfig]);
+
   const allowedCategories = React.useMemo(() => {
-    if (propAllowedCategories) return propAllowedCategories;
-    if (!loggedInUser) return MAIN_CATEGORIES;
+    if (propAllowedCategories && propAllowedCategories.length > 0) return propAllowedCategories;
+    if (!loggedInUser) return allAvailableCategories;
     const cats = loggedInUser.categories ?? loggedInUser.Categories ?? loggedInUser.category ?? loggedInUser.access;
     const userCats = Array.isArray(cats)
       ? cats
@@ -1158,10 +1178,10 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
         ? cats.split(',').map((s: string) => s.trim()).filter(Boolean)
         : [];
     if (loggedInUser.role === 'IT Admin' || userCats.length === 0 || userCats.includes('All')) {
-      return MAIN_CATEGORIES;
+      return allAvailableCategories;
     }
-    return MAIN_CATEGORIES.filter(cat => userCats.includes(cat));
-  }, [loggedInUser, propAllowedCategories]);
+    return allAvailableCategories.filter((cat) => userCats.some((uc) => sameScopeOption(uc, cat)));
+  }, [loggedInUser, propAllowedCategories, allAvailableCategories]);
 
   useEffect(() => {
     if (!initialData?.id && allowedCategories.length > 0) {
