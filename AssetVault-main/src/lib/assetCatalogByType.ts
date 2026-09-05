@@ -132,6 +132,7 @@ export function catalogKeyForAssetType(assetType: string): string {
 // Company-Level Main Categories and sheet mappings
 export const MAIN_CATEGORIES = [
   "IT Assets",
+  "Quality Assets",
   "Electrical Assets",
   "Production Assets",
   "Safety Assets",
@@ -145,6 +146,7 @@ export type MainCategory = typeof MAIN_CATEGORIES[number];
 
 export const CATEGORY_SHEET_MAP: Record<string, string> = {
   "IT Assets": "IT Assets",
+  "Quality Assets": "Quality Assets",
   "Electrical Assets": "Electrical Assets",
   "Production Assets": "Production Assets",
   "Safety Assets": "Safety Assets",
@@ -155,6 +157,14 @@ export const CATEGORY_SHEET_MAP: Record<string, string> = {
 };
 
 export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
+  "Quality Assets": [
+    "Precision Measuring Instrument",
+    "AC Leak & Gas Charging Equipment",
+    "Electrical Safety & Performance Rig",
+    "Metrology & Calibration Standard",
+    "Environmental & Psychrometric Testing",
+    "Other Quality Tool"
+  ],
   "IT Assets": [
     "Laptop / Desktop",
     "Input Device",
