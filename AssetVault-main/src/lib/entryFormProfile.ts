@@ -65,8 +65,82 @@ export function getEntryFormProfile(
   );
   const showLegacyItSpecs = !!(activeTypeDef?.useLegacyItForm && isItPrimaryDevice);
 
+  const isQuality = mainCategory === 'Quality Assets' || (formData.department || '').toLowerCase().includes('quality');
+  const isProduction = mainCategory === 'Production Assets' || (formData.department || '').toLowerCase().includes('production') || (formData.department || '').toLowerCase().includes('mechanical');
+  const isElectrical = mainCategory === 'Electrical Assets' || (formData.department || '').toLowerCase().includes('electrical');
+  const isMaintenance = mainCategory === 'Maintenance Assets' || (formData.department || '').toLowerCase().includes('maintenance');
+  const isSafety = mainCategory === 'Safety Assets' || (formData.department || '').toLowerCase().includes('safety');
   const isVehicle = mainCategory === 'Vehicle Assets';
-  const isSoftware = mainCategory === 'Software / License Assets';
+  const isFurniture = mainCategory === 'Furniture Assets' || (formData.department || '').toLowerCase().includes('furniture') || (formData.department || '').toLowerCase().includes('admin');
+  const isSoftware = mainCategory === 'Software / License Assets' || mainCategory === 'Software & Licenses';
+
+  let serialLabel = 'Serial Number';
+  let assetCodeLabel = 'Asset Code';
+  let makeLabel = 'Brand / Make';
+  let modelLabel = 'Model';
+  let assetNameLabel = 'Asset Name';
+  let assetNamePlaceholder = 'Enter asset name';
+  let requireSerialNumber = true;
+
+  if (isQuality) {
+    serialLabel = 'Instrument / Gauge Serial No.';
+    assetCodeLabel = 'Quality Tag / Asset Code';
+    makeLabel = 'Instrument Brand / OEM';
+    modelLabel = 'Model / Type No.';
+    assetNameLabel = 'Instrument / Equipment Name';
+    assetNamePlaceholder = 'e.g. Digital Vernier Caliper 0-150mm';
+  } else if (isProduction) {
+    serialLabel = 'Machine / Equipment Serial No.';
+    assetCodeLabel = 'Machine / Plant Code';
+    makeLabel = 'OEM / Manufacturer';
+    modelLabel = 'Model / Specification';
+    assetNameLabel = 'Machine / Equipment Name';
+    assetNamePlaceholder = 'e.g. Copper Brazing Rig - Line 1';
+  } else if (isElectrical) {
+    serialLabel = 'Panel / Equipment Serial No.';
+    assetCodeLabel = 'Electrical Asset Code';
+    makeLabel = 'Manufacturer / Brand';
+    modelLabel = 'Model / Rating';
+    assetNameLabel = 'Electrical Equipment Name';
+    assetNamePlaceholder = 'e.g. 500kVA Distribution Panel';
+  } else if (isMaintenance) {
+    serialLabel = 'Tool / Equipment Serial No.';
+    assetCodeLabel = 'Maintenance Tool Code';
+    makeLabel = 'Manufacturer / Brand';
+    modelLabel = 'Model / Spec';
+    assetNameLabel = 'Maintenance Tool / Asset Name';
+    assetNamePlaceholder = 'e.g. Hydraulic Pipe Bender';
+  } else if (isSafety) {
+    serialLabel = 'Equipment / Cylinder Serial No.';
+    assetCodeLabel = 'Safety Asset Code';
+    makeLabel = 'Manufacturer / Brand';
+    modelLabel = 'Model / Capacity';
+    assetNameLabel = 'Safety Equipment Name';
+    assetNamePlaceholder = 'e.g. CO2 Fire Extinguisher 4.5kg';
+  } else if (isVehicle) {
+    serialLabel = 'Chassis / Engine No.';
+    assetCodeLabel = 'Internal Asset Code';
+    makeLabel = 'Vehicle Make / Brand';
+    modelLabel = 'Model / Variant';
+    assetNameLabel = 'Vehicle Name / Number';
+    assetNamePlaceholder = 'e.g. Company Swift — Plant 1';
+  } else if (isFurniture) {
+    serialLabel = 'Batch / Item Code (Optional)';
+    requireSerialNumber = false;
+    assetCodeLabel = 'Furniture Asset Code';
+    makeLabel = 'Brand / Manufacturer';
+    modelLabel = 'Model / Variant';
+    assetNameLabel = 'Furniture / Item Name';
+    assetNamePlaceholder = 'e.g. High-back Ergonomic Mesh Chair';
+  } else if (isSoftware) {
+    serialLabel = 'License Key / Subscription ID';
+    requireSerialNumber = false;
+    assetCodeLabel = 'Software Code';
+    makeLabel = 'Publisher / Vendor';
+    modelLabel = 'Edition / Version';
+    assetNameLabel = 'Software Name';
+    assetNamePlaceholder = 'e.g. SolidWorks 2026 Professional';
+  }
 
   return {
     mainCategory,
@@ -81,18 +155,14 @@ export function getEntryFormProfile(
     showLegacyItSpecs,
     showDynamicSpecs,
     isCctvSecurityDevice: !!isCctvSecurity,
-    serialLabel: isSoftware ? 'License Key' : isVehicle ? 'Chassis / Engine No.' : 'Serial Number',
-    assetCodeLabel: isSoftware ? 'Software Code' : isVehicle ? 'Internal Asset Code' : 'Asset Code',
+    serialLabel,
+    assetCodeLabel,
     manualAssetCode: isSoftware || isEditMode,
-    requireSerialNumber: !isSoftware,
-    makeLabel: isSoftware ? 'Publisher / Brand' : 'Brand / Make',
-    modelLabel: isSoftware ? 'Product / Edition' : 'Model',
-    assetNameLabel: isSoftware ? 'Software Name' : 'Asset Name',
-    assetNamePlaceholder: isSoftware
-      ? 'Enter software name'
-      : isVehicle
-        ? 'e.g. Company Swift — Plant 1'
-        : 'Enter asset name',
+    requireSerialNumber,
+    makeLabel,
+    modelLabel,
+    assetNameLabel,
+    assetNamePlaceholder,
   };
 }
 
