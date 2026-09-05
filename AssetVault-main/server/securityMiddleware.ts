@@ -50,6 +50,8 @@ export function isPublicApiRoute(req: Request): boolean {
   if (req.method === "GET" && path === "/api/file/view") return true;
   if (req.method === "GET" && path === "/api/assets/next-code") return true;
   if (req.method === "GET" && path === "/api/assets/check-unique") return true;
+  // Type definitions (asset categories/departments config) is non-sensitive public config
+  if (req.method === "GET" && path === "/api/type-definitions") return true;
   return false;
 }
 

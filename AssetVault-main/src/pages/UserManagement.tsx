@@ -21,6 +21,7 @@ import {
 } from '../lib/userPermissions';
 import { ViewModeToggle, useListViewMode } from '../components/ViewModeToggle';
 import { useTypeDefinitions } from '../hooks/useTypeDefinitions';
+import { DEFAULT_TYPE_DEFINITIONS } from '../lib/typeDefinitions';
 
 interface PlantRecord {
   code: string;
@@ -131,12 +132,27 @@ export default function UserManagement() {
 
   const allCategories = useMemo(() => {
     const list = new Set<string>(MANAGEABLE_CATEGORIES);
-    // Only add active department names from typeConfig.departments (user-defined in Settings > Departments)
-    // We intentionally do NOT iterate typeConfig.types to avoid leaking asset-type names (Laptop, Fan, etc.)
-    if (typeConfig?.departments) {
-      typeConfig.departments.forEach((d) => {
-        if (d.active !== false && d.name && d.name.trim()) {
-          list.add(d.name.trim());
+    const deptNames = new Set(
+      (typeConfig?.departments || []).map((d) => d.name.trim().toLowerCase())
+    );
+    ['it', 'maintenance', 'electrical', 'mechanical', 'civil', 'corporate', 'admin', 'hr', 'production', 'quality', 'store', 'safety', 'purchase', 'finance', 'engineering', 'sales', 'security'].forEach(d => deptNames.add(d));
+
+    if (typeConfig?.types) {
+      typeConfig.types.forEach((t) => {
+        if (t.active !== false) {
+          const isDefault = DEFAULT_TYPE_DEFINITIONS.some((def) => def.id === t.id);
+          if (!isDefault && t.name && t.name.trim()) {
+            const nameTrim = t.name.trim();
+            if (!deptNames.has(nameTrim.toLowerCase())) {
+              list.add(nameTrim);
+            }
+          }
+          if (t.mainCategory && t.mainCategory.trim()) {
+            const mcTrim = t.mainCategory.trim();
+            if (!deptNames.has(mcTrim.toLowerCase())) {
+              list.add(mcTrim);
+            }
+          }
         }
       });
     }

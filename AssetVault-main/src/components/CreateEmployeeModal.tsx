@@ -14,6 +14,7 @@ import {
   normalizeEmployeePhoneInput,
 } from '../lib/employeeValidation';
 import { useApp } from '../context/AppProvider';
+import { useTypeDefinitions } from '../hooks/useTypeDefinitions';
 import { buildScopedLocationOptions, buildScopedPlantOptions, sameScopeOption } from '../lib/scopeOptions';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
@@ -143,10 +144,15 @@ export default function CreateEmployeeModal({ open, initial, onClose, onSaved, m
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial?.employeeId, initial?.email]);
 
+  const { config: typeConfig } = useTypeDefinitions();
+
   const departments = useMemo(() => {
     const fromCatalog = settings.catalog?.departments ?? [];
-    return Array.from(new Set([...fromCatalog, form.department].filter(Boolean)));
-  }, [settings.catalog?.departments, form.department]);
+    const fromTypeConfig = (typeConfig?.departments || [])
+      .filter((d) => d.active !== false && d.name && d.name.trim())
+      .map((d) => d.name.trim());
+    return Array.from(new Set([...fromCatalog, ...fromTypeConfig, form.department].filter(Boolean)));
+  }, [settings.catalog?.departments, typeConfig?.departments, form.department]);
 
   if (!open) return null;
 

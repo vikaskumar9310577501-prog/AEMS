@@ -66,6 +66,7 @@ import {
   emptyDynamicValues,
   applyLegacyFieldMapping,
   legacyToDynamicDetails,
+  DEFAULT_TYPE_DEFINITIONS,
 } from "../lib/typeDefinitions";
 import {
   applyCategorySelection,
@@ -1089,11 +1090,14 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const departmentOptions = React.useMemo(() => {
     const fromCatalog = catalog.departments || [];
+    const fromTypeConfig = (typeConfig?.departments || [])
+      .filter((d) => d.active !== false && d.name && d.name.trim())
+      .map((d) => d.name.trim());
     const merged = Array.from(
-      new Set([...DEFAULT_DEPARTMENTS, ...fromCatalog, formData.department].filter(Boolean))
+      new Set([...DEFAULT_DEPARTMENTS, ...fromCatalog, ...fromTypeConfig, formData.department].filter(Boolean))
     );
     return merged.sort((a, b) => a.localeCompare(b));
-  }, [catalog.departments, formData.department]);
+  }, [catalog.departments, typeConfig?.departments, formData.department]);
 
   const selectAssignmentMode = (mode: AssetAssignmentMode) => {
     setAssignmentMode(mode);
@@ -1118,10 +1122,27 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const allAvailableCategories = React.useMemo(() => {
     const list = new Set<string>(MAIN_CATEGORIES);
+    const deptNames = new Set(
+      (typeConfig?.departments || []).map((d) => d.name.trim().toLowerCase())
+    );
+    ['it', 'maintenance', 'electrical', 'mechanical', 'civil', 'corporate', 'admin', 'hr', 'production', 'quality', 'store', 'safety', 'purchase', 'finance', 'engineering', 'sales', 'security'].forEach(d => deptNames.add(d));
+
     if (typeConfig?.types) {
       typeConfig.types.forEach((t) => {
-        if (t.active !== false && t.mainCategory) {
-          list.add(t.mainCategory);
+        if (t.active !== false) {
+          const isDefault = DEFAULT_TYPE_DEFINITIONS.some((def) => def.id === t.id);
+          if (!isDefault && t.name && t.name.trim()) {
+            const nameTrim = t.name.trim();
+            if (!deptNames.has(nameTrim.toLowerCase())) {
+              list.add(nameTrim);
+            }
+          }
+          if (t.mainCategory && t.mainCategory.trim()) {
+            const mcTrim = t.mainCategory.trim();
+            if (!deptNames.has(mcTrim.toLowerCase())) {
+              list.add(mcTrim);
+            }
+          }
         }
       });
     }
