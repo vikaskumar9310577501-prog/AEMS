@@ -1120,16 +1120,8 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     const list = new Set<string>(MAIN_CATEGORIES);
     if (typeConfig?.types) {
       typeConfig.types.forEach((t) => {
-        if (t.active !== false) {
-          if (t.name) list.add(t.name);
-          if (t.mainCategory) list.add(t.mainCategory);
-        }
-      });
-    }
-    if (typeConfig?.departments) {
-      typeConfig.departments.forEach((d) => {
-        if (d.active !== false && d.name) {
-          list.add(d.name);
+        if (t.active !== false && t.mainCategory) {
+          list.add(t.mainCategory);
         }
       });
     }
