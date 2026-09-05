@@ -19,6 +19,8 @@ import {
   TrendingUp,
   TrendingDown,
   ExternalLink,
+  X,
+  RotateCcw,
 } from 'lucide-react';
 import { useApp } from '../context/AppProvider';
 import { useEmployees } from '../hooks/useEmployees';
@@ -40,6 +42,8 @@ export default function HrDashboardPage() {
     return <Navigate to={resolveDefaultRouteForUser(user)} replace />;
   }
 
+  const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [plantFilter, setPlantFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive'>('all');
   const [selectedDept, setSelectedDept] = useState<string>('all');
@@ -70,23 +74,69 @@ export default function HrDashboardPage() {
     });
   }, [employees, user]);
 
+  // Distinct locations available from scoped employee records
+  const locationsList = useMemo(() => {
+    const lSet = new Set<string>();
+    scopedEmployees.forEach((e) => {
+      const loc = String(e.location || '').trim();
+      if (loc) lSet.add(loc);
+    });
+    return Array.from(lSet).sort();
+  }, [scopedEmployees]);
+
+  // Distinct plants available from scoped employee records (filtered by selected location)
+  const plantsList = useMemo(() => {
+    const pSet = new Set<string>();
+    scopedEmployees.forEach((e) => {
+      const empLoc = String(e.location || '').trim();
+      const empPlant = String(e.plant || '').trim();
+      if (!empPlant) return;
+      if (
+        locationFilter === 'all' ||
+        sameScopeOption(locationFilter, empLoc) ||
+        scopeOptionIncludes(empLoc, locationFilter)
+      ) {
+        pSet.add(empPlant);
+      }
+    });
+    return Array.from(pSet).sort();
+  }, [scopedEmployees, locationFilter]);
+
+  // Scoped employees filtered by interactive Location & Plant filters
+  const locationPlantScopedEmployees = useMemo(() => {
+    let list = scopedEmployees;
+    if (locationFilter !== 'all') {
+      list = list.filter((e) => {
+        const empLoc = String(e.location || '').trim();
+        return sameScopeOption(locationFilter, empLoc) || scopeOptionIncludes(empLoc, locationFilter);
+      });
+    }
+    if (plantFilter !== 'all') {
+      list = list.filter((e) => {
+        const empPlant = String(e.plant || '').trim();
+        return sameScopeOption(plantFilter, empPlant) || scopeOptionIncludes(empPlant, plantFilter);
+      });
+    }
+    return list;
+  }, [scopedEmployees, locationFilter, plantFilter]);
+
   // Department list for dropdown
   const departments = useMemo(() => {
     const dSet = new Set<string>();
-    scopedEmployees.forEach((e) => {
+    locationPlantScopedEmployees.forEach((e) => {
       if (e.department) dSet.add(e.department.trim());
     });
     return Array.from(dSet).sort();
-  }, [scopedEmployees]);
+  }, [locationPlantScopedEmployees]);
 
-  // Overall Statistics
+  // Overall Statistics dynamically computed from locationPlantScopedEmployees
   const stats = useMemo(() => {
-    const total = scopedEmployees.length;
-    const active = scopedEmployees.filter((e) => !isInactiveEmployee(e.status)).length;
+    const total = locationPlantScopedEmployees.length;
+    const active = locationPlantScopedEmployees.filter((e) => !isInactiveEmployee(e.status)).length;
     const inactive = total - active;
 
     let totalAssignedAssets = 0;
-    scopedEmployees.forEach((emp) => {
+    locationPlantScopedEmployees.forEach((emp) => {
       const empAssets = assetsForEmployee(assets, emp);
       totalAssignedAssets += empAssets.length;
     });
@@ -97,11 +147,11 @@ export default function HrDashboardPage() {
       inactive,
       totalAssignedAssets,
     };
-  }, [scopedEmployees, assets]);
+  }, [locationPlantScopedEmployees, assets]);
 
-  // Filtered & Sorted Employees
+  // Filtered & Sorted Employees for Directory table
   const filteredEmployees = useMemo(() => {
-    let list = scopedEmployees;
+    let list = locationPlantScopedEmployees;
 
     if (statusFilter === 'Active') {
       list = list.filter((e) => !isInactiveEmployee(e.status));
@@ -139,7 +189,18 @@ export default function HrDashboardPage() {
     }
 
     return list;
-  }, [employees, assets, statusFilter, selectedDept, search, sortBy]);
+  }, [locationPlantScopedEmployees, assets, statusFilter, selectedDept, search, sortBy]);
+
+  const hasActiveFilters = locationFilter !== 'all' || plantFilter !== 'all' || selectedDept !== 'all' || statusFilter !== 'all' || !!search.trim();
+
+  const clearAllFilters = () => {
+    setLocationFilter('all');
+    setPlantFilter('all');
+    setSelectedDept('all');
+    setStatusFilter('all');
+    setSearch('');
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
   const paginatedEmployees = useMemo(() => {
@@ -165,23 +226,80 @@ export default function HrDashboardPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-[#F8F6F0] min-h-screen text-slate-900">
-      {/* Top Header Portal: Search Bar, All Status, Departments, User Info */}
+      {/* Top Header Portal: Search Bar, Location, Plant, Status, Departments, User Info */}
       {portalTarget &&
         createPortal(
-          <div className="flex items-center gap-2.5 max-w-full overflow-x-auto scrollbar-none py-1">
+          <div className="flex items-center gap-2 max-w-full overflow-x-auto scrollbar-none py-1">
             {/* Search Input in Top Header */}
-            <div className="relative min-w-[180px] sm:w-60 lg:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-200" size={14} />
+            <div className="relative min-w-[150px] sm:w-52 lg:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-200" size={13} />
               <input
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="Search staff, ID, Dept, Plant..."
-                className="w-full pl-9 pr-3 py-1.5 bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-slate-900 placeholder-blue-200/70 focus:placeholder-slate-400 rounded-xl text-xs border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                placeholder="Search staff, ID, Dept..."
+                className="w-full pl-8 pr-2.5 py-1.5 bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-slate-900 placeholder-blue-200/70 focus:placeholder-slate-400 rounded-xl text-xs border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-medium"
               />
             </div>
+
+            {/* Location Filter Dropdown in Top Header */}
+            {(locationsList.length > 1 || user?.role === 'IT Admin') && (
+              <div className="relative shrink-0">
+                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  locationFilter !== 'all'
+                    ? 'bg-emerald-500 text-white border-emerald-400 shadow-sm'
+                    : 'bg-white/10 hover:bg-white/15 text-white border-white/20'
+                }`}>
+                  <MapPin size={12} className={locationFilter !== 'all' ? 'text-white' : 'text-emerald-300'} />
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => {
+                      setLocationFilter(e.target.value);
+                      setPlantFilter('all');
+                      setCurrentPage(1);
+                    }}
+                    className="bg-transparent text-white focus:outline-none cursor-pointer pr-1 [&>option]:text-slate-900 [&>option]:bg-white font-bold"
+                  >
+                    <option value="all">All Locations ({locationsList.length})</option>
+                    {locationsList.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Plant Filter Dropdown in Top Header */}
+            {(plantsList.length > 1 || user?.role === 'IT Admin') && (
+              <div className="relative shrink-0">
+                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  plantFilter !== 'all'
+                    ? 'bg-cyan-600 text-white border-cyan-400 shadow-sm'
+                    : 'bg-white/10 hover:bg-white/15 text-white border-white/20'
+                }`}>
+                  <Building2 size={12} className={plantFilter !== 'all' ? 'text-white' : 'text-cyan-300'} />
+                  <select
+                    value={plantFilter}
+                    onChange={(e) => {
+                      setPlantFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="bg-transparent text-white focus:outline-none cursor-pointer pr-1 [&>option]:text-slate-900 [&>option]:bg-white font-bold"
+                  >
+                    <option value="all">All Plants ({plantsList.length})</option>
+                    {plantsList.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
             {/* Status Filter Dropdown in Top Header */}
             <div className="relative shrink-0">
@@ -193,7 +311,7 @@ export default function HrDashboardPage() {
                     setStatusFilter(e.target.value as any);
                     setCurrentPage(1);
                   }}
-                  className="bg-transparent text-white focus:outline-none cursor-pointer pr-1 [&>option]:text-slate-900 [&>option]:bg-white"
+                  className="bg-transparent text-white focus:outline-none cursor-pointer pr-1 [&>option]:text-slate-900 [&>option]:bg-white font-bold"
                 >
                   <option value="all">All Status</option>
                   <option value="Active">Active Only</option>
@@ -212,9 +330,9 @@ export default function HrDashboardPage() {
                     setSelectedDept(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="bg-transparent text-white focus:outline-none cursor-pointer pr-1 max-w-[130px] [&>option]:text-slate-900 [&>option]:bg-white"
+                  className="bg-transparent text-white focus:outline-none cursor-pointer pr-1 max-w-[120px] [&>option]:text-slate-900 [&>option]:bg-white font-bold"
                 >
-                  <option value="all">Departments</option>
+                  <option value="all">Departments ({departments.length})</option>
                   {departments.map((d) => (
                     <option key={d} value={d}>
                       {d}
@@ -224,9 +342,22 @@ export default function HrDashboardPage() {
               </div>
             </div>
 
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="shrink-0 p-1.5 bg-rose-500/80 hover:bg-rose-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1"
+                title="Reset All Filters"
+              >
+                <RotateCcw size={13} />
+                <span className="hidden md:inline text-[11px]">Reset</span>
+              </button>
+            )}
+
             {/* User Badge */}
             {user && (
-              <div className="hidden xl:flex items-center gap-2 text-white text-xs font-bold pl-2 border-l border-white/20 shrink-0">
+              <div className="hidden 2xl:flex items-center gap-2 text-white text-xs font-bold pl-2 border-l border-white/20 shrink-0">
                 <span className="text-blue-200/80 font-medium truncate max-w-[140px]">{user.email}</span>
                 <span className="px-2 py-0.5 rounded-md bg-white/15 text-white border border-white/25 text-[10px] uppercase font-black">
                   {user.role}
@@ -333,6 +464,60 @@ export default function HrDashboardPage() {
 
       {/* DIRECTORY SCROLLABLE LIST */}
       <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4">
+        {/* Active Filter Scope Summary Bar */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs shadow-2xs">
+            <span className="font-bold text-slate-500">Filtered Scope:</span>
+            {locationFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-black">
+                <MapPin size={11} /> Location: {locationFilter}
+                <button type="button" onClick={() => setLocationFilter('all')} className="hover:text-emerald-950 ml-1">
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {plantFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-700 border border-cyan-200 font-black">
+                <Building2 size={11} /> Plant: {plantFilter}
+                <button type="button" onClick={() => setPlantFilter('all')} className="hover:text-cyan-950 ml-1">
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {statusFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-black">
+                <Filter size={11} /> Status: {statusFilter}
+                <button type="button" onClick={() => setStatusFilter('all')} className="hover:text-blue-950 ml-1">
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {selectedDept !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-black">
+                <Briefcase size={11} /> Dept: {selectedDept}
+                <button type="button" onClick={() => setSelectedDept('all')} className="hover:text-amber-950 ml-1">
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {search.trim() && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-black">
+                <Search size={11} /> Search: "{search}"
+                <button type="button" onClick={() => setSearch('')} className="hover:text-slate-950 ml-1">
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="text-red-500 hover:text-red-700 font-bold ml-auto flex items-center gap-1 text-[11px]"
+            >
+              <RotateCcw size={11} /> Reset All
+            </button>
+          </div>
+        )}
+
         {/* Employee Directory Section Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -574,7 +759,7 @@ export default function HrDashboardPage() {
         isOpen={!!activeKpiModal}
         onClose={() => setActiveKpiModal(null)}
         kpiType={activeKpiModal}
-        employees={employees}
+        employees={locationPlantScopedEmployees}
         assets={assets}
         onSelectEmployee={(emp) => navigate(`/employees/${encodeURIComponent(emp.employeeId)}`)}
         onSelectAsset={(asset) => navigate(`/asset/${encodeURIComponent(asset.id)}`)}
