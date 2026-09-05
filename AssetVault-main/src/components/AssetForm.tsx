@@ -41,6 +41,7 @@ import {
   getVendorsForCategory,
   DEFAULT_DEPARTMENTS,
   addDepartment,
+  removeDepartment,
 } from "../lib/assetCatalog";
 import { assetToFormData, optionsWithValue } from "../lib/formAsset";
 import { MAIN_CATEGORIES, CATEGORY_SUBCATEGORIES, PERIPHERAL_TYPES, IT_PRIMARY_TYPES, PERIPHERAL_GRID_TYPES, CCTV_IT_TYPES, subCategoryForItAssetType } from "../lib/assetCatalogByType";
@@ -187,92 +188,59 @@ function hasValue(...values: unknown[]): boolean {
   return values.some((value) => String(value ?? '').trim() !== '');
 }
 
-const IT_UPPERCASE_FIELDS = new Set<keyof AssetFormData>([
-  'assetName',
-  'make',
-  'model',
-  'serialNumber',
-  'assetCode',
-  'accountAssetCode',
-  'department',
-  'employeeId',
-  'vendorName',
-  'ram',
-  'ssd',
-  'cpu',
-  'windowsVersion',
-  'hostName',
-  'invoiceNumber',
-  'contactName',
-  'contactMobile',
-  'additionalItems',
-  'extraItems',
-  'missingItems',
-  'amcVendor',
-  'monitorAssetCode',
-  'monitorSerial',
-  'monitorMake',
-  'monitorModel',
-  'keyboardAssetCode',
-  'keyboardSerial',
-  'keyboardMake',
-  'keyboardModel',
-  'mouseAssetCode',
-  'mouseSerial',
-  'mouseMake',
-  'mouseModel',
-  'upsAssetCode',
-  'upsSerial',
-  'upsMake',
-  'upsModel',
-]);
-
-function shouldUppercaseItField(name: string): name is keyof AssetFormData {
-  return IT_UPPERCASE_FIELDS.has(name as keyof AssetFormData);
+function isEmailFieldKey(name: string): boolean {
+  const lower = String(name || '').toLowerCase();
+  return lower.includes('email') || lower === 'contactemail' || lower === 'employeeemail';
 }
 
-function normalizeItTextValue(name: string, value: string, isItCategory: boolean): string {
-  if (!isItCategory || !shouldUppercaseItField(name)) return value;
+function normalizeFormTextValue(name: string, value: string): string {
+  if (isEmailFieldKey(name)) return value;
   return value.toUpperCase();
 }
 
-function normalizeDynamicItValue(
+function normalizeDynamicValue(
   key: string,
   value: string,
-  isItCategory: boolean,
   fieldType?: string
 ): string {
-  if (!isItCategory) return value;
-  if (fieldType && fieldType !== 'text' && fieldType !== 'textarea') return value;
+  if (fieldType && fieldType !== 'text' && fieldType !== 'textarea' && fieldType !== 'select') return value;
+  if (isEmailFieldKey(key)) return value;
   const lower = key.toLowerCase();
-  if (lower.includes('email') || lower.includes('url') || lower.includes('link')) return value;
-  if (lower.includes('ip_address') || lower === 'ipaddress' || lower === 'ip') return value;
+  if (lower.includes('url') || lower.includes('link')) return value;
   return value.toUpperCase();
 }
 
-function normalizeItPatch<T extends Record<string, unknown>>(patch: T, isItCategory: boolean): T {
-  if (!isItCategory) return patch;
+function normalizeFormPatch<T extends Record<string, unknown>>(patch: T): T {
   const next = { ...patch };
   for (const [key, value] of Object.entries(next)) {
     if (typeof value === 'string') {
-      next[key as keyof T] = normalizeItTextValue(key, value, true) as T[keyof T];
+      next[key as keyof T] = (isEmailFieldKey(key) ? value : value.toUpperCase()) as T[keyof T];
     }
   }
   return next;
 }
 
-function normalizeItFormDataForSave<T extends AssetFormData>(
+function normalizeFormDataForSave<T extends AssetFormData>(
   data: T,
   dynamicFields: Array<{ key: string; type?: string }> = []
 ): T {
-  const isIt = (data.mainCategory || 'IT Assets') === 'IT Assets';
-  if (!isIt) return data;
   const next = { ...data };
   const record = next as Record<string, unknown>;
-  for (const field of IT_UPPERCASE_FIELDS) {
-    const value = record[field];
-    if (typeof value === 'string') {
-      record[field] = value.toUpperCase();
+  const nonUppercaseKeys = new Set([
+    'imageUrl',
+    'documentUrl',
+    'contactEmail',
+    'purchaseDate',
+    'warrantyStartDate',
+    'warrantyEndDate',
+    'nextMaintenanceDate',
+    'amcStartDate',
+    'amcEndDate',
+  ]);
+
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === 'string' && !nonUppercaseKeys.has(key) && !isEmailFieldKey(key)) {
+      record[key] = value.toUpperCase();
     }
   }
   if (next.dynamicDetails) {
@@ -281,7 +249,7 @@ function normalizeItFormDataForSave<T extends AssetFormData>(
         const field = dynamicFields.find((item) => item.key === key);
         return [
           key,
-          normalizeDynamicItValue(key, String(value || ''), true, field?.type),
+          normalizeDynamicValue(key, String(value || ''), field?.type),
         ];
       })
     );
@@ -1358,9 +1326,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     return macRegex.test(mac);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    const nextValue = normalizeItTextValue(name, value, isItCategory);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({ ...prev, [name]: checked ? "Yes" : "No" }));
+      return;
+    }
+
+    const nextValue = isEmailFieldKey(name) || type === "date" || type === "number" ? value : value.toUpperCase();
     
     if (name === "assetCode") {
       if (!nextValue.trim()) {
@@ -1451,7 +1425,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
       ...(initialData?.id ? {} : { createdBy: currentUser, createdDate: now }),
     };
 
-    const dataToSubmit = normalizeItFormDataForSave(
+    const dataToSubmit = normalizeFormDataForSave(
       assignmentMode === 'in_house' && !hideAssignee
         ? applyInHouseAssignmentPayload(basePayload)
         : basePayload,
@@ -1875,7 +1849,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               label={entryProfile.makeLabel}
               required
               value={formData.make}
-              transformValue={(value) => normalizeItTextValue('make', value, isItCategory)}
+              transformValue={(value) => normalizeFormTextValue('make', value)}
               options={[
                 ...getBrandListForAssetType(catalog, formData.assetType),
                 ...(formData.make && !getBrandListForAssetType(catalog, formData.assetType).includes(formData.make)
@@ -1883,7 +1857,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   : []),
               ]}
               onChange={(make) => {
-                const nextMake = normalizeItTextValue('make', make, isItCategory);
+                const nextMake = normalizeFormTextValue('make', make);
                 const models = getModelsForBrandAndType(catalog, formData.assetType, nextMake);
                 setFormData((prev) => ({
                   ...prev,
@@ -1893,7 +1867,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               }}
               onAddCustom={(make) =>
                 persistCatalog((c) =>
-                  addBrandForType(c, formData.assetType, normalizeItTextValue('make', make, isItCategory))
+                  addBrandForType(c, formData.assetType, normalizeFormTextValue('make', make))
                 )
               }
               onDeleteOption={(make) =>
@@ -1908,7 +1882,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               required
               disabled={!formData.make}
               value={formData.model}
-              transformValue={(value) => normalizeItTextValue('model', value, isItCategory)}
+              transformValue={(value) => normalizeFormTextValue('model', value)}
               options={
                 formData.make
                   ? optionsWithValue(
@@ -1918,7 +1892,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   : []
               }
               onChange={(model) => {
-                const nextModel = normalizeItTextValue('model', model, isItCategory);
+                const nextModel = normalizeFormTextValue('model', model);
                 setFormData((prev) => ({
                   ...prev,
                   model: nextModel,
@@ -1927,7 +1901,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               }}
               onAddCustom={(model) => {
                 if (!formData.make) return;
-                const trimmed = normalizeItTextValue('model', model.trim(), isItCategory);
+                const trimmed = normalizeFormTextValue('model', model.trim());
                 if (!trimmed) return;
                 setFormData((prev) => ({
                   ...prev,
@@ -2164,7 +2138,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               label="Vendor Name"
               required
               value={formData.vendorName}
-              transformValue={(value) => normalizeItTextValue('vendorName', value, isItCategory)}
+              transformValue={(value) => normalizeFormTextValue('vendorName', value)}
               options={optionsWithValue(
                 getVendorsForCategory(catalog, formData.mainCategory || "IT Assets"),
                 formData.vendorName
@@ -2172,12 +2146,12 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               onChange={(vendorName) =>
                 setFormData((prev) => ({
                   ...prev,
-                  vendorName: normalizeItTextValue('vendorName', vendorName, isItCategory),
+                  vendorName: normalizeFormTextValue('vendorName', vendorName),
                 }))
               }
               onAddCustom={(v) =>
                 persistCatalog((c) =>
-                  addVendor(c, formData.mainCategory || "IT Assets", normalizeItTextValue('vendorName', v, isItCategory))
+                  addVendor(c, formData.mainCategory || "IT Assets", normalizeFormTextValue('vendorName', v))
                 )
               }
               onDeleteOption={(v) => persistCatalog((c) => removeVendor(c, formData.mainCategory || "IT Assets", v))}
@@ -2457,15 +2431,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               <SmartSelect
                 label="RAM"
                 value={formData.ram}
-                transformValue={(value) => normalizeItTextValue('ram', value, isItCategory)}
+                transformValue={(value) => normalizeFormTextValue('ram', value)}
                 options={optionsWithValue(
                   [...RAM_OPTIONS, ...(catalog.ram || [])].filter(
                     (v) => !(catalog.deletedOptions?.ram || []).includes(v)
                   ),
                   formData.ram
                 )}
-                onChange={(ram) => setFormData((prev) => ({ ...prev, ram: normalizeItTextValue('ram', ram, isItCategory) }))}
-                onAddCustom={(v) => persistCatalog((c) => addRam(c, normalizeItTextValue('ram', v, isItCategory)))}
+                onChange={(ram) => setFormData((prev) => ({ ...prev, ram: normalizeFormTextValue('ram', ram) }))}
+                onAddCustom={(v) => persistCatalog((c) => addRam(c, normalizeFormTextValue('ram', v)))}
                 onDeleteOption={(v) => persistCatalog((c) => removeRam(c, v))}
               />
             </div>
@@ -2473,15 +2447,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               <SmartSelect
                 label="Storage (SSD)"
                 value={formData.ssd}
-                transformValue={(value) => normalizeItTextValue('ssd', value, isItCategory)}
+                transformValue={(value) => normalizeFormTextValue('ssd', value)}
                 options={optionsWithValue(
                   [...SSD_OPTIONS, ...(catalog.ssd || [])].filter(
                     (v) => !(catalog.deletedOptions?.ssd || []).includes(v)
                   ),
                   formData.ssd
                 )}
-                onChange={(ssd) => setFormData((prev) => ({ ...prev, ssd: normalizeItTextValue('ssd', ssd, isItCategory) }))}
-                onAddCustom={(v) => persistCatalog((c) => addSsd(c, normalizeItTextValue('ssd', v, isItCategory)))}
+                onChange={(ssd) => setFormData((prev) => ({ ...prev, ssd: normalizeFormTextValue('ssd', ssd) }))}
+                onAddCustom={(v) => persistCatalog((c) => addSsd(c, normalizeFormTextValue('ssd', v)))}
                 onDeleteOption={(v) => persistCatalog((c) => removeSsd(c, v))}
               />
             </div>
@@ -2490,15 +2464,15 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 label="Processor Arch"
                 required
                 value={formData.cpu}
-                transformValue={(value) => normalizeItTextValue('cpu', value, isItCategory)}
+                transformValue={(value) => normalizeFormTextValue('cpu', value)}
                 options={optionsWithValue(
                   [...CPU_OPTIONS, ...(catalog.cpu || [])].filter(
                     (v) => !(catalog.deletedOptions?.cpu || []).includes(v)
                   ),
                   formData.cpu
                 )}
-                onChange={(cpu) => setFormData((prev) => ({ ...prev, cpu: normalizeItTextValue('cpu', cpu, isItCategory) }))}
-                onAddCustom={(v) => persistCatalog((c) => addCpu(c, normalizeItTextValue('cpu', v, isItCategory)))}
+                onChange={(cpu) => setFormData((prev) => ({ ...prev, cpu: normalizeFormTextValue('cpu', cpu) }))}
+                onAddCustom={(v) => persistCatalog((c) => addCpu(c, normalizeFormTextValue('cpu', v)))}
                 onDeleteOption={(v) => persistCatalog((c) => removeCpu(c, v))}
               />
             </div>
@@ -2506,7 +2480,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               <SmartSelect
                 label="OS Version"
                 value={formData.windowsVersion}
-                transformValue={(value) => normalizeItTextValue('windowsVersion', value, isItCategory)}
+                transformValue={(value) => normalizeFormTextValue('windowsVersion', value)}
                 options={optionsWithValue(
                   [...WINDOWS_OPTIONS, ...(catalog.windowsVersion || [])].filter(
                     (v) => !(catalog.deletedOptions?.windowsVersion || []).includes(v)
@@ -2516,12 +2490,12 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 onChange={(windowsVersion) =>
                   setFormData((prev) => ({
                     ...prev,
-                    windowsVersion: normalizeItTextValue('windowsVersion', windowsVersion, isItCategory),
+                    windowsVersion: normalizeFormTextValue('windowsVersion', windowsVersion),
                   }))
                 }
                 onAddCustom={(v) =>
                   persistCatalog((c) =>
-                    addWindowsVersion(c, normalizeItTextValue('windowsVersion', v, isItCategory))
+                    addWindowsVersion(c, normalizeFormTextValue('windowsVersion', v))
                   )
                 }
                 onDeleteOption={(v) => persistCatalog((c) => removeWindowsVersion(c, v))}
@@ -2625,7 +2599,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
               onChange={(patch) =>
                 setFormData((prev) => ({
                   ...prev,
-                  ...normalizeItPatch(patch as Record<string, unknown>, isItCategory),
+                  ...normalizeFormPatch(patch as Record<string, unknown>),
                 }))
               }
               onEmployeeResolved={setLinkedEmployee}
@@ -2654,6 +2628,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                 label="Location"
                 required
                 value={formData.location}
+                transformValue={(v) => v.toUpperCase()}
                 options={optionsWithValue(allowedLocations, formData.location)}
                 onChange={(location) => {
                   setFormData((prev) => ({
@@ -2661,6 +2636,37 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                     location,
                     plantCode: "",
                   }));
+                }}
+                onAddCustom={(loc) => {
+                  const upper = loc.trim().toUpperCase();
+                  if (!upper) return;
+                  setAppSettings((prev) => ({
+                    ...prev,
+                    locations: Array.from(new Set([...prev.locations, upper])),
+                  }));
+                  fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...appSettings,
+                      locations: Array.from(new Set([...appSettings.locations, upper])),
+                    }),
+                  }).catch(() => {});
+                  setFormData((prev) => ({ ...prev, location: upper, plantCode: "" }));
+                }}
+                onDeleteOption={(loc) => {
+                  setAppSettings((prev) => ({
+                    ...prev,
+                    locations: prev.locations.filter((l) => l !== loc),
+                  }));
+                  fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/settings', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...appSettings,
+                      locations: appSettings.locations.filter((l) => l !== loc),
+                    }),
+                  }).catch(() => {});
                 }}
               />
             </div>
@@ -2696,13 +2702,17 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
                   label="Department"
                   required
                   value={formData.department}
+                  transformValue={(v) => v.toUpperCase()}
                   options={optionsWithValue(departmentOptions, formData.department)}
                   onChange={(department) => setFormData((prev) => ({ ...prev, department }))}
                   onAddCustom={(department) => {
-                    const trimmed = department.trim();
+                    const trimmed = department.trim().toUpperCase();
                     if (!trimmed) return;
                     persistCatalog((c) => addDepartment(c, trimmed));
                     setFormData((prev) => ({ ...prev, department: trimmed }));
+                  }}
+                  onDeleteOption={(department) => {
+                    persistCatalog((c) => removeDepartment(c, department));
                   }}
                 />
               </div>

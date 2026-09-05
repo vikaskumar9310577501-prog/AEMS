@@ -448,7 +448,7 @@ export default function EmployeeSelector({
               <input
                 name="department"
                 value={values.department}
-                onChange={(e) => onChange({ department: e.target.value })}
+                onChange={(e) => onChange({ department: e.target.value.toUpperCase() })}
                 readOnly={requireSavedProfile && !matched}
                 className={cn(
                   'w-full input-geometric',

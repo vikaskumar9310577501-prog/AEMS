@@ -88,6 +88,8 @@ export default function SmartSelect({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [isOpen]);
 
+  const transform = transformValue ?? ((v: string) => v.toUpperCase());
+
   const handleSelect = (v: string) => {
     if (v === OTHER) {
       setOtherMode(true);
@@ -95,11 +97,11 @@ export default function SmartSelect({
       return;
     }
     setOtherMode(false);
-    onChange(transformValue ? transformValue(v) : v);
+    onChange(transform(v));
   };
 
   const commitOther = () => {
-    const trimmed = (transformValue ? transformValue(otherText) : otherText).trim();
+    const trimmed = transform(otherText).trim();
     if (!trimmed) return;
     onAddCustom?.(trimmed);
     onChange(trimmed);
@@ -210,14 +212,14 @@ export default function SmartSelect({
             type="text"
             value={otherText}
             onChange={(e) => {
-              const next = transformValue ? transformValue(e.target.value) : e.target.value;
+              const next = transform(e.target.value);
               setOtherText(next);
               onChange(next);
             }}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), commitOther())}
             onBlur={commitOther}
             placeholder="Type and press Add"
-            className="flex-1 input-geometric"
+            className="flex-1 input-geometric uppercase font-bold"
           />
           <button
             type="button"
