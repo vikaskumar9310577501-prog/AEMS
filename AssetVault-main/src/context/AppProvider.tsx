@@ -12,6 +12,7 @@ import type { Asset, AssetFormData } from '../types';
 import type { AppSessionUser } from '../types/session';
 import { mapAssetsFromApi } from '../lib/assetMap';
 import { MAIN_CATEGORIES, healMisalignedCategoryFields } from '../lib/assetCatalogByType';
+import { useTypeDefinitions } from '../hooks/useTypeDefinitions';
 import { healMisalignedAssetFields } from '../lib/healAssetFields';
 import { expandCategoriesForSidebar, assetMatchesSidebarCategory, resolveAssetMainCategory } from '../lib/dashboardCategories';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
@@ -130,6 +131,7 @@ export function useApp() {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { config: typeConfig } = useTypeDefinitions();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<AppSessionUser | null>(null);
@@ -514,18 +516,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(interval);
   }, [user, fetchAssets]);
 
+  // All available categories: static MAIN_CATEGORIES + active custom departments from Settings
+  const allAvailableCategories = useMemo(() => {
+    const list = new Set<string>(visibleMainCategories());
+    if (typeConfig?.departments) {
+      typeConfig.departments.forEach((d) => {
+        if (d.active !== false && d.name && d.name.trim()) {
+          list.add(d.name.trim());
+        }
+      });
+    }
+    return Array.from(list);
+  }, [typeConfig]);
+
   const visibleCategories = useMemo(() => {
     if (!user || user.role === 'IT Admin' || hasAllScope(user.categories)) {
-      return expandCategoriesForSidebar(visibleMainCategories());
+      return expandCategoriesForSidebar(allAvailableCategories);
     }
     const scopedCategories = cleanScopeValues(user.categories).filter(
       (cat) => !sameScopeValue(cat, 'All')
     );
     if (!scopedCategories.length) return [];
     return expandCategoriesForSidebar(
-      visibleMainCategories().filter((cat) => scopeListIncludes(scopedCategories, cat))
+      allAvailableCategories.filter((cat) => scopeListIncludes(scopedCategories, cat))
     );
-  }, [user]);
+  }, [user, allAvailableCategories]);
 
   const filterAssets = useCallback(
     (list: Asset[], opts: { searchQuery: string; selectedCategory: string }) => {
