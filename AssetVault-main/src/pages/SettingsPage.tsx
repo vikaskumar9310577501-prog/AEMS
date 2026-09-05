@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { Plus, Trash2, MapPin, Building2, List, Layers, Edit2, Check, X, Archive, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useApp } from '../context/AppProvider';
-import { canAccessSettings, resolveDefaultRouteForUser } from '../lib/userPermissions';
+import { canAccessSettings, resolveDefaultRouteForUser, isItAdminRole, isAdminRole } from '../lib/userPermissions';
 import TypeDefinitionsAdmin from '../components/TypeDefinitionsAdmin';
 import AuditLogsViewer from '../components/AuditLogsViewer';
 
