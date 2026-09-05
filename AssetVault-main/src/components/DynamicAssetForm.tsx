@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import type { FieldDefinition } from '../types/categoryTypes';
 import { cn } from '../lib/utils';
 import SmartSelect from './SmartSelect';
 import { validateCorporateEmail } from '../lib/emailValidation';
+import { Upload, Paperclip } from 'lucide-react';
 
 export interface ManagedSelectConfig {
   options: string[];
@@ -32,13 +34,19 @@ export default function DynamicAssetForm({
   title = 'Type-specific details',
   managedSelects = {},
 }: DynamicAssetFormProps) {
-  if (!fields.length) return null;
+  const activeFields = useMemo(() => {
+    return fields
+      .filter((f) => f.active !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [fields]);
+
+  if (!activeFields.length) return null;
 
   return (
     <section className={cn('space-y-4', className)}>
       <h3 className="label-caps flex items-center gap-2 text-blue-600">{title}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {fields.map((field) => {
+        {activeFields.map((field) => {
           const value = values[field.key] ?? '';
           const liveEmailErr =
             isEmailField(field) && value.trim() ? validateCorporateEmail(value) : null;
@@ -120,6 +128,44 @@ export default function DynamicAssetForm({
             );
           }
 
+          if (field.type === 'file') {
+            return (
+              <div key={field.key} className="space-y-1">
+                {label}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(field.key, e.target.value)}
+                    placeholder="URL or document link"
+                    className="flex-1 input-geometric text-xs"
+                  />
+                  <label className="btn-secondary-geometric cursor-pointer flex items-center gap-1.5 text-xs py-2 px-3 shrink-0">
+                    <Paperclip size={13} />
+                    <span>Upload</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (typeof reader.result === 'string') {
+                              onChange(field.key, reader.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {err && <p className="text-xs text-red-500 font-bold">{err}</p>}
+              </div>
+            );
+          }
+
           const inputType =
             field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text';
 
@@ -154,6 +200,7 @@ export function validateDynamicFields(
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   for (const f of fields) {
+    if (f.active === false) continue;
     const val = String(values[f.key] ?? '').trim();
     if (f.required && !val) {
       errors[f.key] = `${f.label} is required`;

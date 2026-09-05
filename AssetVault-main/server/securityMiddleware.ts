@@ -190,6 +190,17 @@ export function userCanAccessPlantLocation(
   return matchLoc && matchPlant;
 }
 
+export function userCanAccessEmployee(
+  user: { role?: string; locations?: string[]; plants?: string[] } | null | undefined,
+  employee: { location?: string; plant?: string } | null | undefined,
+  settingsPlants: Array<{ code: string; name?: string; location?: string }> = []
+): boolean {
+  if (!user) return false;
+  if (isItAdminRole(user.role)) return true;
+  if (!employee) return false;
+  return userCanAccessPlantLocation(user, employee.location, employee.plant, settingsPlants);
+}
+
 function canUseEmailFallbackAuth(req: Request): boolean {
   if (!getFallbackEmail(req)) return false;
 

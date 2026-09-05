@@ -26,6 +26,7 @@ import { assetsForEmployee } from '../lib/employeeAssets';
 import { isInactiveEmployee } from '../lib/employeeStatus';
 import { canAccessHr, resolveDefaultRouteForUser } from '../lib/userPermissions';
 import HrKpiModal, { HrKpiType } from '../components/HrKpiModal';
+import { cleanScopeList, sameScopeOption, scopeOptionIncludes, hasAllScope } from '../lib/scopeOptions';
 
 const PAGE_SIZE = 8;
 
@@ -47,23 +48,45 @@ export default function HrDashboardPage() {
   const [activeMenuEmployeeId, setActiveMenuEmployeeId] = useState<string | null>(null);
   const [activeKpiModal, setActiveKpiModal] = useState<HrKpiType | null>(null);
 
+  // Scope employees to logged-in user's assigned locations and plants
+  const scopedEmployees = useMemo(() => {
+    if (!user || user.role === 'IT Admin' || hasAllScope(user.locations)) {
+      return employees;
+    }
+    const userLocs = cleanScopeList(user.locations).filter((l) => !sameScopeOption(l, 'All'));
+    const userPlants = cleanScopeList(user.plants).filter((p) => !sameScopeOption(p, 'All'));
+
+    return employees.filter((emp) => {
+      const empLoc = String(emp.location || '').trim();
+      const empPlant = String(emp.plant || '').trim();
+
+      const matchLoc = userLocs.length === 0 || userLocs.some((l) => sameScopeOption(l, empLoc) || scopeOptionIncludes(empLoc, l));
+      const matchPlant = userPlants.length === 0 || userPlants.some((p) => sameScopeOption(p, empPlant) || scopeOptionIncludes(empPlant, p));
+
+      if (userLocs.length > 0 && userPlants.length > 0) {
+        return matchLoc && matchPlant;
+      }
+      return matchLoc || matchPlant;
+    });
+  }, [employees, user]);
+
   // Department list for dropdown
   const departments = useMemo(() => {
     const dSet = new Set<string>();
-    employees.forEach((e) => {
+    scopedEmployees.forEach((e) => {
       if (e.department) dSet.add(e.department.trim());
     });
     return Array.from(dSet).sort();
-  }, [employees]);
+  }, [scopedEmployees]);
 
   // Overall Statistics
   const stats = useMemo(() => {
-    const total = employees.length;
-    const active = employees.filter((e) => !isInactiveEmployee(e.status)).length;
+    const total = scopedEmployees.length;
+    const active = scopedEmployees.filter((e) => !isInactiveEmployee(e.status)).length;
     const inactive = total - active;
 
     let totalAssignedAssets = 0;
-    employees.forEach((emp) => {
+    scopedEmployees.forEach((emp) => {
       const empAssets = assetsForEmployee(assets, emp);
       totalAssignedAssets += empAssets.length;
     });
@@ -74,11 +97,11 @@ export default function HrDashboardPage() {
       inactive,
       totalAssignedAssets,
     };
-  }, [employees, assets]);
+  }, [scopedEmployees, assets]);
 
   // Filtered & Sorted Employees
   const filteredEmployees = useMemo(() => {
-    let list = employees;
+    let list = scopedEmployees;
 
     if (statusFilter === 'Active') {
       list = list.filter((e) => !isInactiveEmployee(e.status));

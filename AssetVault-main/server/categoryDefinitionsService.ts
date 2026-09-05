@@ -41,10 +41,11 @@ export async function syncTypeDefinitionsFromGas(
   try {
     const result = (await proxyToGas({ action: "get_type_definitions" })) as {
       types?: TypeDefinitionsConfig["types"];
+      departments?: TypeDefinitionsConfig["departments"];
       error?: string;
     };
     if (result?.types && Array.isArray(result.types) && result.types.length > 0) {
-      return saveTypeDefinitions({ types: result.types });
+      return saveTypeDefinitions({ types: result.types, departments: result.departments });
     }
   } catch (e) {
     console.warn("syncTypeDefinitionsFromGas:", e);
@@ -60,6 +61,7 @@ export async function persistTypeDefinitionsToGas(
     const result = (await proxyToGas({
       action: "save_type_definitions",
       types: config.types,
+      departments: config.departments,
     })) as { success?: boolean; error?: string };
     if (result?.error) return { ok: false, error: result.error };
     return { ok: true };

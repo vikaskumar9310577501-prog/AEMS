@@ -233,6 +233,7 @@ import {
   getClientIp,
   getFallbackEmail,
   userCanAccessPlantLocation,
+  userCanAccessEmployee,
   isItAdminRole,
 } from "./server/securityMiddleware.js";
 import {
@@ -2508,6 +2509,25 @@ app.get("/api/type-definitions", (_req, res) => {
   }
 });
 
+app.post("/api/type-definitions", async (req, res) => {
+  try {
+    const user = resolveRequestUser(req);
+    if (!user || !isItAdminRole(user.role)) {
+      return res.status(403).json({
+        error: "Access Denied: Only IT Admin is authorized to configure departments, categories, and entry forms.",
+      });
+    }
+    const incoming = req.body as TypeDefinitionsConfig;
+    const saved = saveTypeDefinitions(incoming);
+    if (incoming && (incoming as any).syncSheet !== false && GAS_WEBAPP_URL) {
+      void persistTypeDefinitionsToGas(saved, proxyToGas);
+    }
+    res.json({ success: true, ...saved });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to save type definitions" });
+  }
+});
+
 function countAssetsForEmployee(assets: { employeeId: string; contactEmail: string; contactName: string }[], emp: Employee) {
   const eid = normalizeEmployeeId(emp.employeeId);
   const email = normalizeEmail(emp.email);
@@ -2531,27 +2551,9 @@ app.get("/api/employees", async (req, res) => {
       list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
     const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
     if (user && !isItAdminRole(user.role)) {
-      const uLocs = (user.locations || []).flatMap((l) => l.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
-      const uPlants = (user.plants || []).flatMap((p) => p.split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'all'));
-      const hasAllLocs = (user.locations || []).some((l) => l.trim().toLowerCase() === "all");
-      const hasAllPlants = (user.plants || []).some((p) => p.trim().toLowerCase() === "all");
-
-      if (!hasAllLocs && uLocs.length === 0 && !hasAllPlants && uPlants.length === 0) {
-        return res.json([]);
-      }
-
-      list = list.filter((emp) => {
-        const rawLoc = String(emp.location || "").trim().toLowerCase().replace(/\s*,\s*/g, ',');
-        const empLocTokens = rawLoc ? [rawLoc, ...rawLoc.split(',').map((s) => s.trim()).filter(Boolean)] : [];
-        const empPlant = String(emp.plant || "").trim().toLowerCase();
-        const matchLoc = hasAllLocs || uLocs.length === 0 || empLocTokens.length === 0 || uLocs.some((l) => empLocTokens.some((t) => t === l || t.includes(l) || l.includes(t)));
-        const matchPlant = hasAllPlants || uPlants.length === 0 || !empPlant || uPlants.some((p) => empPlant === p || empPlant.includes(p) || p.includes(empPlant));
-        if (uLocs.length > 0 && uPlants.length > 0 && !hasAllLocs && !hasAllPlants) {
-          return matchLoc && matchPlant;
-        }
-        return matchLoc || matchPlant;
-      });
+      list = list.filter((emp) => userCanAccessEmployee(user, emp, settingsPlants));
     }
     res.json(list);
   } catch (error: any) {
@@ -2577,6 +2579,12 @@ app.get("/api/employees/lookup", async (req, res) => {
 
     if (!employee) {
       return res.json({ employee: null, assetCount: 0 });
+    }
+
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessEmployee(user, employee, settingsPlants)) {
+      return res.status(403).json({ error: "Access Denied: You do not have access to this employee." });
     }
 
     let assetCount = 0;
@@ -2605,6 +2613,13 @@ app.get("/api/employees/:employeeId", async (req, res) => {
       employee = findEmployeeById(list, eid);
     }
     if (!employee) return res.status(404).json({ error: "Employee not found" });
+
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessEmployee(user, employee, settingsPlants)) {
+      return res.status(403).json({ error: "Access Denied: You do not have access to this employee." });
+    }
+
     res.json({ employee });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to load employee" });
@@ -2614,6 +2629,20 @@ app.get("/api/employees/:employeeId", async (req, res) => {
 app.get("/api/employees/:employeeId/history", async (req, res) => {
   try {
     const eid = decodeURIComponent(req.params.employeeId);
+    let list = readEmployees();
+    let employee = findEmployeeById(list, eid);
+    if (!employee && (GAS_WEBAPP_URL || SPREADSHEET_ID)) {
+      list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
+      employee = findEmployeeById(list, eid);
+    }
+    if (employee) {
+      const user = resolveRequestUser(req);
+      const settingsPlants = maintenanceSettingsPlants();
+      if (!userCanAccessEmployee(user, employee, settingsPlants)) {
+        return res.status(403).json({ error: "Access Denied: You do not have access to this employee history." });
+      }
+    }
+
     if (req.query.refresh === "1" && GAS_WEBAPP_URL) {
       await fetchHistoryFromGas(proxyToGas);
     }
@@ -2690,6 +2719,14 @@ app.post("/api/employees", async (req, res) => {
       return res.status(400).json({ error: validationError });
     }
 
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (!userCanAccessEmployee(user, body, settingsPlants)) {
+      return res.status(403).json({
+        error: `Access Denied: You are not authorized to create employees for location "${body.location}" / plant "${body.plant}".`,
+      });
+    }
+
     const list = await loadEmployeesWithSheetSync();
     const existing = findEmployeeById(list, body.employeeId);
     if (existing) {
@@ -2737,8 +2774,20 @@ app.put("/api/employees/:employeeId", async (req, res) => {
     if (GAS_WEBAPP_URL || SPREADSHEET_ID || shouldRefreshSheetBackedData(false, list.length)) {
       list = await fetchEmployeesFromGas(proxyToGas, SPREADSHEET_ID);
     }
-    if (!findEmployeeById(list, body.employeeId)) {
+    const current = findEmployeeById(list, body.employeeId);
+    if (!current) {
       return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const user = resolveRequestUser(req);
+    const settingsPlants = maintenanceSettingsPlants();
+    if (
+      !userCanAccessEmployee(user, current, settingsPlants) ||
+      !userCanAccessEmployee(user, body, settingsPlants)
+    ) {
+      return res.status(403).json({
+        error: "Access Denied: You are not authorized to update employees for this location / plant.",
+      });
     }
 
     const beforeUpdate = readEmployees();

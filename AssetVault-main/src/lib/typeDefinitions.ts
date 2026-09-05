@@ -231,8 +231,29 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
   },
 ];
 
+export const DEFAULT_DEPARTMENTS: DepartmentDefinition[] = [
+  { id: 'it', name: 'IT', active: true, displayOrder: 1 },
+  { id: 'maintenance', name: 'Maintenance', active: true, displayOrder: 2 },
+  { id: 'electrical', name: 'Electrical', active: true, displayOrder: 3 },
+  { id: 'mechanical', name: 'Mechanical', active: true, displayOrder: 4 },
+  { id: 'civil', name: 'Civil', active: true, displayOrder: 5 },
+  { id: 'corporate', name: 'Corporate', active: true, displayOrder: 6 },
+  { id: 'admin', name: 'Admin', active: true, displayOrder: 7 },
+  { id: 'hr', name: 'HR', active: true, displayOrder: 8 },
+  { id: 'production', name: 'Production', active: true, displayOrder: 9 },
+  { id: 'quality', name: 'Quality', active: true, displayOrder: 10 },
+  { id: 'store', name: 'Store', active: true, displayOrder: 11 },
+  { id: 'safety', name: 'Safety', active: true, displayOrder: 12 },
+  { id: 'purchase', name: 'Purchase', active: true, displayOrder: 13 },
+  { id: 'finance', name: 'Finance', active: true, displayOrder: 14 },
+];
+
 export function defaultTypeDefinitionsConfig(): TypeDefinitionsConfig {
-  return { types: structuredClone ? structuredClone(DEFAULT_TYPE_DEFINITIONS) : JSON.parse(JSON.stringify(DEFAULT_TYPE_DEFINITIONS)) };
+  return {
+    types: structuredClone ? structuredClone(DEFAULT_TYPE_DEFINITIONS) : JSON.parse(JSON.stringify(DEFAULT_TYPE_DEFINITIONS)),
+    departments: structuredClone ? structuredClone(DEFAULT_DEPARTMENTS) : JSON.parse(JSON.stringify(DEFAULT_DEPARTMENTS)),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 const SOFTWARE_LICENSE_CATEGORY = 'Software / License Assets';
@@ -255,24 +276,32 @@ function patchCctvSecurityType(
 
 export function mergeTypeDefinitions(saved?: TypeDefinitionsConfig | null): TypeDefinitionsConfig {
   const base = defaultTypeDefinitionsConfig();
-  if (!saved?.types?.length) return base;
+  if (!saved) return base;
 
+  // Merge Departments
+  const deptMap = new Map<string, DepartmentDefinition>();
+  for (const d of base.departments || []) deptMap.set(d.id.toLowerCase(), d);
+  for (const d of saved.departments || []) {
+    const id = (d.id || d.name).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const existing = deptMap.get(id);
+    deptMap.set(id, { ...existing, ...d, id });
+  }
+
+  // Merge Types
   const softwareDefaults = base.types.find((t) => t.id === 'software_license');
   const cctvDefaults = base.types.find((t) => t.id === 'cctv_security');
-  if (!softwareDefaults) {
-    return { types: saved.types, updatedAt: saved.updatedAt || base.updatedAt };
-  }
 
   const byId = new Map<string, AssetTypeDefinition>();
   for (const t of base.types) byId.set(t.id, t);
-  for (const t of saved.types) {
-    let patched = patchSoftwareLicenseType(t, softwareDefaults);
+  for (const t of saved.types || []) {
+    let patched = softwareDefaults ? patchSoftwareLicenseType(t, softwareDefaults) : t;
     if (cctvDefaults) patched = patchCctvSecurityType(patched, cctvDefaults);
     byId.set(t.id, patched);
   }
 
   return {
     types: Array.from(byId.values()),
+    departments: Array.from(deptMap.values()).sort((a, b) => (a.displayOrder || 99) - (b.displayOrder || 99)),
     updatedAt: saved.updatedAt || base.updatedAt,
   };
 }
