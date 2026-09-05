@@ -131,10 +131,12 @@ export default function UserManagement() {
 
   const allCategories = useMemo(() => {
     const list = new Set<string>(MANAGEABLE_CATEGORIES);
-    if (typeConfig?.types) {
-      typeConfig.types.forEach((t) => {
-        if (t.active !== false && t.mainCategory) {
-          list.add(t.mainCategory);
+    // Only add active department names from typeConfig.departments (user-defined in Settings > Departments)
+    // We intentionally do NOT iterate typeConfig.types to avoid leaking asset-type names (Laptop, Fan, etc.)
+    if (typeConfig?.departments) {
+      typeConfig.departments.forEach((d) => {
+        if (d.active !== false && d.name && d.name.trim()) {
+          list.add(d.name.trim());
         }
       });
     }

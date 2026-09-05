@@ -64,6 +64,7 @@ export default function TypeDefinitionsAdmin() {
     try {
       const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/type-definitions', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ types, departments, syncSheet: true }),
       });

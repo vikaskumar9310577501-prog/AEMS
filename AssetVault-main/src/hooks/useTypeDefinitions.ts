@@ -8,7 +8,7 @@ export function useTypeDefinitions() {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/type-definitions');
+      const res = await fetch((import.meta.env.VITE_API_BASE_URL || "") + '/api/type-definitions', { credentials: 'include' });
       if (res.ok) {
         const data = (await res.json()) as TypeDefinitionsConfig;
         setConfig(mergeTypeDefinitions(data));
