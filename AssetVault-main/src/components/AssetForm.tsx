@@ -211,6 +211,15 @@ function normalizeDynamicValue(
   return value.toUpperCase();
 }
 
+function normalizeDynamicItValue(
+  key: string,
+  value: string,
+  _isItCategory?: boolean,
+  fieldType?: string
+): string {
+  return normalizeDynamicValue(key, value, fieldType);
+}
+
 function normalizeFormPatch<T extends Record<string, unknown>>(patch: T): T {
   const next = { ...patch };
   for (const [key, value] of Object.entries(next)) {
@@ -492,7 +501,7 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
 
   const onDynamicChange = (key: string, value: string) => {
     const dynamicField = activeTypeDef?.fields.find((f) => f.key === key);
-    const nextValue = normalizeDynamicItValue(key, value, isItCategory, dynamicField?.type);
+    const nextValue = normalizeDynamicValue(key, value, dynamicField?.type);
     setDynamicDetails((prev) => {
       const next = { ...prev, [key]: nextValue };
       if (activeTypeDef) {
