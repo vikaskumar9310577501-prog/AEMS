@@ -89,6 +89,10 @@ export interface MaintenanceMachine {
   plantCode: string;
   /** Machine warranty status used before PM planning. */
   warrantyStatus?: 'in_warranty' | 'out_of_warranty';
+  /** Model number (especially for tracking in-warranty machines) */
+  modelNumber?: string;
+  /** Serial number (especially for tracking in-warranty machines) */
+  serialNumber?: string;
   /** Preventive cycle in months. 0 = Custom (manual dates only). */
   trendMonths?: number;
   /** Extra planned dates when trend is Custom — shown on the dashboard as-is. */

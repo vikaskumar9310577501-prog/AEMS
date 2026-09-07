@@ -1492,7 +1492,11 @@ export default function MaintenancePage() {
                           </MachineCell>
                           <MachineCell title={machineRowName(m)} className="shadow-sm group-hover:shadow-md">
                             <p className="font-bold text-stone-800 leading-tight">{displayName}</p>
-                            <p className="text-[10px] font-semibold text-stone-400 mt-0.5 font-mono">{m.machineNumber}</p>
+                            <p className="text-[10px] font-semibold text-stone-400 mt-0.5 font-mono">
+                              {m.machineNumber}
+                              {m.modelNumber ? ` · Mod: ${m.modelNumber}` : ''}
+                              {m.serialNumber ? ` · SN: ${m.serialNumber}` : ''}
+                            </p>
                           </MachineCell>
                           <MachineCell className="shadow-sm group-hover:shadow-md">
                             <span className="inline-flex px-2 py-1 rounded-md bg-stone-100/80 border border-stone-200/60 text-[11px] font-semibold text-stone-600">
@@ -2013,7 +2017,11 @@ function DashboardKpiOverlay({
                     </MachineCell>
                     <MachineCell title={`${name} ${m.machineNumber}`} className="shadow-sm group-hover:shadow-md">
                       <p className="font-bold text-stone-800 leading-tight">{name}</p>
-                      <p className="text-[10px] font-semibold text-stone-400 mt-0.5 font-mono">{m.machineNumber}</p>
+                      <p className="text-[10px] font-semibold text-stone-400 mt-0.5 font-mono">
+                        {m.machineNumber}
+                        {m.modelNumber ? ` · Mod: ${m.modelNumber}` : ''}
+                        {m.serialNumber ? ` · SN: ${m.serialNumber}` : ''}
+                      </p>
                     </MachineCell>
                     <MachineCell className="shadow-sm group-hover:shadow-md">
                       <span className="inline-flex px-2.5 py-1 rounded-lg bg-stone-100/90 border border-stone-200/70 text-[11px] font-bold text-stone-700">
@@ -2216,6 +2224,8 @@ function MachineDetailPopup({
                           : '—'
                     }
                   />
+                  {machine.modelNumber ? <DetailField label="Model No." value={machine.modelNumber} /> : null}
+                  {machine.serialNumber ? <DetailField label="Serial No." value={machine.serialNumber} /> : null}
                 </div>
               </div>
 

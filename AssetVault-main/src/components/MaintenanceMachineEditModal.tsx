@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { MaintenanceMachine, WarrantyStatus } from '../types/maintenance';
@@ -107,6 +107,8 @@ export default function MaintenanceMachineEditModal({
   const [location, setLocation] = useState('');
   const [plantCode, setPlantCode] = useState('');
   const [warrantyStatus, setWarrantyStatus] = useState<WarrantyStatus>('out_of_warranty');
+  const [modelNumber, setModelNumber] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [trendMonths, setTrendMonths] = useState(2);
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState('');
   const [status, setStatus] = useState<MaintenanceMachine['status']>('Active');
@@ -118,6 +120,8 @@ export default function MaintenanceMachineEditModal({
     if (!machine) return;
     setMachineType(machine.machineType || '');
     setMachineNumber(machine.machineNumber || '');
+    setModelNumber(machine.modelNumber || '');
+    setSerialNumber(machine.serialNumber || '');
     setDepartment(machine.department || '');
     setResponsibility(machine.responsibility || '');
     setLocation(machine.location || '');
@@ -155,6 +159,8 @@ export default function MaintenanceMachineEditModal({
     void onSave({
       machineType: machineType.trim(),
       machineNumber: normalizeMachineNumber(machineNumber),
+      modelNumber: warrantyStatus === 'in_warranty' ? modelNumber.trim() : (modelNumber.trim() || undefined),
+      serialNumber: warrantyStatus === 'in_warranty' ? serialNumber.trim() : (serialNumber.trim() || undefined),
       department: department.trim(),
       responsibility: responsibility.trim(),
       location: location.trim(),
@@ -295,6 +301,28 @@ export default function MaintenanceMachineEditModal({
                   <option value="out_of_warranty">{warrantyStatusLabel('out_of_warranty')}</option>
                 </select>
               </div>
+              {warrantyStatus === 'in_warranty' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="label-caps">Model Number</label>
+                    <input
+                      value={modelNumber}
+                      onChange={(e) => setModelNumber(e.target.value)}
+                      placeholder="e.g. MOD-2024-X"
+                      className="w-full input-geometric font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="label-caps">Serial Number</label>
+                    <input
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value)}
+                      placeholder="e.g. SN-98765432"
+                      className="w-full input-geometric font-mono font-semibold"
+                    />
+                  </div>
+                </>
+              )}
               <div className="space-y-1.5">
                 <label className="label-caps">Frequency</label>
                 <select

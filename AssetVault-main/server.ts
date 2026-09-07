@@ -3974,6 +3974,8 @@ app.post("/api/maintenance/machines", async (req, res) => {
       ? mergeCustomPlan(nextMaintenanceDate, body.customPlanDates)
       : { nextMaintenanceDate, customPlanDates: [] as string[] };
     const equipmentName = String(body.equipmentName || "").trim() || undefined;
+    const modelNumber = String(body.modelNumber || "").trim() || undefined;
+    const serialNumber = String(body.serialNumber || "").trim() || undefined;
     const department = String(body.department || "").trim() || undefined;
     const responsibility = String(body.responsibility || "").trim() || undefined;
     const warrantyRaw = String((body as { warrantyStatus?: string }).warrantyStatus || "")
@@ -3993,6 +3995,8 @@ app.post("/api/maintenance/machines", async (req, res) => {
       machineNumber,
       assetCode: nextMaintenanceAssetCode(existing),
       equipmentName,
+      modelNumber,
+      serialNumber,
       department,
       responsibility,
       location,
@@ -4067,6 +4071,14 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
         body.equipmentName !== undefined
           ? String(body.equipmentName || "").trim() || undefined
           : current.equipmentName,
+      modelNumber:
+        body.modelNumber !== undefined
+          ? String(body.modelNumber || "").trim() || undefined
+          : current.modelNumber,
+      serialNumber:
+        body.serialNumber !== undefined
+          ? String(body.serialNumber || "").trim() || undefined
+          : current.serialNumber,
       department:
         body.department !== undefined
           ? String(body.department || "").trim() || undefined
