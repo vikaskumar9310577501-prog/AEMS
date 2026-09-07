@@ -280,6 +280,19 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
     ],
   },
   {
+    id: 'production_asset',
+    name: 'Production Asset',
+    mainCategory: 'Production',
+    fields: [
+      { key: 'machine_name', label: 'Machine / Equipment Name', type: 'text' },
+      { key: 'machine_number', label: 'Machine Number', type: 'text' },
+      { key: 'line_station', label: 'Line / Station', type: 'text' },
+      { key: 'capacity', label: 'Capacity / Rating', type: 'text' },
+      { key: 'power_rating', label: 'Power Rating (kW/HP)', type: 'text' },
+      { key: 'manufacturer', label: 'Manufacturer / Make', type: 'text' },
+    ],
+  },
+  {
     id: 'idu_asset',
     name: 'IDU Asset',
     mainCategory: 'IDU',

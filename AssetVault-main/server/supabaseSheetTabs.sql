@@ -51,7 +51,10 @@ create or replace view "Electrical Assets" as
 select * from asset_sheet where "Main Category" = 'Electrical Assets';
 
 create or replace view "Production Assets" as
-select * from asset_sheet where "Main Category" = 'Production Assets';
+select * from asset_sheet where "Main Category" in ('Production Assets', 'Production');
+
+create or replace view "Production" as
+select * from asset_sheet where "Main Category" in ('Production Assets', 'Production');
 
 create or replace view "Safety Assets" as
 select * from asset_sheet where "Main Category" = 'Safety Assets';
@@ -150,6 +153,7 @@ grant select on "IT Assets" to postgres, service_role;
 grant select on "Office Assets" to postgres, service_role;
 grant select on "Electrical Assets" to postgres, service_role;
 grant select on "Production Assets" to postgres, service_role;
+grant select on "Production" to postgres, service_role;
 grant select on "Safety Assets" to postgres, service_role;
 grant select on "Vehicle Assets" to postgres, service_role;
 grant select on "Furniture Assets" to postgres, service_role;

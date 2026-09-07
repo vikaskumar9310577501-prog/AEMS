@@ -8,6 +8,7 @@ const CATEGORY_PREFIX: Record<string, string> = {
   "Office Assets": "OFF",
   "Electrical Assets": "ELE",
   "Production Assets": "PRD",
+  "Production": "PRD",
   "Safety Assets": "SAF",
   "Vehicle Assets": "VEH",
   "Furniture Assets": "FUR",

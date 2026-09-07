@@ -128,6 +128,7 @@ var CATEGORY_SHEET_MAP_ = {
   "Office Assets": "Office Assets",
   "Electrical Assets": "Electrical Assets",
   "Production Assets": "Production Assets",
+  "Production": "Production Assets",
   "Production / Manufacturing Assets": "Production Assets",
   "Production Manufacturing Assets": "Production Assets",
   "Safety Assets": "Safety Assets",
