@@ -139,7 +139,13 @@ export const MAIN_CATEGORIES = [
   "Vehicle Assets",
   "Furniture Assets",
   "Software / License Assets",
-  "Maintenance Assets"
+  "Maintenance Assets",
+  "IDU",
+  "ODU",
+  "IQC",
+  "QA ELECTRONICS",
+  "OPERATIONS",
+  "OQC"
 ] as const;
 
 export type MainCategory = typeof MAIN_CATEGORIES[number];
@@ -153,7 +159,13 @@ export const CATEGORY_SHEET_MAP: Record<string, string> = {
   "Vehicle Assets": "Vehicle Assets",
   "Furniture Assets": "Furniture Assets",
   "Software / License Assets": "Software License Assets",
-  "Maintenance Assets": "Maintenance Assets"
+  "Maintenance Assets": "Maintenance Assets",
+  "IDU": "IDU",
+  "ODU": "ODU",
+  "IQC": "IQC",
+  "QA ELECTRONICS": "QA ELECTRONICS",
+  "OPERATIONS": "OPERATIONS",
+  "OQC": "OQC"
 };
 
 export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
@@ -267,6 +279,52 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "Cutting Machine",
     "Grease Gun",
     "Measuring Tape",
+  ],
+  "IDU": [
+    "Assembly Line",
+    "Testing Rig",
+    "Vacuum Station",
+    "Gas Charging Station",
+    "Packaging Line",
+    "Other IDU Asset"
+  ],
+  "ODU": [
+    "Assembly Line",
+    "Compressor Mounting",
+    "Brazing Station",
+    "Performance Test Chamber",
+    "Packaging Line",
+    "Other ODU Asset"
+  ],
+  "IQC": [
+    "Incoming Inspection Instrument",
+    "Testing Gauge",
+    "Sampling Tool",
+    "Vernier / Micrometer",
+    "Material Verification Rig",
+    "Other IQC Asset"
+  ],
+  "QA ELECTRONICS": [
+    "PCB Functional Tester",
+    "Oscilloscope / Analyzer",
+    "Digital Multimeter",
+    "Soldering & Rework Station",
+    "Component Reliability Tester",
+    "Other QA Electronics Asset"
+  ],
+  "OPERATIONS": [
+    "Production Line Equipment",
+    "Material Handling Equipment",
+    "Utility Support",
+    "Workstation / Tooling",
+    "Other Operations Asset"
+  ],
+  "OQC": [
+    "Final Run Test Rig",
+    "Safety & High-Pot Testing",
+    "Pre-Dispatch Inspection",
+    "Barcode & Packaging Scanner",
+    "Other OQC Asset"
   ]
 };
 
@@ -308,6 +366,12 @@ const MAIN_CATEGORY_ALIASES: Record<string, string> = {
   'admin facility assets': 'Furniture Assets',
   'admin / facility assets': 'Furniture Assets',
   'production manufacturing assets': 'Production Assets',
+  idu: 'IDU',
+  odu: 'ODU',
+  iqc: 'IQC',
+  'qa electronics': 'QA ELECTRONICS',
+  operations: 'OPERATIONS',
+  oqc: 'OQC',
 };
 
 /** Asset-code prefix → main category (matches server/assetCodeGenerator.ts). */
@@ -322,6 +386,12 @@ const CODE_PREFIX_TO_MAIN: Record<string, string> = {
   SW: 'Software / License Assets',
   ADM: 'Furniture Assets',
   MNT: 'Maintenance Assets',
+  IDU: 'IDU',
+  ODU: 'ODU',
+  IQC: 'IQC',
+  QAE: 'QA ELECTRONICS',
+  OPS: 'OPERATIONS',
+  OQC: 'OQC',
 };
 
 /** Return canonical main category if `value` is a known category label, else null. */

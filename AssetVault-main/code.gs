@@ -136,7 +136,13 @@ var CATEGORY_SHEET_MAP_ = {
   "Software / License Assets": "Software License Assets",
   "Admin / Facility Assets": "Admin Facility Assets",
   "Maintenance Assets": "Maintenance Assets",
-  "Maintenance Tools": "Maintenance Assets"
+  "Maintenance Tools": "Maintenance Assets",
+  "IDU": "IDU",
+  "ODU": "ODU",
+  "IQC": "IQC",
+  "QA ELECTRONICS": "QA ELECTRONICS",
+  "OPERATIONS": "OPERATIONS",
+  "OQC": "OQC"
 };
 
 var SHEET_TO_MAIN_CATEGORY_ = {
@@ -149,7 +155,13 @@ var SHEET_TO_MAIN_CATEGORY_ = {
   "Furniture Assets": "Furniture Assets",
   "Software License Assets": "Software / License Assets",
   "Admin Facility Assets": "Admin / Facility Assets",
-  "Maintenance Assets": "Maintenance Assets"
+  "Maintenance Assets": "Maintenance Assets",
+  "IDU": "IDU",
+  "ODU": "ODU",
+  "IQC": "IQC",
+  "QA ELECTRONICS": "QA ELECTRONICS",
+  "OPERATIONS": "OPERATIONS",
+  "OQC": "OQC"
 };
 
 var SYSTEM_SHEET_NAMES_ = {

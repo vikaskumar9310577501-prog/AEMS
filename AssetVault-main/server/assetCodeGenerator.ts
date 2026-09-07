@@ -16,6 +16,12 @@ const CATEGORY_PREFIX: Record<string, string> = {
   "Admin Facility Assets": "ADM",
   "Admin / Facility Assets": "ADM",
   "Maintenance Assets": "MNT",
+  "IDU": "IDU",
+  "ODU": "ODU",
+  "IQC": "IQC",
+  "QA ELECTRONICS": "QAE",
+  "OPERATIONS": "OPS",
+  "OQC": "OQC",
 };
 
 const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";

@@ -50,14 +50,18 @@ var CATEGORY_SHEET_MAP_ = {
   "Production Assets": "Production Assets", "Production / Manufacturing Assets": "Production Assets",
   "Safety Assets": "Safety Assets", "Vehicle Assets": "Vehicle Assets", "Furniture Assets": "Furniture Assets",
   "Software / License Assets": "Software License Assets", "Admin / Facility Assets": "Admin Facility Assets",
-  "Maintenance Assets": "Maintenance Assets", "Maintenance Tools": "Maintenance Assets"
+  "Maintenance Assets": "Maintenance Assets", "Maintenance Tools": "Maintenance Assets",
+  "IDU": "IDU", "ODU": "ODU", "IQC": "IQC",
+  "QA ELECTRONICS": "QA ELECTRONICS", "OPERATIONS": "OPERATIONS", "OQC": "OQC"
 };
 
 var SHEET_TO_MAIN_CATEGORY_ = {
   "IT Assets": "IT Assets", "Office Assets": "Office Assets", "Electrical Assets": "Electrical Assets",
   "Production Assets": "Production Assets", "Safety Assets": "Safety Assets", "Vehicle Assets": "Vehicle Assets",
   "Furniture Assets": "Furniture Assets", "Software License Assets": "Software / License Assets",
-  "Admin Facility Assets": "Admin / Facility Assets", "Maintenance Assets": "Maintenance Assets"
+  "Admin Facility Assets": "Admin / Facility Assets", "Maintenance Assets": "Maintenance Assets",
+  "IDU": "IDU", "ODU": "ODU", "IQC": "IQC",
+  "QA ELECTRONICS": "QA ELECTRONICS", "OPERATIONS": "OPERATIONS", "OQC": "OQC"
 };
 
 function getMasterHeaders_() {
