@@ -356,18 +356,11 @@ export default function MaintenancePage() {
         setStatusHeaderFilterOpen(false);
       }
     };
-    const onScroll = () => {
-      setTypeFilterOpen(false);
-      setPlantHeaderFilterOpen(false);
-      setStatusHeaderFilterOpen(false);
-    };
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('touchstart', onPointerDown);
-    window.addEventListener('scroll', onScroll, true);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('touchstart', onPointerDown);
-      window.removeEventListener('scroll', onScroll, true);
     };
   }, [typeFilterOpen, plantHeaderFilterOpen, statusHeaderFilterOpen]);
 
@@ -437,14 +430,11 @@ export default function MaintenancePage() {
         setFilterOpen(false);
       }
     };
-    const onScroll = () => setFilterOpen(false);
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('touchstart', onPointerDown);
-    window.addEventListener('scroll', onScroll, true);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('touchstart', onPointerDown);
-      window.removeEventListener('scroll', onScroll, true);
     };
   }, [filterOpen]);
 
@@ -524,8 +514,15 @@ export default function MaintenancePage() {
         }
       }
 
-      if (filterLocation && !sameLoc(m.location, filterLocation)) return false;
-      if (filterPlant && String(m.plantCode || '').toLowerCase() !== filterPlant.toLowerCase()) return false;
+      if (filterLocation) {
+        let machineLoc = String(m.location || '').trim();
+        if (!machineLoc && m.plantCode) {
+          const found = plants.find((p) => p.code.toLowerCase() === String(m.plantCode).trim().toLowerCase());
+          if (found?.location) machineLoc = found.location.trim();
+        }
+        if (!sameLoc(machineLoc, filterLocation)) return false;
+      }
+      if (filterPlant && String(m.plantCode || '').trim().toLowerCase() !== filterPlant.trim().toLowerCase()) return false;
       if (filterMachineType && m.machineType !== filterMachineType) return false;
       if (filterMachineStatus) {
         const badge = statusBadge(m);
@@ -575,8 +572,15 @@ export default function MaintenancePage() {
         }
       }
 
-      if (filterLocation && !sameLoc(c.location, filterLocation)) return false;
-      if (filterPlant && String(c.plantCode || '').toLowerCase() !== filterPlant.toLowerCase()) return false;
+      if (filterLocation) {
+        let compLoc = String(c.location || '').trim();
+        if (!compLoc && c.plantCode) {
+          const found = plants.find((p) => p.code.toLowerCase() === String(c.plantCode).trim().toLowerCase());
+          if (found?.location) compLoc = found.location.trim();
+        }
+        if (!sameLoc(compLoc, filterLocation)) return false;
+      }
+      if (filterPlant && String(c.plantCode || '').trim().toLowerCase() !== filterPlant.trim().toLowerCase()) return false;
       return true;
     });
   }, [complaints, user, plants, filterLocation, filterPlant]);
@@ -968,37 +972,86 @@ export default function MaintenancePage() {
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
               Refresh
             </button>
+            {filterLocation ? (
+              <span className="inline-flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-bold shrink-0 shadow-sm">
+                <span>Loc: {locationDisplayTag(filterLocation) || filterLocation}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterLocation('');
+                    setFilterPlant('');
+                  }}
+                  className="hover:text-rose-600 p-0.5 rounded transition-colors"
+                  title="Remove location filter"
+                  aria-label="Remove location filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            ) : null}
+            {filterPlant ? (
+              <span className="inline-flex items-center gap-1 pl-2 pr-1.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold shrink-0 shadow-sm">
+                <span>Plant: {plantFilterLabel(filterPlant, plants)}</span>
+                <button
+                  type="button"
+                  onClick={() => setFilterPlant('')}
+                  className="hover:text-rose-600 p-0.5 rounded transition-colors"
+                  title="Remove plant filter"
+                  aria-label="Remove plant filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            ) : null}
             <div className="relative shrink-0" ref={filterWrapRef}>
               <button
                 type="button"
                 onClick={() => setFilterOpen((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors ${
                   filterOpen || filterLocation || filterPlant
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-indigo-600 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
                 title="Location / Plant filter"
               >
                 <Filter size={12} />
                 Filter
-                {(filterLocation || filterPlant) && <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />}
+                {(filterLocation || filterPlant) && (
+                  <span className="w-2 h-2 rounded-full bg-amber-300 ring-2 ring-indigo-700" />
+                )}
               </button>
               {filterOpen && (
                 <div
-                  className="absolute right-0 top-full mt-1.5 z-50 w-[min(92vw,280px)] rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2"
-                  onMouseLeave={() => setFilterOpen(false)}
+                  className="absolute right-0 top-full mt-1.5 z-50 w-[min(92vw,300px)] rounded-2xl border border-slate-200 bg-white shadow-2xl p-3.5 space-y-3"
+                  onClick={(e) => e.stopPropagation()}
                 >
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Filter size={12} className="text-indigo-600" />
+                      Filter Machines
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFilterOpen(false)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                      title="Close"
+                      aria-label="Close filter"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Location</label>
+                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-500">Location</label>
                     <select
                       value={filterLocation}
                       onChange={(e) => {
                         setFilterLocation(e.target.value);
                         setFilterPlant('');
                       }}
-                      className="mt-1 w-full input-geometric text-xs font-semibold py-1.5"
+                      className="mt-1 w-full input-geometric text-xs font-semibold py-1.5 bg-white"
                     >
-                      <option value="">All locations</option>
+                      <option value="">All locations ({locationOptions.length})</option>
                       {locationOptions.map((loc) => (
                         <option key={loc} value={loc}>
                           {locationDisplayTag(loc) || loc}
@@ -1006,14 +1059,15 @@ export default function MaintenancePage() {
                       ))}
                     </select>
                   </div>
+
                   <div>
-                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Plant</label>
+                    <label className="text-[9px] font-black uppercase tracking-wider text-slate-500">Plant</label>
                     <select
                       value={filterPlant}
                       onChange={(e) => setFilterPlant(e.target.value)}
-                      className="mt-1 w-full input-geometric text-xs font-semibold py-1.5"
+                      className="mt-1 w-full input-geometric text-xs font-semibold py-1.5 bg-white"
                     >
-                      <option value="">All plants</option>
+                      <option value="">All plants ({plantOptions.length})</option>
                       {plantOptions.map((code) => (
                         <option key={code} value={code}>
                           {plantFilterLabel(code, plants)}
@@ -1021,18 +1075,33 @@ export default function MaintenancePage() {
                       ))}
                     </select>
                   </div>
-                  {(filterLocation || filterPlant) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilterLocation('');
-                        setFilterPlant('');
-                      }}
-                      className="w-full px-2 py-1.5 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                    >
-                      Clear
-                    </button>
-                  )}
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold text-slate-500">
+                      {scopedMachines.length} of {machines.length} machines
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {(filterLocation || filterPlant) ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterLocation('');
+                            setFilterPlant('');
+                          }}
+                          className="px-2 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setFilterOpen(false)}
+                        className="px-2.5 py-1 text-[10px] font-black uppercase text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -219,6 +219,26 @@ export default function MaintenanceMachineEditModal({
                 value={machineType}
                 options={optionsWithValue(typeOptions, machineType)}
                 onChange={setMachineType}
+                onDeleteOption={async (name) => {
+                  const trimmed = name.trim();
+                  if (!trimmed) return;
+                  const ok = window.confirm(`Delete machine type "${trimmed}"?`);
+                  if (!ok) return;
+                  if (machineType.toLowerCase() === trimmed.toLowerCase()) {
+                    setMachineType('');
+                  }
+                  try {
+                    await fetch(
+                      `${import.meta.env.VITE_API_BASE_URL || ''}/api/maintenance/machine-types/${encodeURIComponent(trimmed)}`,
+                      {
+                        method: 'DELETE',
+                        credentials: 'include',
+                      }
+                    );
+                  } catch {
+                    /* locally handled */
+                  }
+                }}
               />
               <div className="space-y-1.5">
                 <label className="label-caps">

@@ -48,6 +48,7 @@ import {
   getMaintenanceMeta,
   saveMaintenanceMeta,
   addMachineType,
+  removeMachineType,
 } from "./server/maintenanceStore.js";
 import {
   nextMaintenanceAssetCode,
@@ -4320,6 +4321,17 @@ app.post("/api/maintenance/machine-types", async (req, res) => {
     res.json({ success: true, machineTypes: meta.machineTypes, meta });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to add machine type" });
+  }
+});
+
+app.delete("/api/maintenance/machine-types/:name", async (req, res) => {
+  try {
+    const name = decodeURIComponent(String(req.params.name || "").trim());
+    if (!name) return res.status(400).json({ error: "Machine type name is required" });
+    const meta = await removeMachineType(name);
+    res.json({ success: true, machineTypes: meta.machineTypes, meta });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete machine type" });
   }
 });
 

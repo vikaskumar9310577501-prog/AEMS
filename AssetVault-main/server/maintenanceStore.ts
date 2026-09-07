@@ -179,3 +179,12 @@ export async function addMachineType(typeName: string): Promise<MaintenanceMeta>
   }
   return saveMaintenanceMeta(meta);
 }
+
+export async function removeMachineType(typeName: string): Promise<MaintenanceMeta> {
+  const name = String(typeName || "").trim().toLowerCase();
+  if (!name) throw new Error("Machine type is required");
+  const meta = await getMaintenanceMeta();
+  meta.machineTypes = (meta.machineTypes || []).filter((t) => t.trim().toLowerCase() !== name);
+  return saveMaintenanceMeta(meta);
+}
+

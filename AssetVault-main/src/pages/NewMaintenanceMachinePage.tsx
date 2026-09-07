@@ -190,6 +190,30 @@ export default function NewMaintenanceMachinePage() {
                 /* still usable locally */
               }
             }}
+            onDeleteOption={async (name) => {
+              const trimmed = name.trim();
+              if (!trimmed) return;
+              const ok = window.confirm(`Delete machine type "${trimmed}"?`);
+              if (!ok) return;
+              setMachineTypes((prev) => prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase()));
+              if (form.machineType.toLowerCase() === trimmed.toLowerCase()) {
+                setForm((prev) => ({ ...prev, machineType: '' }));
+              }
+              try {
+                const res = await fetch(
+                  `${import.meta.env.VITE_API_BASE_URL || ''}/api/maintenance/machine-types/${encodeURIComponent(trimmed)}`,
+                  {
+                    method: 'DELETE',
+                    credentials: 'include',
+                  }
+                );
+                if (res.ok) {
+                  toast.success(`Machine type "${trimmed}" deleted`);
+                }
+              } catch {
+                /* local state updated */
+              }
+            }}
           />
 
           <div className="space-y-1.5">

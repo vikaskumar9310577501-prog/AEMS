@@ -255,6 +255,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
       /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
       /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
+      /^\/api\/maintenance\/machine-types\/[^/]+$/.test(req.path) ||
       /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
   ) {
     return true;

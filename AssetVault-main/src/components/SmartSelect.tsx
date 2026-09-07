@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { cn } from "../lib/utils";
-import { ChevronDown, Trash2, X } from "lucide-react";
+import { ChevronDown, Search, Trash2, X } from "lucide-react";
 
 const OTHER = "__OTHER__";
 
@@ -32,6 +32,7 @@ export default function SmartSelect({
   transformValue,
 }: SmartSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const safeOptions = options ?? [];
@@ -47,6 +48,12 @@ export default function SmartSelect({
     }
     return sorted;
   }, [sorted, value, hasAddCustom]);
+
+  const displayedOptions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return finalOptions;
+    return finalOptions.filter((opt) => opt.toLowerCase().includes(q));
+  }, [finalOptions, searchQuery]);
 
   const inList = !!(value && finalOptions.includes(value));
 
@@ -78,7 +85,10 @@ export default function SmartSelect({
 
   // Click outside to close dropdown
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setSearchQuery("");
+      return;
+    }
     const handleOutsideClick = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
@@ -154,54 +164,99 @@ export default function SmartSelect({
           </div>
 
           {isOpen && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto py-1">
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 flex flex-col overflow-hidden">
               <div
-                onClick={() => {
-                  handleSelect("");
-                  setIsOpen(false);
-                }}
-                className="px-4 py-2 text-sm text-slate-400 hover:bg-slate-50 cursor-pointer font-normal"
+                className="p-2 border-b border-slate-100 bg-slate-50/80 shrink-0"
+                onClick={(e) => e.stopPropagation()}
               >
-                {placeholder}
-              </div>
-              {finalOptions.map((opt) => (
-                <div
-                  key={opt}
-                  onClick={() => {
-                    handleSelect(opt);
-                    setIsOpen(false);
-                  }}
-                  className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer group"
-                >
-                  <span className="flex-1 text-sm text-slate-700 font-bold">
-                    {opt}
-                  </span>
-                  {onDeleteOption && (
+                <div className="relative">
+                  <Search
+                    size={13}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search ${label.toLowerCase()}…`}
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 font-semibold text-slate-800"
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                  />
+                  {searchQuery ? (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteOption(opt);
+                        setSearchQuery("");
                       }}
-                      className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                      title={`Delete "${opt}"`}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      title="Clear search"
                     >
-                      <Trash2 size={13} />
+                      <X size={12} />
                     </button>
-                  )}
+                  ) : null}
                 </div>
-              ))}
-              {hasAddCustom && (
-                <div
-                  onClick={() => {
-                    handleSelect(OTHER);
-                    setIsOpen(false);
-                  }}
-                  className="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 cursor-pointer font-bold border-t border-slate-100"
-                >
-                  Other (type new)…
-                </div>
-              )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-1">
+                {!searchQuery && (
+                  <div
+                    onClick={() => {
+                      handleSelect("");
+                      setIsOpen(false);
+                    }}
+                    className="px-4 py-2 text-sm text-slate-400 hover:bg-slate-50 cursor-pointer font-normal"
+                  >
+                    {placeholder}
+                  </div>
+                )}
+                {displayedOptions.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-slate-400 text-center font-medium">
+                    No matching options
+                  </div>
+                ) : (
+                  displayedOptions.map((opt) => (
+                    <div
+                      key={opt}
+                      onClick={() => {
+                        handleSelect(opt);
+                        setIsOpen(false);
+                      }}
+                      className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer group transition-colors"
+                    >
+                      <span className="flex-1 text-sm text-slate-700 font-bold">
+                        {opt}
+                      </span>
+                      {onDeleteOption && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteOption(opt);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-2 shrink-0"
+                          title={`Delete "${opt}"`}
+                          aria-label={`Delete ${opt}`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+                {hasAddCustom && (
+                  <div
+                    onClick={() => {
+                      handleSelect(OTHER);
+                      setIsOpen(false);
+                    }}
+                    className="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 cursor-pointer font-bold border-t border-slate-100"
+                  >
+                    Other (type new)…
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
