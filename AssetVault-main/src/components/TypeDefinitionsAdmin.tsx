@@ -20,6 +20,7 @@ import type {
 } from '../types/categoryTypes';
 import { MAIN_CATEGORIES } from '../lib/assetCatalogByType';
 import { useTypeDefinitions } from '../hooks/useTypeDefinitions';
+import { useApp } from '../context/AppProvider';
 
 const FIELD_TYPES: { value: FieldInputType; label: string }[] = [
   { value: 'text', label: 'Single-line Text' },
@@ -43,6 +44,7 @@ function slugify(s: string) {
 }
 
 export default function TypeDefinitionsAdmin() {
+  const { user } = useApp();
   const { config, loading, refresh } = useTypeDefinitions();
   const [activeTab, setActiveTab] = useState<'categories' | 'departments'>('categories');
   const [types, setTypes] = useState<AssetTypeDefinition[]>([]);
@@ -62,11 +64,13 @@ export default function TypeDefinitionsAdmin() {
   const saveAll = async () => {
     setSaving(true);
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user?.email) headers['X-User-Email'] = user.email;
       const res = await fetch((import.meta.env.VITE_API_BASE_URL || '') + '/api/type-definitions', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ types, departments, syncSheet: true }),
+        headers,
+        body: JSON.stringify({ types, departments, syncSheet: true, userEmail: user?.email }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');

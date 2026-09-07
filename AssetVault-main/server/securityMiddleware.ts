@@ -213,6 +213,8 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/assets/bulk" ||
       req.path === "/api/assets/sync" ||
       req.path === "/api/users" ||
+      req.path === "/api/type-definitions" ||
+      req.path === "/api/settings" ||
       req.path === "/api/missing-items" ||
       req.path === "/api/damaged-items" ||
       req.path === "/api/maintenance/machines" ||
