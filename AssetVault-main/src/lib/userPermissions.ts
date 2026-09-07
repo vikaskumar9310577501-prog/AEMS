@@ -169,7 +169,7 @@ export function canAccessMaintenanceTab(
   if (tab === 'complaint-dashboard') return canViewMaintenanceComplaintDashboard(role, categories);
   if (tab === 'complaints') return canViewMaintenanceComplaintsInbox(role, categories);
   if (tab === 'email-center') return canViewMaintenanceDashboard(role, categories) || isItAdminRole(role);
-  if (tab === 'settings') return canManageMaintenanceFhPh(role);
+  if (tab === 'settings') return canManageMaintenanceFhPh(role) || canViewMaintenanceDashboard(role, categories) || isItAdminRole(role);
   return false;
 }
 

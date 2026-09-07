@@ -42,7 +42,7 @@ interface EmailCenterProps {
   currentLocation?: string;
 }
 
-type SubTab = 'compose' | 'drafts' | 'automations' | 'templates' | 'history' | 'analytics';
+type SubTab = 'compose' | 'drafts' | 'automations' | 'templates' | 'history';
 
 export default function EmailNotificationCenter({
   locations,
@@ -317,7 +317,6 @@ export default function EmailNotificationCenter({
           { id: 'drafts', label: 'Drafts', icon: FileText, badge: drafts.length },
           { id: 'templates', label: 'Templates', icon: Sparkles, badge: templates.length },
           { id: 'history', label: 'Email History', icon: History, badge: logs.length },
-          { id: 'analytics', label: 'Analytics & Trend', icon: BarChart3 },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -832,56 +831,6 @@ export default function EmailNotificationCenter({
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB: ANALYTICS */}
-      {activeTab === 'analytics' && analytics && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Dispatched</p>
-              <p className="text-2xl font-black text-slate-900 mt-1">{analytics.totalEmails}</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Successful</p>
-              <p className="text-2xl font-black text-emerald-600 mt-1">{analytics.sent}</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-red-200 bg-red-50/20 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-red-700">Failed</p>
-              <p className="text-2xl font-black text-red-600 mt-1">{analytics.failed}</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-blue-200 bg-blue-50/20 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Active Automations</p>
-              <p className="text-2xl font-black text-blue-600 mt-1">{analytics.scheduledAutomations}</p>
-            </div>
-          </div>
-
-          <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <h4 className="text-sm font-bold text-slate-900 mb-3">Recent 14-Day Delivery Volume</h4>
-            {analytics.trend.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No delivery activity recorded yet.</p>
-            ) : (
-              <div className="flex items-end gap-2 h-40 pt-6">
-                {analytics.trend.map((t) => {
-                  const max = Math.max(...analytics.trend.map((x) => x.sent + x.failed), 1);
-                  const h = Math.round(((t.sent + t.failed) / max) * 120);
-                  return (
-                    <div key={t.date} className="flex-1 flex flex-col items-center gap-1">
-                      <div
-                        style={{ height: `${Math.max(h, 6)}px` }}
-                        className="w-full rounded-t-md bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer"
-                        title={`${t.date}: ${t.sent} sent, ${t.failed} failed`}
-                      />
-                      <span className="text-[9px] font-mono text-slate-400 truncate w-full text-center">
-                        {t.date.slice(5)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
       )}

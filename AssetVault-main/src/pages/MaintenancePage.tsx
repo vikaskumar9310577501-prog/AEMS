@@ -1010,16 +1010,6 @@ export default function MaintenancePage() {
               Complaints
             </button>
           )}
-          {canAccessMaintenanceTab(user?.role, 'email-center', user?.categories) && (
-            <button
-              type="button"
-              onClick={() => goTab('email-center')}
-              className={navBtn(tab === 'email-center')}
-            >
-              <Mail size={14} />
-              Email & Notification Center
-            </button>
-          )}
           {tab === 'complaints' && canComplaintsInbox ? (
             <div className="inline-flex items-center gap-1 ml-1 shrink-0">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-700">
@@ -1052,12 +1042,12 @@ export default function MaintenancePage() {
                 />
               </div>
             )}
-            {canFhPh && (
+            {(canFhPh || canAccessMaintenanceTab(user?.role, 'email-center', user?.categories)) && (
               <button
                 type="button"
                 onClick={() => goTab('settings')}
-                className={navBtn(tab === 'settings', 'w-8 h-8 justify-center px-0 shrink-0')}
-                title="HOD / FH / PH settings"
+                className={navBtn(tab === 'settings' || tab === 'email-center', 'w-8 h-8 justify-center px-0 shrink-0')}
+                title="Settings & Email Notification Center"
                 aria-label="Settings"
               >
                 <Settings size={15} />
@@ -1946,110 +1936,7 @@ export default function MaintenancePage() {
           />
         )}
 
-        {tab === 'settings' && canFhPh && (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-black text-slate-900">Settings — HOD / FH / PH emails</h2>
-                <p className="text-xs text-slate-500">
-                  Used for trend-change alerts, 1-week reminders, overdue escalation, and complaint notifications.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void savePlantContacts()}
-                disabled={savingSettings}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase disabled:opacity-60"
-              >
-                {savingSettings ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-            {plantRows.length === 0 ? (
-              <p className="p-8 text-sm text-slate-500 text-center">
-                No plants found. Add plants in Settings, or register a machine first.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3">Plant</th>
-                      <th className={`px-4 py-3 ${contactFocus === 'hod' ? 'bg-blue-100 text-blue-800' : ''}`}>
-                        Head of Department (HOD) email
-                      </th>
-                      <th className={`px-4 py-3 ${contactFocus === 'fh' ? 'bg-blue-100 text-blue-800' : ''}`}>
-                        Factory Head (FH) email
-                      </th>
-                      <th className={`px-4 py-3 ${contactFocus === 'ph' ? 'bg-blue-100 text-blue-800' : ''}`}>
-                        Plant Head (PH) email
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {plantRows.map((code) => {
-                      const plant = plants.find((p) => p.code === code);
-                      const contact = plantContactsDraft[code] || {};
-                      return (
-                        <tr key={code}>
-                          <td className="px-4 py-3">
-                            <p className="font-bold text-slate-900">{plantShortName(code, plants)}</p>
-                            {plant?.location ? (
-                              <p className="text-xs text-slate-500">{plant.location}</p>
-                            ) : null}
-                          </td>
-                          <td className={`px-4 py-3 ${contactFocus === 'hod' ? 'bg-blue-50' : ''}`}>
-                            <input
-                              type="email"
-                              value={contact.hodEmail || ''}
-                              onChange={(e) =>
-                                setPlantContactsDraft((prev) => ({
-                                  ...prev,
-                                  [code]: { ...prev[code], hodEmail: e.target.value },
-                                }))
-                              }
-                              placeholder="hod@company.com"
-                              className="w-full input-geometric text-sm"
-                            />
-                          </td>
-                          <td className={`px-4 py-3 ${contactFocus === 'fh' ? 'bg-blue-50' : ''}`}>
-                            <input
-                              type="email"
-                              value={contact.fhEmail || ''}
-                              onChange={(e) =>
-                                setPlantContactsDraft((prev) => ({
-                                  ...prev,
-                                  [code]: { ...prev[code], fhEmail: e.target.value },
-                                }))
-                              }
-                              placeholder="fh@company.com"
-                              className="w-full input-geometric text-sm"
-                            />
-                          </td>
-                          <td className={`px-4 py-3 ${contactFocus === 'ph' ? 'bg-blue-50' : ''}`}>
-                            <input
-                              type="email"
-                              value={contact.phEmail || ''}
-                              onChange={(e) =>
-                                setPlantContactsDraft((prev) => ({
-                                  ...prev,
-                                  [code]: { ...prev[code], phEmail: e.target.value },
-                                }))
-                              }
-                              placeholder="ph@company.com"
-                              className="w-full input-geometric text-sm"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === 'email-center' && canAccessMaintenanceTab(user?.role, 'email-center', user?.categories) && (
+        {(tab === 'settings' || tab === 'email-center') && (canFhPh || canAccessMaintenanceTab(user?.role, 'email-center', user?.categories)) && (
           <div className="flex-1 min-h-0 flex flex-col mb-4">
             <EmailNotificationCenter
               locations={allowedLocations}
