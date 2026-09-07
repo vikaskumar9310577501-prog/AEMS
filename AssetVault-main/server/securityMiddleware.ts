@@ -218,6 +218,8 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/missing-items" ||
       req.path === "/api/damaged-items" ||
       req.path === "/api/maintenance/machines" ||
+      req.path === "/api/maintenance/machines/import" ||
+      req.path.startsWith("/api/maintenance/email") ||
       req.path === "/api/maintenance/machine-types" ||
       req.path === "/api/maintenance/complaints" ||
       /^\/api\/maintenance\/machines\/[^/]+\/done$/.test(req.path) ||
@@ -231,6 +233,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
   if (
     req.method === "PUT" &&
     (req.path === "/api/maintenance/meta" ||
+      req.path.startsWith("/api/maintenance/email") ||
       /^\/api\/assets\/[^/]+$/.test(req.path) ||
       /^\/api\/users\/[^/]+$/.test(req.path) ||
       /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
@@ -243,6 +246,7 @@ function canUseEmailFallbackAuth(req: Request): boolean {
   if (
     req.method === "PATCH" &&
     (/^\/api\/maintenance\/machines\/[^/]+\/(trend|next-date|details)$/.test(req.path) ||
+      req.path.startsWith("/api/maintenance/email") ||
       /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
   ) {
     return true;
@@ -250,7 +254,8 @@ function canUseEmailFallbackAuth(req: Request): boolean {
 
   if (
     req.method === "DELETE" &&
-    (/^\/api\/assets\/[^/]+$/.test(req.path) ||
+    (req.path.startsWith("/api/maintenance/email") ||
+      /^\/api\/assets\/[^/]+$/.test(req.path) ||
       /^\/api\/users\/[^/]+$/.test(req.path) ||
       /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
       /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
@@ -277,6 +282,8 @@ function canUseEmailFallbackAuth(req: Request): boolean {
       req.path === "/api/audit-logs" ||
       req.path === "/api/maintenance/machines" ||
       req.path === "/api/maintenance/machines/next-code" ||
+      req.path === "/api/maintenance/machines/missing-info" ||
+      req.path.startsWith("/api/maintenance/email") ||
       req.path === "/api/maintenance/complaints" ||
       req.path === "/api/maintenance/meta" ||
       req.path === "/api/maintenance/overview" ||

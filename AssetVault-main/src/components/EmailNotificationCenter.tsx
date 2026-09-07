@@ -30,10 +30,10 @@ import type {
   EmailAutomation,
   EmailDraft,
   EmailExecutionLog,
-  EmailAnalytics,
 } from '../types/emailAutomation';
 import { parseJsonResponse } from '../lib/apiFetch';
 import { plantShortName } from '../lib/plantDisplay';
+import { useApp } from '../context/AppProvider';
 
 interface EmailCenterProps {
   locations: string[];
@@ -50,6 +50,7 @@ export default function EmailNotificationCenter({
   currentPlantCode = '',
   currentLocation = '',
 }: EmailCenterProps) {
+  const { user } = useApp();
   const [activeTab, setActiveTab] = useState<SubTab>('automations');
   const [loading, setLoading] = useState(false);
 
@@ -58,7 +59,6 @@ export default function EmailNotificationCenter({
   const [automations, setAutomations] = useState<EmailAutomation[]>([]);
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [logs, setLogs] = useState<EmailExecutionLog[]>([]);
-  const [analytics, setAnalytics] = useState<EmailAnalytics | null>(null);
 
   // Compose State
   const [toInput, setToInput] = useState('');
@@ -81,30 +81,36 @@ export default function EmailNotificationCenter({
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || '';
 
+  const getHeaders = (extra: Record<string, string> = {}) => {
+    const h: Record<string, string> = { ...extra };
+    if (user?.email) {
+      h['x-user-email'] = user.email;
+    }
+    return h;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [tRes, aRes, dRes, lRes, anRes] = await Promise.all([
-        fetch(`${apiBase}/api/maintenance/email/templates`, { credentials: 'include' }),
-        fetch(`${apiBase}/api/maintenance/email/automations`, { credentials: 'include' }),
-        fetch(`${apiBase}/api/maintenance/email/drafts`, { credentials: 'include' }),
-        fetch(`${apiBase}/api/maintenance/email/logs`, { credentials: 'include' }),
-        fetch(`${apiBase}/api/maintenance/email/analytics`, { credentials: 'include' }),
+      const headers = getHeaders();
+      const [tRes, aRes, dRes, lRes] = await Promise.all([
+        fetch(`${apiBase}/api/maintenance/email/templates`, { credentials: 'include', headers }),
+        fetch(`${apiBase}/api/maintenance/email/automations`, { credentials: 'include', headers }),
+        fetch(`${apiBase}/api/maintenance/email/drafts`, { credentials: 'include', headers }),
+        fetch(`${apiBase}/api/maintenance/email/logs`, { credentials: 'include', headers }),
       ]);
 
-      const [tData, aData, dData, lData, anData] = await Promise.all([
+      const [tData, aData, dData, lData] = await Promise.all([
         parseJsonResponse<{ templates?: EmailTemplate[] }>(tRes),
         parseJsonResponse<{ automations?: EmailAutomation[] }>(aRes),
         parseJsonResponse<{ drafts?: EmailDraft[] }>(dRes),
         parseJsonResponse<{ logs?: EmailExecutionLog[] }>(lRes),
-        parseJsonResponse<{ analytics?: EmailAnalytics }>(anRes),
       ]);
 
       if (tData.templates) setTemplates(tData.templates);
       if (aData.automations) setAutomations(aData.automations);
       if (dData.drafts) setDrafts(dData.drafts);
       if (lData.logs) setLogs(lData.logs);
-      if (anData.analytics) setAnalytics(anData.analytics);
     } catch {
       /* ignore */
     } finally {
@@ -140,7 +146,7 @@ export default function EmailNotificationCenter({
       const res = await fetch(`${apiBase}/api/maintenance/email/send`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           to: toChips,
           cc: ccChips,
@@ -172,7 +178,7 @@ export default function EmailNotificationCenter({
       const res = await fetch(`${apiBase}/api/maintenance/email/drafts`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           to: toChips,
           cc: ccChips,
@@ -197,7 +203,7 @@ export default function EmailNotificationCenter({
       const res = await fetch(`${apiBase}/api/maintenance/email/test`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           testEmail: testTargetEmail.trim(),
           subject: subject || undefined,
@@ -220,7 +226,7 @@ export default function EmailNotificationCenter({
       const res = await fetch(`${apiBase}/api/maintenance/email/automations`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           ...auto,
           status: nextStatus,
@@ -240,6 +246,7 @@ export default function EmailNotificationCenter({
       const res = await fetch(`${apiBase}/api/maintenance/email/trigger-scheduler`, {
         method: 'POST',
         credentials: 'include',
+        headers: getHeaders(),
       });
       const data = await parseJsonResponse<{ sent?: number; skipped?: number }>(res);
       toast.success(`Scheduler executed: ${data.sent || 0} emails sent`, { id: 'trigger-now' });

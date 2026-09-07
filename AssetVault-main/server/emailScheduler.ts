@@ -163,7 +163,17 @@ export function resolveRecipients(
     if (rule.type === "plant_contacts") {
       const roles = (rule.value || "HOD,FH,PH").toUpperCase().split(",").map((s) => s.trim());
       for (const p of plants) {
-        const contact = plantContacts[p] || plantContacts[p.toUpperCase()] || plantContacts[p.toLowerCase()];
+        let contact = plantContacts[p] || plantContacts[p.toUpperCase()] || plantContacts[p.toLowerCase()];
+        if (!contact) {
+          const normP = p.trim().toLowerCase();
+          for (const [k, v] of Object.entries(plantContacts)) {
+            const normK = k.trim().toLowerCase();
+            if (normK === normP || normP.includes(normK) || normK.includes(normP)) {
+              contact = v;
+              break;
+            }
+          }
+        }
         if (contact) {
           if (roles.includes("HOD") && contact.hodEmail) targetSet.add(contact.hodEmail.trim().toLowerCase());
           if (roles.includes("FH") && contact.fhEmail) targetSet.add(contact.fhEmail.trim().toLowerCase());
