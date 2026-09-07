@@ -172,3 +172,37 @@ export async function deleteMirroredAsset(id: string): Promise<void> {
   await sbJson(`/rest/v1/assets?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
 }
 
+export async function mirrorMachineToPostgres(machine: Record<string, unknown>): Promise<void> {
+  const probe = await sbFetch("/rest/v1/maintenance_machines?select=id&limit=1");
+  if (!probe.ok) return;
+  const row = {
+    id: txt(machine.id),
+    asset_code: txt(machine.assetCode),
+    machine_type: txt(machine.machineType),
+    machine_number: txt(machine.machineNumber),
+    equipment_name: txt(machine.equipmentName),
+    department: txt(machine.department),
+    responsibility: txt(machine.responsibility),
+    location: txt(machine.location),
+    plant_code: txt(machine.plantCode),
+    warranty_status: txt(machine.warrantyStatus),
+    model_number: txt(machine.modelNumber),
+    serial_number: txt(machine.serialNumber),
+    trend_months: typeof machine.trendMonths === "number" ? machine.trendMonths : null,
+    next_maintenance_date: txt(machine.nextMaintenanceDate),
+    last_maintenance_date: txt(machine.lastMaintenanceDate),
+    status: txt(machine.status),
+    remarks: txt(machine.remarks),
+    json_data: machine,
+  };
+  await sbJson("/rest/v1/maintenance_machines?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" } as unknown as HeadersInit,
+    body: JSON.stringify(row),
+  }).catch(() => undefined);
+}
+
+export async function deleteMirroredMachine(id: string): Promise<void> {
+  await sbJson(`/rest/v1/maintenance_machines?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
+}
+

@@ -73,6 +73,24 @@ where "Main Category" in ('Admin Facility Assets', 'Admin / Facility Assets');
 create or replace view "Maintenance Assets" as
 select * from asset_sheet where "Main Category" = 'Maintenance Assets';
 
+create or replace view "IDU" as
+select * from asset_sheet where "Main Category" = 'IDU';
+
+create or replace view "ODU" as
+select * from asset_sheet where "Main Category" = 'ODU';
+
+create or replace view "IQC" as
+select * from asset_sheet where "Main Category" = 'IQC';
+
+create or replace view "QA ELECTRONICS" as
+select * from asset_sheet where "Main Category" = 'QA ELECTRONICS';
+
+create or replace view "OPERATIONS" as
+select * from asset_sheet where "Main Category" = 'OPERATIONS';
+
+create or replace view "OQC" as
+select * from asset_sheet where "Main Category" = 'OQC';
+
 create or replace view "2040" as
 select * from asset_sheet where "Plant Name" = '2040';
 
@@ -138,6 +156,12 @@ grant select on "Furniture Assets" to postgres, service_role;
 grant select on "Software License Assets" to postgres, service_role;
 grant select on "Admin Facility Assets" to postgres, service_role;
 grant select on "Maintenance Assets" to postgres, service_role;
+grant select on "IDU" to postgres, service_role;
+grant select on "ODU" to postgres, service_role;
+grant select on "IQC" to postgres, service_role;
+grant select on "QA ELECTRONICS" to postgres, service_role;
+grant select on "OPERATIONS" to postgres, service_role;
+grant select on "OQC" to postgres, service_role;
 grant select on "2040" to postgres, service_role;
 grant select on "4020" to postgres, service_role;
 grant select on "4010" to postgres, service_role;

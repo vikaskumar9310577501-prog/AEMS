@@ -8,6 +8,7 @@ import {
   type MaintenanceMachine,
   type MaintenanceMeta,
 } from "../src/types/maintenance.js";
+import { mirrorMachineToPostgres, deleteMirroredMachine } from "./postgresMirror.js";
 
 const MACHINES_FILE = "maintenance_machines";
 const META_FILE = "maintenance_meta";
@@ -105,6 +106,9 @@ export async function upsertMaintenanceMachine(machine: MaintenanceMachine): Pro
     if (idx >= 0) rows[idx] = machine;
     else rows.push(machine);
     await saveJson(MACHINES_FILE, rows);
+    if (isSupabaseMode()) {
+      mirrorMachineToPostgres(machine as unknown as Record<string, unknown>).catch(() => undefined);
+    }
     return machine;
   });
 }
@@ -115,6 +119,9 @@ export async function deleteMaintenanceMachine(id: string): Promise<boolean> {
     const next = rows.filter((r) => r.id !== id);
     if (next.length === rows.length) return false;
     await saveJson(MACHINES_FILE, next);
+    if (isSupabaseMode()) {
+      deleteMirroredMachine(id).catch(() => undefined);
+    }
     return true;
   });
 }
