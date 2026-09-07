@@ -182,6 +182,60 @@ create table if not exists uploaded_files (
   uploaded_at timestamptz not null default now()
 );
 
+create table if not exists maintenance_machines (
+  id text primary key,
+  asset_code text,
+  machine_type text,
+  machine_number text,
+  equipment_name text,
+  department text,
+  responsibility text,
+  location text,
+  plant_code text,
+  warranty_status text,
+  model_number text,
+  serial_number text,
+  trend_months int,
+  next_maintenance_date text,
+  last_maintenance_date text,
+  status text,
+  remarks text,
+  json_data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists maintenance_complaints (
+  id text primary key,
+  machine_id text,
+  asset_code text,
+  machine_type text,
+  machine_number text,
+  equipment_name text,
+  department text,
+  responsibility text,
+  location text,
+  plant_code text,
+  complaint_text text,
+  remark text,
+  reporter_name text,
+  reporter_employee_code text,
+  reporter_phone text,
+  downtime_minutes int,
+  photo_url text,
+  photo_name text,
+  status text,
+  remarks text,
+  resolution_photo_url text,
+  resolution_photo_name text,
+  reported_at text,
+  resolved_at text,
+  resolved_by text,
+  resolved_technician_count int,
+  resolved_technician_names text[],
+  json_data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 alter table assets enable row level security;
 alter table employees enable row level security;
 alter table users enable row level security;
@@ -202,6 +256,8 @@ alter table type_definitions enable row level security;
 alter table app_settings enable row level security;
 alter table otp_log enable row level security;
 alter table uploaded_files enable row level security;
+alter table maintenance_machines enable row level security;
+alter table maintenance_complaints enable row level security;
 
 grant usage on schema public to anon, authenticated, service_role;
 grant all on all tables in schema public to service_role;

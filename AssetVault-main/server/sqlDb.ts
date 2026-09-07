@@ -14,7 +14,13 @@ const CATEGORIES = [
   "Furniture Assets",
   "Software License Assets",
   "Admin Facility Assets",
-  "Maintenance Assets"
+  "Maintenance Assets",
+  "IDU",
+  "ODU",
+  "IQC",
+  "QA ELECTRONICS",
+  "OPERATIONS",
+  "OQC"
 ];
 
 export function sanitizeSqlName(name: string): string {
@@ -65,6 +71,75 @@ export async function getDb(): Promise<Database> {
     `;
     await db.exec(createTableQuery);
   }
+
+  // Initialize Maintenance_Machines table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS Maintenance_Machines (
+      id TEXT PRIMARY KEY,
+      assetCode TEXT,
+      machineType TEXT,
+      machineNumber TEXT,
+      equipmentName TEXT,
+      department TEXT,
+      responsibility TEXT,
+      location TEXT,
+      plantCode TEXT,
+      warrantyStatus TEXT,
+      modelNumber TEXT,
+      serialNumber TEXT,
+      trendMonths INTEGER,
+      nextMaintenanceDate TEXT,
+      lastMaintenanceDate TEXT,
+      status TEXT,
+      remarks TEXT,
+      customPlanDates TEXT,
+      pmLogs TEXT,
+      createdBy TEXT,
+      createdAt TEXT,
+      updatedBy TEXT,
+      updatedAt TEXT
+    )
+  `);
+
+  try {
+    const mmCols = (await db.all(`PRAGMA table_info(Maintenance_Machines)`)).map((c: any) => c.name);
+    if (!mmCols.includes('modelNumber')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN modelNumber TEXT`);
+    if (!mmCols.includes('serialNumber')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN serialNumber TEXT`);
+    if (!mmCols.includes('warrantyStatus')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN warrantyStatus TEXT`);
+  } catch {}
+
+  // Initialize Maintenance_Complaints table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS Maintenance_Complaints (
+      id TEXT PRIMARY KEY,
+      machineId TEXT,
+      assetCode TEXT,
+      machineType TEXT,
+      machineNumber TEXT,
+      equipmentName TEXT,
+      department TEXT,
+      responsibility TEXT,
+      location TEXT,
+      plantCode TEXT,
+      complaintText TEXT,
+      remark TEXT,
+      reporterName TEXT,
+      reporterEmployeeCode TEXT,
+      reporterPhone TEXT,
+      downtimeMinutes INTEGER,
+      photoUrl TEXT,
+      photoName TEXT,
+      status TEXT,
+      remarks TEXT,
+      resolutionPhotoUrl TEXT,
+      resolutionPhotoName TEXT,
+      reportedAt TEXT,
+      resolvedAt TEXT,
+      resolvedBy TEXT,
+      resolvedTechnicianCount INTEGER,
+      resolvedTechnicianNames TEXT
+    )
+  `);
 
   dbInstance = db;
   return db;

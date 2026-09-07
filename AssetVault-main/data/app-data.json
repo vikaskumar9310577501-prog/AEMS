@@ -369,7 +369,12 @@
         "Sales",
         "Security",
         "Store",
-        "ppc"
+        "ppc",
+        "IDU",
+        "ODU",
+        "QA ELECTRONICS",
+        "OPERATIONS",
+        "OQC"
       ],
       "brandsByType": {
         "Laptop": {
@@ -1194,6 +1199,193 @@
                 "Safety Gear",
                 "Other"
               ]
+            },
+            {
+              "key": "calibration_due_date",
+              "label": "Calibration Due Date",
+              "type": "date"
+            }
+          ]
+        },
+        {
+          "id": "idu_asset",
+          "name": "IDU Asset",
+          "mainCategory": "IDU",
+          "fields": [
+            {
+              "key": "line_number",
+              "label": "Line / Station Number",
+              "type": "text",
+              "placeholder": "e.g. IDU Line 1"
+            },
+            {
+              "key": "equipment_type",
+              "label": "Equipment Type",
+              "type": "select",
+              "options": [
+                "Assembly Conveyor",
+                "Testing Rig",
+                "Vacuum Station",
+                "Gas Charging Station",
+                "Packaging Line",
+                "Other"
+              ]
+            },
+            {
+              "key": "model_number",
+              "label": "Model Number",
+              "type": "text"
+            },
+            {
+              "key": "serial_number",
+              "label": "Serial Number",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "odu_asset",
+          "name": "ODU Asset",
+          "mainCategory": "ODU",
+          "fields": [
+            {
+              "key": "line_number",
+              "label": "Line / Station Number",
+              "type": "text",
+              "placeholder": "e.g. ODU Line 1"
+            },
+            {
+              "key": "equipment_type",
+              "label": "Equipment Type",
+              "type": "select",
+              "options": [
+                "Assembly Conveyor",
+                "Compressor Mount Station",
+                "Brazing Rig",
+                "Testing Chamber",
+                "Packaging Line",
+                "Other"
+              ]
+            },
+            {
+              "key": "model_number",
+              "label": "Model Number",
+              "type": "text"
+            },
+            {
+              "key": "serial_number",
+              "label": "Serial Number",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "iqc_asset",
+          "name": "IQC Asset",
+          "mainCategory": "IQC",
+          "fields": [
+            {
+              "key": "instrument_type",
+              "label": "Inspection Instrument Type",
+              "type": "select",
+              "options": [
+                "Vernier Caliper",
+                "Micrometer",
+                "Height Gauge",
+                "Hardness Tester",
+                "Profile Projector",
+                "Material Tester",
+                "Other"
+              ]
+            },
+            {
+              "key": "calibration_due_date",
+              "label": "Calibration Due Date",
+              "type": "date"
+            },
+            {
+              "key": "accuracy_spec",
+              "label": "Accuracy / Tolerance",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "qa_electronics_asset",
+          "name": "QA Electronics Asset",
+          "mainCategory": "QA ELECTRONICS",
+          "fields": [
+            {
+              "key": "equipment_type",
+              "label": "Testing / QA Equipment",
+              "type": "select",
+              "options": [
+                "PCB Functional Tester",
+                "Oscilloscope",
+                "Multimeter",
+                "Soldering & Rework Station",
+                "LCR Meter",
+                "Other"
+              ]
+            },
+            {
+              "key": "calibration_due_date",
+              "label": "Calibration Due Date",
+              "type": "date"
+            },
+            {
+              "key": "test_bench",
+              "label": "Test Bench / Station",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "id": "operations_asset",
+          "name": "Operations Asset",
+          "mainCategory": "OPERATIONS",
+          "fields": [
+            {
+              "key": "operation_area",
+              "label": "Operations Area / Section",
+              "type": "text"
+            },
+            {
+              "key": "equipment_type",
+              "label": "Equipment Type",
+              "type": "select",
+              "options": [
+                "Material Handling",
+                "Hydraulic Lift",
+                "Pallet Truck",
+                "Tooling Station",
+                "Line Equipment",
+                "Other"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "oqc_asset",
+          "name": "OQC Asset",
+          "mainCategory": "OQC",
+          "fields": [
+            {
+              "key": "inspection_stage",
+              "label": "Inspection Stage",
+              "type": "select",
+              "options": [
+                "Final Run Test",
+                "Packaging Inspection",
+                "Safety Check",
+                "Pre-Dispatch Audit",
+                "Other"
+              ]
+            },
+            {
+              "key": "test_rig_number",
+              "label": "Test Rig / Station ID",
+              "type": "text"
             },
             {
               "key": "calibration_due_date",
