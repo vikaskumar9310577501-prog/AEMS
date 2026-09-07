@@ -524,7 +524,15 @@ function todayKey(d = new Date()): string {
 
 export { todayKey };
 
-async function sendViaSmtp(to: string[], subject: string, html: string, text: string): Promise<void> {
+async function sendViaSmtp(
+  to: string[],
+  subject: string,
+  html: string,
+  text: string,
+  cc?: string[],
+  bcc?: string[],
+  attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>
+): Promise<void> {
   const user = getEnv("SMTP_EMAIL");
   const pass = getEnv("SMTP_PASSWORD");
   if (!user || !pass) {
@@ -538,29 +546,49 @@ async function sendViaSmtp(to: string[], subject: string, html: string, text: st
     auth: { user, pass },
   });
   const from = getEnv("OTP_FROM_EMAIL") || user;
-  await transporter.sendMail({
+  const mailOptions: nodemailer.SendMailOptions = {
     from: `"${APP_NAME}" <${from}>`,
     to: to.join(", "),
     subject,
     html,
     text,
-  });
+  };
+  if (cc && cc.length > 0) {
+    mailOptions.cc = cc.join(", ");
+  }
+  if (bcc && bcc.length > 0) {
+    mailOptions.bcc = bcc.join(", ");
+  }
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments;
+  }
+  await transporter.sendMail(mailOptions);
 }
 
-/** Send professional maintenance email via nodemailer (SMTP only — no Apps Script / GmailApp). */
+/** Send professional maintenance email via nodemailer with TO, CC, BCC, Attachments. */
 export async function sendMaintenanceMail(opts: {
   to: string[];
   subject: string;
   html: string;
   text: string;
+  cc?: string[];
+  bcc?: string[];
+  attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>;
 }): Promise<{ ok: boolean; via?: string; error?: string }> {
   const recipients = Array.from(
     new Set(opts.to.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))
   );
   if (recipients.length === 0) return { ok: false, error: "No recipients" };
 
+  const cc = opts.cc
+    ? Array.from(new Set(opts.cc.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean)))
+    : undefined;
+  const bcc = opts.bcc
+    ? Array.from(new Set(opts.bcc.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean)))
+    : undefined;
+
   try {
-    await sendViaSmtp(recipients, opts.subject, opts.html, opts.text);
+    await sendViaSmtp(recipients, opts.subject, opts.html, opts.text, cc, bcc, opts.attachments);
     return { ok: true, via: "smtp" };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);

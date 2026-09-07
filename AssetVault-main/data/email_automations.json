@@ -1,0 +1,148 @@
+[
+  {
+    "id": "auto_overdue_pm",
+    "name": "Overdue PM Automated Alert",
+    "triggerType": "overdue_pm",
+    "status": "active",
+    "frequency": "daily",
+    "scheduleTimes": [
+      "09:00",
+      "16:00"
+    ],
+    "recipientRules": [
+      {
+        "type": "plant_contacts",
+        "value": "HOD,FH,PH",
+        "target": "to"
+      },
+      {
+        "type": "role",
+        "value": "Maintenance Head",
+        "target": "cc"
+      }
+    ],
+    "templateId": "tpl_overdue_pm",
+    "consolidationMode": "consolidated",
+    "retryCount": 3,
+    "retryIntervalMinutes": 15,
+    "createdAt": "2026-09-07T16:20:45.064Z",
+    "updatedAt": "2026-09-07T16:20:45.064Z"
+  },
+  {
+    "id": "auto_upcoming_pm",
+    "name": "Upcoming PM 7-Day Alert",
+    "triggerType": "upcoming_pm",
+    "status": "active",
+    "frequency": "daily",
+    "scheduleTimes": [
+      "08:30"
+    ],
+    "reminderDays": 7,
+    "recipientRules": [
+      {
+        "type": "plant_contacts",
+        "value": "HOD,FH,PH",
+        "target": "to"
+      }
+    ],
+    "templateId": "tpl_upcoming_pm",
+    "consolidationMode": "consolidated",
+    "retryCount": 3,
+    "retryIntervalMinutes": 15,
+    "createdAt": "2026-09-07T16:20:45.064Z",
+    "updatedAt": "2026-09-07T16:20:45.064Z"
+  },
+  {
+    "id": "auto_complaint_created",
+    "name": "Breakdown Complaint Notification",
+    "triggerType": "complaint_created",
+    "status": "active",
+    "frequency": "instant",
+    "scheduleTimes": [],
+    "recipientRules": [
+      {
+        "type": "plant_contacts",
+        "value": "HOD,PH",
+        "target": "to"
+      }
+    ],
+    "templateId": "tpl_complaint_created",
+    "consolidationMode": "individual",
+    "retryCount": 3,
+    "retryIntervalMinutes": 10,
+    "createdAt": "2026-09-07T16:20:45.064Z",
+    "updatedAt": "2026-09-07T16:20:45.064Z"
+  },
+  {
+    "id": "auto_complaint_resolved",
+    "name": "Complaint Resolved Notification",
+    "triggerType": "complaint_resolved",
+    "status": "active",
+    "frequency": "instant",
+    "scheduleTimes": [],
+    "recipientRules": [
+      {
+        "type": "plant_contacts",
+        "value": "HOD,PH",
+        "target": "to"
+      }
+    ],
+    "templateId": "tpl_complaint_resolved",
+    "consolidationMode": "individual",
+    "retryCount": 3,
+    "retryIntervalMinutes": 10,
+    "createdAt": "2026-09-07T16:20:45.064Z",
+    "updatedAt": "2026-09-07T16:20:45.064Z"
+  },
+  {
+    "id": "auto_sla_breach",
+    "name": "Complaint SLA Breach Alert",
+    "triggerType": "sla_breached",
+    "status": "active",
+    "frequency": "daily",
+    "scheduleTimes": [
+      "10:00"
+    ],
+    "recipientRules": [
+      {
+        "type": "plant_contacts",
+        "value": "HOD,FH,PH",
+        "target": "to"
+      },
+      {
+        "type": "role",
+        "value": "IT Admin",
+        "target": "cc"
+      }
+    ],
+    "templateId": "tpl_sla_breach",
+    "consolidationMode": "individual",
+    "retryCount": 3,
+    "retryIntervalMinutes": 15,
+    "createdAt": "2026-09-07T16:20:45.064Z",
+    "updatedAt": "2026-09-07T16:20:45.064Z"
+  },
+  {
+    "id": "auto_monthly_pm",
+    "name": "Monthly PM Summary Report",
+    "triggerType": "monthly_pm",
+    "status": "active",
+    "frequency": "monthly",
+    "scheduleTimes": [
+      "10:00"
+    ],
+    "recipientRules": [
+      {
+        "type": "plant_contacts",
+        "value": "HOD,FH,PH",
+        "target": "to"
+      }
+    ],
+    "templateId": "tpl_monthly_pm",
+    "consolidationMode": "consolidated",
+    "retryCount": 3,
+    "retryIntervalMinutes": 30,
+    "createdAt": "2026-09-07T16:20:45.064Z",
+    "updatedAt": "2026-09-07T16:20:45.064Z"
+  }
+]

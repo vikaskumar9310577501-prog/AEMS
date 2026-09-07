@@ -26,7 +26,11 @@ import {
   Eye,
   ImageIcon,
   MoreVertical,
+  Download,
+  Upload,
+  Mail,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppProvider';
 import { parseJsonResponse } from '../lib/apiFetch';
 import type { MaintenanceComplaint, MaintenanceMachine, MaintenanceMeta } from '../types/maintenance';
@@ -71,6 +75,8 @@ import MaintenanceQRPrintModal from '../components/MaintenanceQRPrintModal';
 import MaintenanceDoneModal from '../components/MaintenanceDoneModal';
 import MaintenanceResolveModal, { type ResolveComplaintPayload } from '../components/MaintenanceResolveModal';
 import MaintenanceMachineEditModal from '../components/MaintenanceMachineEditModal';
+import ThisMonthPmModal from '../components/ThisMonthPmModal';
+import EmailNotificationCenter from '../components/EmailNotificationCenter';
 import { plantShortName, plantTableLabel, plantFilterLabel, locationDisplayTag } from '../lib/plantDisplay';
 import { formatTechnicianNames } from '../lib/maintenanceTechnicians';
 import { buildScopedLocationOptions, buildScopedPlantOptions, sameScopeOption } from '../lib/scopeOptions';
@@ -191,6 +197,12 @@ export default function MaintenancePage() {
   const typeFilterRef = React.useRef<HTMLDivElement | null>(null);
   const plantHeaderFilterRef = React.useRef<HTMLDivElement | null>(null);
   const statusHeaderFilterRef = React.useRef<HTMLDivElement | null>(null);
+  const [filterNextPmMonth, setFilterNextPmMonth] = useState<'all' | 'this_month' | 'next_month' | 'prev_month'>('all');
+  const [nextPmFilterOpen, setNextPmFilterOpen] = useState(false);
+  const nextPmFilterRef = React.useRef<HTMLDivElement | null>(null);
+  const [thisMonthPmModalOpen, setThisMonthPmModalOpen] = useState(false);
+  const [thisMonthModalOffset, setThisMonthModalOffset] = useState(0);
+  const [importingExcel, setImportingExcel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -342,7 +354,7 @@ export default function MaintenancePage() {
   }, [machineMenuId]);
 
   useEffect(() => {
-    if (!typeFilterOpen && !plantHeaderFilterOpen && !statusHeaderFilterOpen) return;
+    if (!typeFilterOpen && !plantHeaderFilterOpen && !statusHeaderFilterOpen && !nextPmFilterOpen) return;
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target;
       if (!(target instanceof Node)) return;
@@ -355,6 +367,9 @@ export default function MaintenancePage() {
       if (statusHeaderFilterOpen && statusHeaderFilterRef.current && !statusHeaderFilterRef.current.contains(target)) {
         setStatusHeaderFilterOpen(false);
       }
+      if (nextPmFilterOpen && nextPmFilterRef.current && !nextPmFilterRef.current.contains(target)) {
+        setNextPmFilterOpen(false);
+      }
     };
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('touchstart', onPointerDown);
@@ -362,7 +377,7 @@ export default function MaintenancePage() {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('touchstart', onPointerDown);
     };
-  }, [typeFilterOpen, plantHeaderFilterOpen, statusHeaderFilterOpen]);
+  }, [typeFilterOpen, plantHeaderFilterOpen, statusHeaderFilterOpen, nextPmFilterOpen]);
 
   useEffect(() => {
     if (!user || !canAccessMaintenance(user.role, user.categories)) return;
@@ -529,9 +544,29 @@ export default function MaintenancePage() {
         const key = badge?.label || 'OK';
         if (key !== filterMachineStatus) return false;
       }
+      if (filterNextPmMonth !== 'all') {
+        const dStr = effectiveNextMaintenanceDate(m);
+        if (!dStr) return false;
+        const d = new Date(dStr + (dStr.includes('T') ? '' : 'T00:00:00'));
+        if (isNaN(d.getTime())) return false;
+        const now = new Date();
+        let start: Date;
+        let end: Date;
+        if (filterNextPmMonth === 'this_month') {
+          start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        } else if (filterNextPmMonth === 'next_month') {
+          start = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+          end = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59, 999);
+        } else {
+          start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+          end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        }
+        if (d < start || d > end) return false;
+      }
       return true;
     });
-  }, [machines, user, plants, filterLocation, filterPlant, filterMachineType, filterMachineStatus]);
+  }, [machines, user, plants, filterLocation, filterPlant, filterMachineType, filterMachineStatus, filterNextPmMonth]);
 
   const scopedComplaints = useMemo(() => {
     const isItAdmin = isItAdminRole(user?.role);
@@ -606,6 +641,87 @@ export default function MaintenancePage() {
         .includes(q)
     );
   }, [scopedMachines, search, plants]);
+
+  const currentMonthLabel = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }, []);
+
+  const thisMonthDueCount = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return scopedMachines.filter((m) => {
+      const dStr = effectiveNextMaintenanceDate(m);
+      if (!dStr) return false;
+      const d = new Date(dStr + (dStr.includes('T') ? '' : 'T00:00:00'));
+      return !isNaN(d.getTime()) && d >= start && d <= end;
+    }).length;
+  }, [scopedMachines]);
+
+  const handleExportMachinesExcel = useCallback(() => {
+    if (filtered.length === 0) {
+      toast.error('No machines to export');
+      return;
+    }
+    const data = filtered.map((m, idx) => ({
+      'Sr No': idx + 1,
+      'Asset Code': m.assetCode || '',
+      'Machine Name': machineRowName(m),
+      'Machine Type': m.machineType || '',
+      'Machine Number': m.machineNumber || '',
+      'Serial Number': m.serialNumber || '',
+      'Model Number': m.modelNumber || '',
+      'Location': m.location || '',
+      'Plant': plantTableLabel(m.plantCode, plants) || m.plantCode || '',
+      'Department': m.department || '',
+      'Frequency': m.frequency || '',
+      'Next PM Date': effectiveNextMaintenanceDate(m) || '',
+      'Status': statusBadge(m)?.label || 'OK',
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Machines');
+    XLSX.writeFile(wb, `AEMS_Machines_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success(`Exported ${data.length} machines`);
+  }, [filtered, plants]);
+
+  const handleImportMachinesExcel = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingExcel(true);
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const firstSheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+      if (!rows || rows.length === 0) {
+        toast.error('Excel/CSV sheet contains no rows');
+        return;
+      }
+      const res = await fetch('/api/maintenance/machines/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      });
+      const result = await parseJsonResponse<any>(res);
+      if (!res.ok) {
+        toast.error(result.error || 'Import failed');
+        return;
+      }
+      toast.success(`Import complete: ${result.createdCount || 0} added, ${result.updatedCount || 0} updated`);
+      if (result.errors && result.errors.length > 0) {
+        toast.error(`${result.errors.length} rows had validation errors.`);
+        console.warn('Import row errors:', result.errors);
+      }
+      void load();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to import file');
+    } finally {
+      setImportingExcel(false);
+      e.target.value = '';
+    }
+  }, [load]);
 
   const openComplaints = useMemo(() => scopedComplaints.filter((c) => c.status === 'Open'), [scopedComplaints]);
   const resolvedComplaints = useMemo(
@@ -892,6 +1008,16 @@ export default function MaintenancePage() {
             <button type="button" onClick={() => goTab('complaints')} className={navBtn(tab === 'complaints')}>
               <AlertTriangle size={14} />
               Complaints
+            </button>
+          )}
+          {canAccessMaintenanceTab(user?.role, 'email-center', user?.categories) && (
+            <button
+              type="button"
+              onClick={() => goTab('email-center')}
+              className={navBtn(tab === 'email-center')}
+            >
+              <Mail size={14} />
+              Email & Notification Center
             </button>
           )}
           {tab === 'complaints' && canComplaintsInbox ? (
@@ -1273,6 +1399,34 @@ export default function MaintenancePage() {
                   <p className="text-[10px] font-semibold text-stone-500 mt-0.5">{filtered.length} registered</p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setThisMonthModalOffset(0);
+                  setThisMonthPmModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[11px] font-bold shadow-sm shadow-orange-500/25 transition-all cursor-pointer"
+                title="View machines due for preventive maintenance this month"
+              >
+                <CalendarRange size={13} />
+                <span>{currentMonthLabel} PM Due</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-black tabular-nums">
+                  {thisMonthDueCount}
+                </span>
+              </button>
+              {filterNextPmMonth !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[10px] font-bold">
+                  <span>PM: {filterNextPmMonth === 'this_month' ? 'This Month' : filterNextPmMonth === 'next_month' ? 'Next Month' : 'Prev Month'}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFilterNextPmMonth('all')}
+                    className="p-0.5 hover:text-red-600 rounded transition-colors"
+                    title="Clear PM month filter"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              )}
               {selectedMachines.length > 0 ? (
                 <button
                   type="button"
@@ -1290,6 +1444,31 @@ export default function MaintenancePage() {
                   <QrCode size={12} /> Print All QR
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={handleExportMachinesExcel}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-600/25"
+                title="Export machines table to Excel with Serial & Model numbers"
+              >
+                <Download size={12} /> Export Excel
+              </button>
+              {canAddMachine && (
+                <label
+                  className={`px-3 py-1.5 bg-stone-700 hover:bg-stone-800 text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 shadow-sm shadow-stone-700/25 cursor-pointer ${
+                    importingExcel ? 'opacity-50 pointer-events-none' : ''
+                  }`}
+                  title="Import machines from Excel (.xlsx) or CSV"
+                >
+                  <Upload size={12} /> {importingExcel ? 'Importing…' : 'Import Excel'}
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={handleImportMachinesExcel}
+                    disabled={importingExcel}
+                  />
+                </label>
+              )}
               <div className="relative flex-1 min-w-[180px] max-w-sm ml-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={14} />
                 <input
@@ -1456,7 +1635,54 @@ export default function MaintenancePage() {
                         </div>
                       </th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Frequency</th>
-                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">Next PM</th>
+                      <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
+                        <div ref={nextPmFilterRef} className="relative inline-flex items-center gap-1">
+                          <span>Next PM</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNextPmFilterOpen((v) => !v);
+                              setTypeFilterOpen(false);
+                              setPlantHeaderFilterOpen(false);
+                              setStatusHeaderFilterOpen(false);
+                            }}
+                            className={`inline-flex items-center justify-center w-5 h-5 rounded-md border transition-colors ${
+                              filterNextPmMonth !== 'all'
+                                ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                : 'bg-white/80 border-stone-200/80 text-stone-500 hover:bg-white hover:text-stone-800'
+                            }`}
+                            title="Filter by Next PM Month"
+                            aria-label="Filter by Next PM Month"
+                          >
+                            <ChevronDown size={12} className={nextPmFilterOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                          </button>
+                          {nextPmFilterOpen ? (
+                            <div className="absolute left-0 top-full mt-1.5 min-w-[190px] bg-white rounded-xl shadow-xl border border-stone-200/80 py-1.5 z-[60] text-left normal-case font-semibold tracking-normal">
+                              {[
+                                { id: 'all', label: 'All Dates' },
+                                { id: 'prev_month', label: 'Previous Month' },
+                                { id: 'this_month', label: 'This Month' },
+                                { id: 'next_month', label: 'Next Month' },
+                              ].map((opt) => (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFilterNextPmMonth(opt.id as any);
+                                    setNextPmFilterOpen(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-[12px] hover:bg-stone-50 ${
+                                    filterNextPmMonth === opt.id ? 'bg-blue-50 text-blue-800 font-bold' : 'text-stone-700'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </th>
                       <th className="px-3 py-2.5 text-left bg-[#F0EBE3]/95 backdrop-blur-sm border-y border-stone-200/50">
                         <div ref={statusHeaderFilterRef} className="relative inline-flex items-center gap-1">
                           <span>Status</span>
@@ -1822,7 +2048,28 @@ export default function MaintenancePage() {
             )}
           </div>
         )}
+
+        {tab === 'email-center' && canAccessMaintenanceTab(user?.role, 'email-center', user?.categories) && (
+          <div className="flex-1 min-h-0 flex flex-col mb-4">
+            <EmailNotificationCenter
+              locations={allowedLocations}
+              plants={plants}
+              currentPlantCode={filterPlant}
+              currentLocation={filterLocation}
+            />
+          </div>
+        )}
       </div>
+
+      {thisMonthPmModalOpen && (
+        <ThisMonthPmModal
+          isOpen={thisMonthPmModalOpen}
+          onClose={() => setThisMonthPmModalOpen(false)}
+          machines={scopedMachines}
+          plants={plants}
+          initialMonthOffset={thisMonthModalOffset}
+        />
+      )}
 
       {printMachines && printMachines.length > 0 && (
         <MaintenanceQRPrintModal machines={printMachines} onClose={() => setPrintMachines(null)} />

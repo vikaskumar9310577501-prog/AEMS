@@ -1,0 +1,114 @@
+[
+  {
+    "id": "tpl_overdue_pm",
+    "name": "Overdue Preventive Maintenance Alert",
+    "category": "overdue_pm",
+    "subject": "URGENT: Preventive Maintenance Overdue Machines - {{PlantName}}",
+    "bodyHtml": "<p>Dear Maintenance & Plant Leadership,</p>\n<p>The following machine(s) in <strong>{{PlantName}}</strong> have exceeded their scheduled preventive maintenance date and are currently <strong>OVERDUE</strong>.</p>\n<p>Immediate action is required to avoid unplanned machine breakdown and ensure equipment reliability.</p>\n{{ConsolidatedTable}}\n<p style=\"margin-top:16px;\">Please assign maintenance technicians immediately and complete the maintenance in the AEMS portal.</p>",
+    "variables": [
+      "{{PlantName}}",
+      "{{LocationName}}",
+      "{{CurrentDate}}",
+      "{{TotalCount}}",
+      "{{ConsolidatedTable}}"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-07T16:20:45.061Z",
+    "updatedAt": "2026-09-07T16:20:45.061Z"
+  },
+  {
+    "id": "tpl_upcoming_pm",
+    "name": "Upcoming Preventive Maintenance Notice",
+    "category": "upcoming_pm",
+    "subject": "Upcoming Preventive Maintenance Schedule (Next {{ReminderDays}} Days) - {{PlantName}}",
+    "bodyHtml": "<p>Dear Sir / Madam,</p>\n<p>This is an automated advance notification of machines due for preventive maintenance within the next <strong>{{ReminderDays}} days</strong> in <strong>{{PlantName}}</strong>.</p>\n{{ConsolidatedTable}}\n<p style=\"margin-top:16px;\">Please plan necessary spare parts, tooling, and line clearance accordingly.</p>",
+    "variables": [
+      "{{PlantName}}",
+      "{{LocationName}}",
+      "{{ReminderDays}}",
+      "{{TotalCount}}",
+      "{{ConsolidatedTable}}"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-07T16:20:45.061Z",
+    "updatedAt": "2026-09-07T16:20:45.061Z"
+  },
+  {
+    "id": "tpl_complaint_created",
+    "name": "Breakdown Complaint Registered",
+    "category": "complaint_created",
+    "subject": "BREAKDOWN ALERT: Machine {{MachineNumber}} ({{MachineType}}) - {{PlantName}}",
+    "bodyHtml": "<p>A machine breakdown complaint has been registered in AEMS.</p>\n<table style=\"width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;\">\n  <tr><td style=\"padding:6px 0;color:#64748b;width:35%;\">Machine Name</td><td style=\"padding:6px 0;font-weight:700;\">{{MachineName}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Asset Code</td><td style=\"padding:6px 0;font-weight:700;\">{{MachineCode}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Serial Number</td><td style=\"padding:6px 0;font-weight:700;\">{{SerialNumber}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Model Number</td><td style=\"padding:6px 0;font-weight:700;\">{{ModelNumber}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Plant / Location</td><td style=\"padding:6px 0;font-weight:700;\">{{PlantName}} ({{LocationName}})</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Issue Description</td><td style=\"padding:6px 0;font-weight:700;color:#b91c1c;\">{{IssueDescription}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Reported By</td><td style=\"padding:6px 0;font-weight:700;\">{{ReportedBy}}</td></tr>\n</table>\n<p>Technicians have been notified. Please address promptly to minimize line stoppage.</p>",
+    "variables": [
+      "{{MachineName}}",
+      "{{MachineCode}}",
+      "{{MachineNumber}}",
+      "{{MachineType}}",
+      "{{SerialNumber}}",
+      "{{ModelNumber}}",
+      "{{PlantName}}",
+      "{{LocationName}}",
+      "{{IssueDescription}}",
+      "{{ReportedBy}}"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-07T16:20:45.061Z",
+    "updatedAt": "2026-09-07T16:20:45.061Z"
+  },
+  {
+    "id": "tpl_complaint_resolved",
+    "name": "Machine Breakdown Resolved",
+    "category": "complaint_resolved",
+    "subject": "RESOLVED: Breakdown Complaint on Machine {{MachineNumber}} - {{PlantName}}",
+    "bodyHtml": "<p>The breakdown complaint on machine <strong>{{MachineNumber}}</strong> has been marked <strong>RESOLVED</strong>.</p>\n<table style=\"width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;\">\n  <tr><td style=\"padding:6px 0;color:#64748b;width:35%;\">Machine Name</td><td style=\"padding:6px 0;font-weight:700;\">{{MachineName}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Asset Code</td><td style=\"padding:6px 0;font-weight:700;\">{{MachineCode}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Action Taken</td><td style=\"padding:6px 0;font-weight:700;color:#15803d;\">{{ActionTaken}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Root Cause</td><td style=\"padding:6px 0;font-weight:700;\">{{RootCause}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Downtime</td><td style=\"padding:6px 0;font-weight:700;\">{{Downtime}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Resolved By</td><td style=\"padding:6px 0;font-weight:700;\">{{ResolvedBy}}</td></tr>\n</table>\n<p>Machine is now back in production.</p>",
+    "variables": [
+      "{{MachineName}}",
+      "{{MachineCode}}",
+      "{{MachineNumber}}",
+      "{{PlantName}}",
+      "{{ActionTaken}}",
+      "{{RootCause}}",
+      "{{Downtime}}",
+      "{{ResolvedBy}}"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-07T16:20:45.061Z",
+    "updatedAt": "2026-09-07T16:20:45.061Z"
+  },
+  {
+    "id": "tpl_sla_breach",
+    "name": "Complaint SLA Breach Alert",
+    "category": "sla_breached",
+    "subject": "ESCALATION: Complaint SLA Breached for Machine {{MachineNumber}} ({{DaysOpen}} Days Open)",
+    "bodyHtml": "<p><strong>ATTENTION:</strong> A maintenance complaint has remained open beyond the resolution SLA window.</p>\n<table style=\"width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;\">\n  <tr><td style=\"padding:6px 0;color:#64748b;width:35%;\">Machine</td><td style=\"padding:6px 0;font-weight:700;\">{{MachineName}} ({{MachineCode}})</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Plant</td><td style=\"padding:6px 0;font-weight:700;\">{{PlantName}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Days Open</td><td style=\"padding:6px 0;font-weight:700;color:#b91c1c;\">{{DaysOpen}} days</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Complaint Date</td><td style=\"padding:6px 0;font-weight:700;\">{{ComplaintDate}}</td></tr>\n  <tr><td style=\"padding:6px 0;color:#64748b;\">Issue</td><td style=\"padding:6px 0;font-weight:700;\">{{IssueDescription}}</td></tr>\n</table>\n<p>Please escalate to the department and plant head for urgent closure.</p>",
+    "variables": [
+      "{{MachineName}}",
+      "{{MachineCode}}",
+      "{{MachineNumber}}",
+      "{{PlantName}}",
+      "{{DaysOpen}}",
+      "{{ComplaintDate}}",
+      "{{IssueDescription}}"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-07T16:20:45.061Z",
+    "updatedAt": "2026-09-07T16:20:45.061Z"
+  },
+  {
+    "id": "tpl_monthly_pm",
+    "name": "Monthly PM Summary Report",
+    "category": "monthly_pm",
+    "subject": "Monthly Preventive Maintenance Summary - {{CurrentMonth}} - {{PlantName}}",
+    "bodyHtml": "<p>Dear Management,</p>\n<p>Here is the monthly preventive maintenance status report for <strong>{{CurrentMonth}}</strong> for <strong>{{PlantName}}</strong>.</p>\n{{ConsolidatedTable}}\n<p style=\"margin-top:16px;\">This summary is automatically generated by AEMS.</p>",
+    "variables": [
+      "{{PlantName}}",
+      "{{LocationName}}",
+      "{{CurrentMonth}}",
+      "{{TotalCount}}",
+      "{{ConsolidatedTable}}"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-07T16:20:45.061Z",
+    "updatedAt": "2026-09-07T16:20:45.061Z"
+  }
+]

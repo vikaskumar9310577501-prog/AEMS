@@ -147,6 +147,7 @@ export type MaintenanceTabId =
   | 'machines'
   | 'complaint-dashboard'
   | 'complaints'
+  | 'email-center'
   | 'settings';
 
 export function defaultMaintenanceTab(
@@ -167,6 +168,7 @@ export function canAccessMaintenanceTab(
   if (tab === 'machines') return canViewMaintenanceMachines(role, categories);
   if (tab === 'complaint-dashboard') return canViewMaintenanceComplaintDashboard(role, categories);
   if (tab === 'complaints') return canViewMaintenanceComplaintsInbox(role, categories);
+  if (tab === 'email-center') return canViewMaintenanceDashboard(role, categories) || isItAdminRole(role);
   if (tab === 'settings') return canManageMaintenanceFhPh(role);
   return false;
 }

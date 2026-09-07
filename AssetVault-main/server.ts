@@ -85,6 +85,29 @@ import {
   parseTechnicianPayload,
 } from "./server/maintenanceTechnicians.js";
 import {
+  listEmailTemplates,
+  getEmailTemplate,
+  upsertEmailTemplate,
+  deleteEmailTemplate,
+  listEmailAutomations,
+  getEmailAutomation,
+  upsertEmailAutomation,
+  deleteEmailAutomation,
+  listEmailDrafts,
+  getEmailDraft,
+  upsertEmailDraft,
+  deleteEmailDraft,
+  listEmailLogs,
+  appendEmailLog,
+  getEmailAnalytics,
+} from "./server/emailStore.js";
+import {
+  runEmailAutomationScheduler,
+  startEmailSchedulerTimer,
+  currentIstDate,
+  currentIstTime,
+} from "./server/emailScheduler.js";
+import {
   clearAllCaches,
   isCacheForDifferentSpreadsheet,
   touchCacheSpreadsheetId,
@@ -3975,8 +3998,27 @@ app.post("/api/maintenance/machines", async (req, res) => {
       ? mergeCustomPlan(nextMaintenanceDate, body.customPlanDates)
       : { nextMaintenanceDate, customPlanDates: [] as string[] };
     const equipmentName = String(body.equipmentName || "").trim() || undefined;
-    const modelNumber = String(body.modelNumber || "").trim() || undefined;
-    const serialNumber = String(body.serialNumber || "").trim() || undefined;
+    const modelNumber = String(body.modelNumber || "").trim();
+    const serialNumber = String(body.serialNumber || "").trim();
+
+    if (!serialNumber) {
+      return res.status(400).json({ error: "Serial Number is required." });
+    }
+    if (!modelNumber) {
+      return res.status(400).json({ error: "Model Number is required." });
+    }
+
+    const duplicateSerial = existing.find(
+      (m) =>
+        String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
+        String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+    );
+    if (duplicateSerial) {
+      return res.status(400).json({
+        error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`,
+      });
+    }
+
     const department = String(body.department || "").trim() || undefined;
     const responsibility = String(body.responsibility || "").trim() || undefined;
     const warrantyRaw = String((body as { warrantyStatus?: string }).warrantyStatus || "")
@@ -4039,6 +4081,35 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
       return res.status(400).json({ error: "Type, number, location, plant and maintenance date are required" });
     }
 
+    const modelNumber =
+      body.modelNumber !== undefined
+        ? String(body.modelNumber || "").trim()
+        : String(current.modelNumber || "").trim();
+    const serialNumber =
+      body.serialNumber !== undefined
+        ? String(body.serialNumber || "").trim()
+        : String(current.serialNumber || "").trim();
+
+    if (!serialNumber) {
+      return res.status(400).json({ error: "Serial Number is required." });
+    }
+    if (!modelNumber) {
+      return res.status(400).json({ error: "Model Number is required." });
+    }
+
+    const allMachines = await listMaintenanceMachines();
+    const duplicateSerial = allMachines.find(
+      (m) =>
+        m.id !== id &&
+        String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
+        String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+    );
+    if (duplicateSerial) {
+      return res.status(400).json({
+        error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`,
+      });
+    }
+
     const user = resolveRequestUser(req);
     const settingsPlants = maintenanceSettingsPlants();
     if (
@@ -4072,14 +4143,8 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
         body.equipmentName !== undefined
           ? String(body.equipmentName || "").trim() || undefined
           : current.equipmentName,
-      modelNumber:
-        body.modelNumber !== undefined
-          ? String(body.modelNumber || "").trim() || undefined
-          : current.modelNumber,
-      serialNumber:
-        body.serialNumber !== undefined
-          ? String(body.serialNumber || "").trim() || undefined
-          : current.serialNumber,
+      modelNumber,
+      serialNumber,
       department:
         body.department !== undefined
           ? String(body.department || "").trim() || undefined
@@ -4352,6 +4417,395 @@ app.put("/api/maintenance/meta", async (req, res) => {
     res.json({ success: true, meta });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to save maintenance settings" });
+  }
+});
+
+// ==========================================
+// Machine Mandatory Info & Bulk Import Routes
+// ==========================================
+app.get("/api/maintenance/machines/missing-info", async (_req, res) => {
+  try {
+    const machines = await listMaintenanceMachines();
+    const missing = machines.filter(
+      (m) => !String(m.serialNumber || "").trim() || !String(m.modelNumber || "").trim()
+    );
+    res.json({ success: true, count: missing.length, machines: missing });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to find machines with missing info" });
+  }
+});
+
+app.post("/api/maintenance/machines/bulk-update-info", async (req, res) => {
+  try {
+    const { updates } = (req.body || {}) as {
+      updates: Array<{ id: string; serialNumber: string; modelNumber: string }>;
+    };
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: "No updates provided" });
+    }
+    const all = await listMaintenanceMachines();
+    const results: any[] = [];
+    for (const u of updates) {
+      const target = all.find((m) => m.id === u.id);
+      if (!target) continue;
+      const sn = String(u.serialNumber || "").trim();
+      const mn = String(u.modelNumber || "").trim();
+      if (!sn || !mn) continue;
+      const updated: MaintenanceMachine = {
+        ...target,
+        serialNumber: sn,
+        modelNumber: mn,
+        updatedAt: new Date().toISOString(),
+        updatedBy: String(req.authUser?.email || "Admin"),
+      };
+      await upsertMaintenanceMachine(updated);
+      results.push(updated);
+    }
+    res.json({ success: true, updatedCount: results.length });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to bulk update machine info" });
+  }
+});
+
+app.post("/api/maintenance/machines/import", async (req, res) => {
+  try {
+    const { rows } = (req.body || {}) as { rows: any[] };
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: "No machine rows to import" });
+    }
+    const existing = await listMaintenanceMachines();
+    const errors: Array<{ row: number; error: string }> = [];
+    const validMachines: MaintenanceMachine[] = [];
+    const now = new Date().toISOString();
+    const actor = String(req.authUser?.email || "Import");
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const rowNum = i + 1;
+      const machineType = String(r["Machine Type"] || r.machineType || "").trim();
+      const machineNumber = normalizeMachineNumber(String(r["Machine Number"] || r.machineNumber || ""));
+      const serialNumber = String(r["Serial Number"] || r.serialNumber || "").trim();
+      const modelNumber = String(r["Model Number"] || r.modelNumber || "").trim();
+      const location = String(r["Location"] || r.location || "").trim();
+      const plantCode = String(r["Plant"] || r["Plant Code"] || r.plantCode || "").trim();
+      const nextDate = String(r["Next PM Date"] || r["Next PM"] || r.nextMaintenanceDate || "").trim();
+
+      if (!machineType) {
+        errors.push({ row: rowNum, error: "Machine Type is required." });
+        continue;
+      }
+      if (!machineNumber) {
+        errors.push({ row: rowNum, error: "Machine Number is required." });
+        continue;
+      }
+      if (!serialNumber) {
+        errors.push({ row: rowNum, error: "Serial Number is required." });
+        continue;
+      }
+      if (!modelNumber) {
+        errors.push({ row: rowNum, error: "Model Number is required." });
+        continue;
+      }
+      if (!location || !plantCode) {
+        errors.push({ row: rowNum, error: "Location and Plant are required." });
+        continue;
+      }
+
+      // Check duplicate serial
+      const dup = existing.find(
+        (m) =>
+          String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
+          String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+      );
+      if (dup) {
+        errors.push({
+          row: rowNum,
+          error: `Serial Number "${serialNumber}" already registered to ${dup.assetCode} in plant ${plantCode}.`,
+        });
+        continue;
+      }
+
+      const machine: MaintenanceMachine = {
+        id: `mach_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}_${i}`,
+        machineType,
+        machineNumber,
+        assetCode: nextMaintenanceAssetCode([...existing, ...validMachines]),
+        equipmentName: String(r["Equipment Name"] || r.equipmentName || "").trim() || undefined,
+        modelNumber,
+        serialNumber,
+        department: String(r["Department"] || r.department || "").trim() || undefined,
+        responsibility: String(r["Responsibility"] || r.responsibility || "").trim() || undefined,
+        location,
+        plantCode,
+        warrantyStatus: String(r["Warranty Status"] || r.warrantyStatus || "").toLowerCase().includes("in")
+          ? "in_warranty"
+          : "out_of_warranty",
+        trendMonths: Number(r["Frequency"] || r.trendMonths) || 2,
+        nextMaintenanceDate: nextDate || new Date().toISOString().slice(0, 10),
+        status: "Active",
+        remarks: String(r["Remarks"] || r.remarks || "").trim() || undefined,
+        createdBy: actor,
+        createdAt: now,
+        updatedBy: actor,
+        updatedAt: now,
+      };
+
+      validMachines.push(machine);
+    }
+
+    if (errors.length > 0 && validMachines.length === 0) {
+      return res.status(400).json({
+        error: `Import failed with ${errors.length} validation errors.`,
+        errors,
+      });
+    }
+
+    for (const m of validMachines) {
+      await upsertMaintenanceMachine(m);
+    }
+
+    res.json({
+      success: true,
+      importedCount: validMachines.length,
+      errorCount: errors.length,
+      errors: errors.slice(0, 20),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to import machines" });
+  }
+});
+
+// ==========================================
+// Email & Notification Center Endpoints
+// ==========================================
+app.get("/api/maintenance/email/templates", async (_req, res) => {
+  try {
+    const templates = await listEmailTemplates();
+    res.json({ success: true, templates });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to list email templates" });
+  }
+});
+
+app.post("/api/maintenance/email/templates", async (req, res) => {
+  try {
+    const template = req.body as any;
+    if (!template.name || !template.subject) {
+      return res.status(400).json({ error: "Template name and subject are required" });
+    }
+    const saved = await upsertEmailTemplate({
+      ...template,
+      id: template.id || `tpl_${Date.now().toString(36)}`,
+    });
+    res.json({ success: true, template: saved });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to save email template" });
+  }
+});
+
+app.delete("/api/maintenance/email/templates/:id", async (req, res) => {
+  try {
+    const ok = await deleteEmailTemplate(String(req.params.id));
+    res.json({ success: ok });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete email template" });
+  }
+});
+
+app.get("/api/maintenance/email/automations", async (_req, res) => {
+  try {
+    const automations = await listEmailAutomations();
+    res.json({ success: true, automations });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to list email automations" });
+  }
+});
+
+app.post("/api/maintenance/email/automations", async (req, res) => {
+  try {
+    const automation = req.body as any;
+    if (!automation.name || !automation.triggerType) {
+      return res.status(400).json({ error: "Automation name and trigger type are required" });
+    }
+    const saved = await upsertEmailAutomation({
+      ...automation,
+      id: automation.id || `auto_${Date.now().toString(36)}`,
+      status: automation.status || "active",
+      retryCount: automation.retryCount || 3,
+      retryIntervalMinutes: automation.retryIntervalMinutes || 15,
+      consolidationMode: automation.consolidationMode || "consolidated",
+      scheduleTimes: Array.isArray(automation.scheduleTimes) ? automation.scheduleTimes : ["09:00"],
+    });
+    res.json({ success: true, automation: saved });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to save email automation" });
+  }
+});
+
+app.delete("/api/maintenance/email/automations/:id", async (req, res) => {
+  try {
+    const ok = await deleteEmailAutomation(String(req.params.id));
+    res.json({ success: ok });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete email automation" });
+  }
+});
+
+app.get("/api/maintenance/email/drafts", async (req, res) => {
+  try {
+    const drafts = await listEmailDrafts(req.authUser?.email);
+    res.json({ success: true, drafts });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to list drafts" });
+  }
+});
+
+app.post("/api/maintenance/email/drafts", async (req, res) => {
+  try {
+    const draft = req.body as any;
+    const actor = String(req.authUser?.email || "User");
+    const saved = await upsertEmailDraft({
+      ...draft,
+      id: draft.id || `draft_${Date.now().toString(36)}`,
+      createdBy: draft.createdBy || actor,
+    });
+    res.json({ success: true, draft: saved });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to save draft" });
+  }
+});
+
+app.delete("/api/maintenance/email/drafts/:id", async (req, res) => {
+  try {
+    const ok = await deleteEmailDraft(String(req.params.id));
+    res.json({ success: ok });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to delete draft" });
+  }
+});
+
+app.get("/api/maintenance/email/logs", async (_req, res) => {
+  try {
+    const logs = await listEmailLogs(250);
+    res.json({ success: true, logs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to list email logs" });
+  }
+});
+
+app.get("/api/maintenance/email/analytics", async (_req, res) => {
+  try {
+    const analytics = await getEmailAnalytics();
+    res.json({ success: true, analytics });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch email analytics" });
+  }
+});
+
+app.post("/api/maintenance/email/send", async (req, res) => {
+  try {
+    const body = req.body as {
+      to: string[];
+      cc?: string[];
+      bcc?: string[];
+      subject: string;
+      bodyHtml: string;
+      location?: string;
+      plantCode?: string;
+      department?: string;
+    };
+    if (!body.to || body.to.length === 0) {
+      return res.status(400).json({ error: "At least one TO recipient is required" });
+    }
+    if (!body.subject.trim()) {
+      return res.status(400).json({ error: "Email subject is required" });
+    }
+
+    const plainText = body.bodyHtml.replace(/<[^>]+>/g, " ").trim();
+    const sendResult = await sendMaintenanceMail({
+      to: body.to,
+      cc: body.cc,
+      bcc: body.bcc,
+      subject: body.subject,
+      html: body.bodyHtml,
+      text: plainText,
+    });
+
+    const date = currentIstDate();
+    const time = currentIstTime();
+    const actor = String(req.authUser?.email || "User");
+
+    await appendEmailLog({
+      triggerType: "manual",
+      date,
+      time,
+      sender: actor,
+      to: body.to,
+      cc: body.cc || [],
+      bcc: body.bcc || [],
+      subject: body.subject,
+      location: body.location,
+      plantCode: body.plantCode,
+      department: body.department,
+      status: sendResult.ok ? "sent" : "failed",
+      sentAt: sendResult.ok ? new Date().toISOString() : undefined,
+      failureReason: sendResult.error,
+      retryCount: sendResult.ok ? 0 : 1,
+    });
+
+    if (!sendResult.ok) {
+      return res.status(500).json({ error: sendResult.error || "Failed to send email" });
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to send manual email" });
+  }
+});
+
+app.post("/api/maintenance/email/test", async (req, res) => {
+  try {
+    const { testEmail, subject, bodyHtml } = req.body as {
+      testEmail: string;
+      subject?: string;
+      bodyHtml?: string;
+    };
+    if (!testEmail || !testEmail.includes("@")) {
+      return res.status(400).json({ error: "Valid test email address is required" });
+    }
+
+    const sub = subject || "[TEST EMAIL] AEMS Maintenance Email Center Verification";
+    const html =
+      bodyHtml ||
+      `<div style="font-family:Arial,sans-serif;padding:16px;">
+        <h2 style="color:#1d4ed8;">AEMS Test Notification</h2>
+        <p>This is a successful test email verifying SMTP configuration and delivery from AEMS.</p>
+        <p style="color:#64748b;font-size:12px;">Sent at: ${new Date().toISOString()} (IST: ${currentIstDate()} ${currentIstTime()})</p>
+      </div>`;
+
+    const sendResult = await sendMaintenanceMail({
+      to: [testEmail.trim()],
+      subject: sub,
+      html,
+      text: html.replace(/<[^>]+>/g, " ").trim(),
+    });
+
+    if (!sendResult.ok) {
+      return res.status(500).json({ error: sendResult.error || "Test email delivery failed" });
+    }
+
+    res.json({ success: true, message: `Test email successfully dispatched to ${testEmail}` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to send test email" });
+  }
+});
+
+app.post("/api/maintenance/email/trigger-scheduler", async (_req, res) => {
+  try {
+    const result = await runEmailAutomationScheduler(true);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to trigger scheduler" });
   }
 });
 
@@ -5642,6 +6096,7 @@ async function startServer() {
   };
 
   startListening(PORT);
+  startEmailSchedulerTimer();
 }
 
 if (!process.env.VERCEL) {

@@ -107,6 +107,8 @@ export default function NewMaintenanceMachinePage() {
     if (saving) return;
     if (!form.machineType.trim()) return toast.error('Select machine type');
     if (!form.machineNumber.trim()) return toast.error('Enter machine number');
+    if (!form.serialNumber.trim()) return toast.error('Serial Number is required.');
+    if (!form.modelNumber.trim()) return toast.error('Model Number is required.');
     if (!form.location.trim() || !form.plantCode.trim()) return toast.error('Location and plant are required');
     if (!form.warrantyStatus) return toast.error('Select In Warranty or Out of Warranty');
     if (!form.nextMaintenanceDate.trim()) return toast.error('Maintenance date is required');
@@ -120,8 +122,8 @@ export default function NewMaintenanceMachinePage() {
         body: JSON.stringify({
           machineType: form.machineType.trim(),
           machineNumber: normalizeMachineNumber(form.machineNumber),
-          modelNumber: form.warrantyStatus === 'in_warranty' ? form.modelNumber.trim() : undefined,
-          serialNumber: form.warrantyStatus === 'in_warranty' ? form.serialNumber.trim() : undefined,
+          modelNumber: form.modelNumber.trim(),
+          serialNumber: form.serialNumber.trim(),
           department: form.department.trim(),
           responsibility: form.responsibility.trim(),
           location: form.location.trim(),
@@ -227,6 +229,35 @@ export default function NewMaintenanceMachinePage() {
               placeholder="e.g. M01"
               className="w-full input-geometric uppercase font-mono font-bold"
             />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="label-caps">
+                Serial Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                required
+                type="text"
+                value={form.serialNumber}
+                onChange={(e) => setForm((prev) => ({ ...prev, serialNumber: e.target.value }))}
+                placeholder="e.g. SN-98765432"
+                className="w-full input-geometric bg-white font-mono font-bold"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="label-caps">
+                Model Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                required
+                type="text"
+                value={form.modelNumber}
+                onChange={(e) => setForm((prev) => ({ ...prev, modelNumber: e.target.value }))}
+                placeholder="e.g. MOD-2024-X"
+                className="w-full input-geometric bg-white font-semibold"
+              />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-5">
@@ -339,33 +370,6 @@ export default function NewMaintenanceMachinePage() {
                 </div>
               </button>
             </div>
-
-            {form.warrantyStatus === 'in_warranty' && (
-              <div className="pt-3.5 border-t border-slate-200/80">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="label-caps">Model Number</label>
-                    <input
-                      type="text"
-                      value={form.modelNumber}
-                      onChange={(e) => setForm((prev) => ({ ...prev, modelNumber: e.target.value }))}
-                      placeholder="e.g. MOD-2024-X"
-                      className="w-full input-geometric bg-white font-semibold"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="label-caps">Serial Number</label>
-                    <input
-                      type="text"
-                      value={form.serialNumber}
-                      onChange={(e) => setForm((prev) => ({ ...prev, serialNumber: e.target.value }))}
-                      placeholder="e.g. SN-98765432"
-                      className="w-full input-geometric bg-white font-mono font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {form.warrantyStatus ? (
