@@ -11,6 +11,7 @@ export type EmailTriggerType =
   | 'complaint_closed'
   | 'complaint_reopened'
   | 'sla_breached'
+  | 'zero_machine_entry'
   | 'custom_scheduled';
 
 export type EmailFrequency = 'instant' | 'daily' | 'weekly' | 'monthly' | 'one_time';

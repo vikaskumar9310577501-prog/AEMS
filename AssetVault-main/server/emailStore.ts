@@ -205,6 +205,29 @@ function defaultTemplates(): EmailTemplate[] {
       createdAt: now,
       updatedAt: now,
     },
+    {
+      id: "tpl_zero_machine_entry",
+      name: "Daily Machine Entry Missing Alert",
+      category: "zero_machine_entry",
+      subject: "ACTION REQUIRED: No Machine Entry Logged Today ({{CurrentDate}}) - {{PlantName}}",
+      bodyHtml: `<p>Dear Maintenance & Plant Leadership,</p>
+<p>This is an automated alert from AEMS to inform you that <strong>NO machine entries, maintenance logs, or status updates</strong> have been recorded today (<strong>{{CurrentDate}}</strong>) for <strong>{{PlantName}}</strong>.</p>
+<div style="background-color:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin:16px 0;">
+  <p style="margin:0;color:#9f1239;font-weight:bold;font-size:14px;">⚠️ Compliance Warning: Daily Machine Log Pending</p>
+  <p style="margin:6px 0 0 0;color:#881337;font-size:12px;">Total Registered Machines in Plant: <strong>{{TotalCount}}</strong></p>
+</div>
+<p>Daily recording of machine health, PM activities, and status is critical to maintain equipment uptime and prevent untracked breakdowns.</p>
+<p style="margin-top:16px;">Please instruct the plant maintenance team / supervisor to log in to AEMS portal and update today's machine records immediately.</p>`,
+      variables: [
+        "{{PlantName}}",
+        "{{LocationName}}",
+        "{{CurrentDate}}",
+        "{{TotalCount}}",
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    },
   ];
 }
 
@@ -316,6 +339,24 @@ function defaultAutomations(): EmailAutomation[] {
       createdAt: now,
       updatedAt: now,
     },
+    {
+      id: "auto_zero_machine_entry",
+      name: "Daily Machine Entry Missing Alert",
+      triggerType: "zero_machine_entry",
+      status: "active",
+      frequency: "daily",
+      scheduleTimes: ["18:00"],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
+        { type: "role", value: "Maintenance Head", target: "cc" },
+      ],
+      templateId: "tpl_zero_machine_entry",
+      consolidationMode: "consolidated",
+      retryCount: 3,
+      retryIntervalMinutes: 15,
+      createdAt: now,
+      updatedAt: now,
+    },
   ];
 }
 
@@ -326,6 +367,17 @@ export async function listEmailTemplates(): Promise<EmailTemplate[]> {
     const defaults = defaultTemplates();
     await saveJson(TEMPLATES_FILE, defaults);
     return defaults;
+  }
+  const defaults = defaultTemplates();
+  let changed = false;
+  for (const def of defaults) {
+    if (!rows.some((r) => r.id === def.id)) {
+      rows.push(def);
+      changed = true;
+    }
+  }
+  if (changed) {
+    await saveJson(TEMPLATES_FILE, rows);
   }
   return rows;
 }
@@ -365,6 +417,17 @@ export async function listEmailAutomations(): Promise<EmailAutomation[]> {
     const defaults = defaultAutomations();
     await saveJson(AUTOMATIONS_FILE, defaults);
     return defaults;
+  }
+  const defaults = defaultAutomations();
+  let changed = false;
+  for (const def of defaults) {
+    if (!rows.some((r) => r.id === def.id)) {
+      rows.push(def);
+      changed = true;
+    }
+  }
+  if (changed) {
+    await saveJson(AUTOMATIONS_FILE, rows);
   }
   return rows;
 }

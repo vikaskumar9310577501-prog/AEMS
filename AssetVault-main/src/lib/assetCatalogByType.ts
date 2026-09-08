@@ -146,7 +146,8 @@ export const MAIN_CATEGORIES = [
   "IQC",
   "QA ELECTRONICS",
   "OPERATIONS",
-  "OQC"
+  "OQC",
+  "HE QUALITY"
 ] as const;
 
 export type MainCategory = typeof MAIN_CATEGORIES[number];

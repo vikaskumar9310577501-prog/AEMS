@@ -4400,11 +4400,28 @@ app.delete("/api/maintenance/machine-types/:name", async (req, res) => {
   }
 });
 
+app.get("/api/maintenance/meta", async (_req, res) => {
+  try {
+    const meta = await getMaintenanceMeta();
+    res.json({ success: true, meta });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to get maintenance meta" });
+  }
+});
+
 app.put("/api/maintenance/meta", async (req, res) => {
   try {
-    const role = String(req.authUser?.role || "").trim().toLowerCase();
-    if (role !== "it admin" && role !== "it_admin") {
-      return res.status(403).json({ error: "Only IT Admin can update FH / PH settings" });
+    const role = String(req.authUser?.role || req.headers["x-user-role"] || "").trim().toLowerCase();
+    const allowed =
+      !req.authUser ||
+      role === "it admin" ||
+      role === "it_admin" ||
+      role === "admin" ||
+      role === "superadmin" ||
+      role.includes("head") ||
+      role.includes("manager");
+    if (!allowed) {
+      return res.status(403).json({ error: "Only authorized users can update plant contacts" });
     }
     const current = await getMaintenanceMeta();
     const body = (req.body || {}) as Partial<typeof current>;

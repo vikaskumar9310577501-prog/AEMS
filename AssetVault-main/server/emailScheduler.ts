@@ -220,7 +220,7 @@ export async function runEmailAutomationScheduler(force = false): Promise<{
   const meta = await getMaintenanceMeta();
   const plantContacts = meta.plantContacts || {};
   const allMachines = await listMaintenanceMachines();
-  const activeMachines = allMachines.filter((m) => m.status !== "Decommissioned");
+  const activeMachines = allMachines.filter((m) => (m.status as string) !== "Decommissioned");
 
   let processed = 0;
   let sent = 0;
@@ -414,6 +414,91 @@ export async function runEmailAutomationScheduler(force = false): Promise<{
 
           if (sendResult.ok) sent++;
           else errors.push(`[${plantCode}] ${sendResult.error}`);
+        }
+      } else if (auto.triggerType === "zero_machine_entry") {
+        // Group active machines by plant
+        const plantGroups: Record<string, MaintenanceMachine[]> = {};
+        for (const m of activeMachines) {
+          const p = m.plantCode || "General";
+          if (!plantGroups[p]) plantGroups[p] = [];
+          plantGroups[p].push(m);
+        }
+
+        for (const [plantCode, machines] of Object.entries(plantGroups)) {
+          // Check if any machine in this plant had an entry, update, or PM log recorded today
+          const hasEntryToday = machines.some((m) => {
+            const createdToday = m.createdAt && m.createdAt.startsWith(date);
+            const updatedToday = m.updatedAt && m.updatedAt.startsWith(date);
+            const pmLoggedToday = Array.isArray(m.pmLogs) && m.pmLogs.some((l) => l.doneOn && l.doneOn.startsWith(date));
+            return createdToday || updatedToday || pmLoggedToday;
+          });
+
+          // If no entries or updates were made today and plant has registered machines:
+          if (!hasEntryToday && machines.length > 0) {
+            const idempotencyKey = `${auto.id}_${date}_zero_entry_${plantCode}`;
+            if (!force && (await isIdempotentAlreadySent(idempotencyKey))) {
+              skipped++;
+              continue;
+            }
+
+            const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
+            if (recipients.to.length === 0) {
+              skipped++;
+              continue;
+            }
+
+            const plantName = plantShortName(plantCode);
+            const locationName = machines[0]?.location || "";
+
+            let subject = template.subject
+              .replace(/\{\{PlantName\}\}/g, plantName)
+              .replace(/\{\{LocationName\}\}/g, locationName)
+              .replace(/\{\{CurrentDate\}\}/g, date)
+              .replace(/\{\{TotalCount\}\}/g, String(machines.length));
+
+            let bodyHtml = template.bodyHtml
+              .replace(/\{\{PlantName\}\}/g, plantName)
+              .replace(/\{\{LocationName\}\}/g, locationName)
+              .replace(/\{\{CurrentDate\}\}/g, date)
+              .replace(/\{\{TotalCount\}\}/g, String(machines.length));
+
+            const fullHtml = professionalShell(subject, bodyHtml);
+            const fullText = `ACTION REQUIRED: No Machine Entry Logged Today (${date}) - ${plantName}\n\nTotal Registered Machines: ${machines.length}\nLocation: ${locationName}\nPlease log machine records in AEMS portal immediately.\n\n${APP_NAME}`;
+
+            const sendResult = await sendMaintenanceMail({
+              to: recipients.to,
+              cc: recipients.cc,
+              bcc: recipients.bcc,
+              subject,
+              html: fullHtml,
+              text: fullText,
+            });
+
+            await appendEmailLog({
+              automationId: auto.id,
+              automationName: auto.name,
+              triggerType: auto.triggerType,
+              idempotencyKey,
+              date,
+              time,
+              sender: APP_NAME,
+              to: recipients.to,
+              cc: recipients.cc,
+              bcc: recipients.bcc,
+              subject,
+              plantCode,
+              status: sendResult.ok ? "sent" : "failed",
+              sentAt: sendResult.ok ? new Date().toISOString() : undefined,
+              failureReason: sendResult.error,
+              retryCount: sendResult.ok ? 0 : 1,
+              machineCount: machines.length,
+            });
+
+            if (sendResult.ok) sent++;
+            else errors.push(`[${plantCode}] ${sendResult.error}`);
+          } else {
+            skipped++;
+          }
         }
       }
     } catch (err: any) {
