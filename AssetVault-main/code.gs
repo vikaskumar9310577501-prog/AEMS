@@ -474,11 +474,30 @@ function setupSheetsOnFirstRun_(ss) {
 }
 
 // ============================================================
-// 2. GET
+// 2. AUTHENTICATION & GET
 // ============================================================
+
+function getRequiredSecretKey_() {
+  try {
+    return PropertiesService.getScriptProperties().getProperty("GAS_SECRET_KEY") || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function isAuthorizedGasRequest_(key) {
+  var requiredKey = getRequiredSecretKey_();
+  if (!requiredKey) return true; // If not configured in Script Properties yet, permit for backwards compatibility
+  return key && String(key).trim() === requiredKey.trim();
+}
 
 function doGet(e) {
   try {
+    var providedKey = e && e.parameter && (e.parameter.secretKey || e.parameter.apiKey) ? (e.parameter.secretKey || e.parameter.apiKey) : "";
+    if (!isAuthorizedGasRequest_(providedKey)) {
+      return json_({ success: false, error: "Unauthorized. Invalid or missing GAS_SECRET_KEY." });
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var action = e && e.parameter && e.parameter.action ? e.parameter.action : "";
     var type = e && e.parameter && e.parameter.type ? e.parameter.type : "assets";
@@ -568,7 +587,12 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    var body = JSON.parse(e.postData.contents);
+    var body = e && e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
+    var providedKey = (body && (body.secretKey || body.apiKey)) || (e && e.parameter && (e.parameter.secretKey || e.parameter.apiKey)) || "";
+    if (!isAuthorizedGasRequest_(providedKey)) {
+      return json_({ success: false, error: "Unauthorized. Invalid or missing GAS_SECRET_KEY." });
+    }
+
     var action = body.action;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 

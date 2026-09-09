@@ -203,100 +203,12 @@ export function userCanAccessEmployee(
   return userCanAccessPlantLocation(user, employee.location, employee.plant, settingsPlants);
 }
 
-function canUseEmailFallbackAuth(req: Request): boolean {
-  if (!getFallbackEmail(req)) return false;
-
-  if (
-    req.method === "POST" &&
-    (req.path === "/api/upload" ||
-      req.path === "/api/assets" ||
-      req.path === "/api/assets/bulk" ||
-      req.path === "/api/assets/sync" ||
-      req.path === "/api/users" ||
-      req.path === "/api/type-definitions" ||
-      req.path === "/api/settings" ||
-      req.path === "/api/missing-items" ||
-      req.path === "/api/damaged-items" ||
-      req.path === "/api/maintenance/machines" ||
-      req.path === "/api/maintenance/machines/import" ||
-      req.path.startsWith("/api/maintenance/email") ||
-      req.path === "/api/maintenance/machine-types" ||
-      req.path === "/api/maintenance/complaints" ||
-      /^\/api\/maintenance\/machines\/[^/]+\/done$/.test(req.path) ||
-      /^\/api\/maintenance\/complaints\/[^/]+\/done$/.test(req.path) ||
-      /^\/api\/assets\/[^/]+\/deassign$/.test(req.path) ||
-      /^\/api\/missing-items\/[^/]+\/(deassign|reassign|recover)$/.test(req.path))
-  ) {
-    return true;
+export function requireItAdminRole(req: Request, res: Response, next: NextFunction): void {
+  if (!req.authUser || !isItAdminRole(req.authUser.role)) {
+    res.status(403).json({ error: "Access denied. IT Admin role required." });
+    return;
   }
-
-  if (
-    req.method === "PUT" &&
-    (req.path === "/api/maintenance/meta" ||
-      req.path.startsWith("/api/maintenance/email") ||
-      /^\/api\/assets\/[^/]+$/.test(req.path) ||
-      /^\/api\/users\/[^/]+$/.test(req.path) ||
-      /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
-      /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
-      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
-  ) {
-    return true;
-  }
-
-  if (
-    req.method === "PATCH" &&
-    (/^\/api\/maintenance\/machines\/[^/]+\/(trend|next-date|details)$/.test(req.path) ||
-      req.path.startsWith("/api/maintenance/email") ||
-      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
-  ) {
-    return true;
-  }
-
-  if (
-    req.method === "DELETE" &&
-    (req.path.startsWith("/api/maintenance/email") ||
-      /^\/api\/assets\/[^/]+$/.test(req.path) ||
-      /^\/api\/users\/[^/]+$/.test(req.path) ||
-      /^\/api\/missing-items\/[^/]+$/.test(req.path) ||
-      /^\/api\/damaged-items\/[^/]+$/.test(req.path) ||
-      /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
-      /^\/api\/maintenance\/machine-types\/[^/]+$/.test(req.path) ||
-      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path))
-  ) {
-    return true;
-  }
-
-  if (
-    req.method === "GET" &&
-    (req.path === "/api/assets" ||
-      req.path === "/api/assets/sync-meta" ||
-      req.path === "/api/settings" ||
-      req.path === "/api/type-definitions" ||
-      req.path === "/api/employees" ||
-      req.path === "/api/employees/lookup" ||
-      req.path === "/api/users" ||
-      req.path === "/api/users/local" ||
-      req.path === "/api/inventory" ||
-      req.path === "/api/missing-items" ||
-      req.path === "/api/damaged-items" ||
-      req.path === "/api/audit-logs" ||
-      req.path === "/api/maintenance/machines" ||
-      req.path === "/api/maintenance/machines/next-code" ||
-      req.path === "/api/maintenance/machines/missing-info" ||
-      req.path.startsWith("/api/maintenance/email") ||
-      req.path === "/api/maintenance/complaints" ||
-      req.path === "/api/maintenance/meta" ||
-      req.path === "/api/maintenance/overview" ||
-      /^\/api\/maintenance\/machines\/[^/]+$/.test(req.path) ||
-      /^\/api\/maintenance\/complaints\/[^/]+$/.test(req.path) ||
-      /^\/api\/employees\/[^/]+$/.test(req.path) ||
-      /^\/api\/employees\/[^/]+\/history$/.test(req.path) ||
-      /^\/api\/assets\/[^/]+\/history$/.test(req.path))
-  ) {
-    return true;
-  }
-
-  return false;
+  next();
 }
 
 const globalRateLimitStore = new Map<string, { count: number; resetAt: number }>();
@@ -514,15 +426,7 @@ export function requireApiAuth(req: Request, res: Response, next: NextFunction):
 
   const session = getSessionFromRequest(req);
   if (!session) {
-    if (canUseEmailFallbackAuth(req)) {
-      const fallbackEmail = getFallbackEmail(req);
-      if (fallbackEmail && !req.authUser) {
-        req.authUser = { email: fallbackEmail, role: "IT Admin" };
-      }
-      next();
-      return;
-    }
-    res.status(401).json({ error: "Unauthorized. Please log in." });
+    res.status(401).json({ error: "Unauthorized. Valid login session required." });
     return;
   }
   req.authUser = session;

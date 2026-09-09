@@ -14,17 +14,23 @@ export interface SessionUser {
   allowDelete?: boolean;
 }
 
+const runtimeRandomSecret = crypto.randomBytes(32).toString("hex");
+
 function getSecret(): string {
   const secret = getEnv("SESSION_SECRET");
   if (secret && secret.length >= 32) return secret;
-  const fallback =
+  const configured =
     getEnv("SESSION_SECRET") ||
     getEnv("APP_SECRET") ||
     getEnv("DATABASE_URL") ||
     getEnv("SUPABASE_SERVICE_ROLE_KEY") ||
-    getEnv("SPREADSHEET_ID") ||
-    "aems-enterprise-secure-session-token-key-2026-pg-electroplast";
-  return crypto.createHash("sha256").update(fallback).digest("hex");
+    getEnv("SPREADSHEET_ID");
+  if (configured) {
+    return crypto.createHash("sha256").update(configured).digest("hex");
+  }
+  // If no secret environment variable is present, use a secure runtime-generated random secret
+  // so external attackers cannot forge tokens using static source code strings
+  return runtimeRandomSecret;
 }
 
 function b64url(input: Buffer | string): string {
@@ -135,6 +141,11 @@ export function getSessionFromRequest(req: Request): SessionUser | null {
   const auth = req.headers.authorization;
   if (auth?.startsWith("Bearer ")) {
     const token = verifySessionToken(auth.slice(7).trim());
+    if (token) return token;
+  }
+  const xToken = req.headers["x-session-token"];
+  if (typeof xToken === "string" && xToken.trim()) {
+    const token = verifySessionToken(xToken.trim());
     if (token) return token;
   }
   const cookieToken = parseCookies(req)[SESSION_COOKIE];

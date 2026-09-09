@@ -47,13 +47,16 @@ export async function gasPost(
   if (isDbMode() || isSqlBackendUrl(gasUrl)) {
     return handleViaSql(payload);
   }
+  const gasSecret = process.env.GAS_SECRET_KEY || "";
+  const finalPayload = gasSecret ? { ...payload, secretKey: gasSecret } : payload;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(gasUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(finalPayload),
       signal: controller.signal,
     });
     const parsed = parseGasResponseText(await response.text());
@@ -74,10 +77,13 @@ export async function gasGet(
   if (isDbMode() || isSqlBackendUrl(gasUrl)) {
     return handleViaSql({ ...params, action: params.action || params.type || "read_all_assets" });
   }
+  const gasSecret = process.env.GAS_SECRET_KEY || "";
+  const finalParams = gasSecret ? { ...params, secretKey: gasSecret } : params;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const url = gasGetUrl(gasUrl, params);
+    const url = gasGetUrl(gasUrl, finalParams);
     const response = await fetch(url, { signal: controller.signal });
     const parsed = parseGasResponseText(await response.text());
     const err = gasResponseError(parsed);

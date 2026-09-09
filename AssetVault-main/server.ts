@@ -252,6 +252,7 @@ import {
   rateLimitGlobal,
   sanitizePayload,
   requireApiAuth,
+  requireItAdminRole,
   recordFailedOtpAttempt,
   clearFailedOtpAttempt,
   getClientIp,
@@ -2035,11 +2036,11 @@ app.get("/api/data-sheets.xlsx", async (req, res) => {
   }
 });
 
-app.get("/api/users/local", (_req, res) => {
+app.get("/api/users/local", requireItAdminRole, (_req, res) => {
   res.json(getCachedUsers());
 });
 
-app.get("/api/users", async (req, res) => {
+app.get("/api/users", requireItAdminRole, async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     const deps = userSyncDeps();
@@ -2065,7 +2066,7 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.post("/api/users", async (req, res) => {
+app.post("/api/users", requireItAdminRole, async (req, res) => {
   try {
     const user = normalizeUser(req.body);
     if (!user.email) return res.status(400).json({ error: "Email is required" });
@@ -2101,7 +2102,7 @@ app.post("/api/users", async (req, res) => {
   }
 });
 
-app.put("/api/users/:email", async (req, res) => {
+app.put("/api/users/:email", requireItAdminRole, async (req, res) => {
   try {
     const email = decodeURIComponent(req.params.email).toLowerCase();
     const user = normalizeUser({ ...req.body, email });
@@ -2136,7 +2137,7 @@ app.put("/api/users/:email", async (req, res) => {
   }
 });
 
-app.delete("/api/users/:email", async (req, res) => {
+app.delete("/api/users/:email", requireItAdminRole, async (req, res) => {
   try {
     const email = decodeURIComponent(req.params.email).toLowerCase();
     const data = readAppData();
@@ -2296,7 +2297,7 @@ app.get("/api/settings", async (req, res) => {
   }
 });
 
-app.post("/api/settings", async (req, res) => {
+app.post("/api/settings", requireItAdminRole, async (req, res) => {
   try {
     const incoming = req.body as Partial<AppSettings>;
     const syncSheet = (req.body as { syncSheet?: boolean }).syncSheet !== false;
@@ -2411,7 +2412,7 @@ app.post("/api/settings", async (req, res) => {
   }
 });
 
-app.post("/api/settings/rename-location", async (req, res) => {
+app.post("/api/settings/rename-location", requireItAdminRole, async (req, res) => {
   try {
     const { oldName, newName } = req.body;
     if (!oldName || !newName) {
@@ -2442,7 +2443,7 @@ app.post("/api/settings/rename-location", async (req, res) => {
   }
 });
 
-app.post("/api/settings/delete-location", async (req, res) => {
+app.post("/api/settings/delete-location", requireItAdminRole, async (req, res) => {
   try {
     const { name, deleteOrArchive } = req.body;
     if (!name || !deleteOrArchive) {
@@ -2471,7 +2472,7 @@ app.post("/api/settings/delete-location", async (req, res) => {
   }
 });
 
-app.post("/api/settings/rename-plant", async (req, res) => {
+app.post("/api/settings/rename-plant", requireItAdminRole, async (req, res) => {
   try {
     const { oldCode, newCode, newName, location } = req.body;
     if (!oldCode || !newCode || !newName) {
@@ -2499,7 +2500,7 @@ app.post("/api/settings/rename-plant", async (req, res) => {
   }
 });
 
-app.post("/api/settings/delete-plant", async (req, res) => {
+app.post("/api/settings/delete-plant", requireItAdminRole, async (req, res) => {
   try {
     const { code, deleteOrArchive } = req.body;
     if (!code || !deleteOrArchive) {
