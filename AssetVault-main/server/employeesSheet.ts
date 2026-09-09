@@ -164,7 +164,7 @@ export async function addEmployeeToGoogleSheet(
   employee: Employee
 ): Promise<{ ok: boolean; error?: string }> {
   const sheets = await getSheetsClient();
-  if (!sheets) return { ok: false, error: "Google Sheets credentials not configured" };
+  if (!sheets) return { ok: false, error: "Database credentials not configured" };
 
   const id = normalizeEmployeeId(employee.employeeId);
   if (!id) return { ok: false, error: "Employee ID required" };
@@ -203,7 +203,7 @@ export async function updateEmployeeInGoogleSheet(
   employee: Employee
 ): Promise<{ ok: boolean; error?: string }> {
   const sheets = await getSheetsClient();
-  if (!sheets) return { ok: false, error: "Google Sheets credentials not configured" };
+  if (!sheets) return { ok: false, error: "Database credentials not configured" };
 
   const id = normalizeEmployeeId(employee.employeeId);
   if (!id) return { ok: false, error: "Employee ID required" };
@@ -257,7 +257,7 @@ export async function deleteEmployeeFromGoogleSheet(
   employeeId: string
 ): Promise<{ ok: boolean; error?: string }> {
   const sheets = await getSheetsClient();
-  if (!sheets) return { ok: false, error: "Google Sheets credentials not configured" };
+  if (!sheets) return { ok: false, error: "Database credentials not configured" };
 
   const id = normalizeEmployeeId(employeeId);
   if (!id) return { ok: false, error: "Employee ID required" };

@@ -310,7 +310,7 @@ const GAS_ENV = setCleanEnvAlias("GAS_WEBAPP_URL", [
   "GAS_IMPORT_URL",
 ].forEach(setCleanEnv);
 
-// Initialize local SQLite only for non-serverless development. Vercel uses Google Sheets/cache.
+// Initialize local SQLite only for non-serverless development. Vercel uses Supabase/cache.
 if (isLocalSqliteEnabled()) {
   getDb().then(() => console.log("SQLite: DB Initialized")).catch(err => console.error("SQLite Init Error:", err));
 }
@@ -961,7 +961,7 @@ app.post("/api/assets/rebuild-sheets", async (req, res) => {
   }
 });
 
-/** Force-refresh assets from Google Sheets (optional best-effort sheet rebuild for IT Admin). */
+/** Force-refresh assets from the database (optional best-effort rebuild for IT Admin). */
 app.post("/api/assets/sync", async (req, res) => {
   try {
     if (!GAS_WEBAPP_URL) {
@@ -2212,7 +2212,7 @@ app.get("/api/settings", async (req, res) => {
 
     data.settings.catalog = mergeCatalog(data.settings.catalog);
 
-    // Fetch custom options from Google Sheets to merge into local catalog (with 5-minute cache)
+    // Fetch custom options from Supabase to merge into local catalog (with 5-minute cache)
     const OPTIONS_CACHE_KEY = "gas_options";
     const optionsCacheAge = 5 * 60 * 1000; // 5 minutes cache
     let gasOpts = force ? null : readCache<Record<string, string[]>>(OPTIONS_CACHE_KEY, optionsCacheAge);
@@ -2310,7 +2310,7 @@ app.post("/api/settings", requireItAdminRole, async (req, res) => {
     const locations = hasIncomingLocations ? incoming.locations! : data.settings.locations;
     const plants = hasIncomingPlants ? incoming.plants! : data.settings.plants;
 
-    // Sync newly added catalog options back to Google Sheets
+    // Sync newly added catalog options back to Database
     if (GAS_WEBAPP_URL && incoming.catalog) {
       try {
         const current = data.settings.catalog || { brands: {}, vendors: [], departments: [] };
@@ -2713,13 +2713,13 @@ app.delete("/api/assignment-history/:id", async (req, res) => {
       );
       if (!remote.ok) {
         if (remote.notFound && existsLocal) {
-          sheetWarning = "Record was not on Google Sheet; removed from app only.";
+          sheetWarning = "Record was not in the database; removed from app only.";
         } else if (!existsLocal) {
           return res.status(remote.notFound ? 404 : 500).json({
-            error: remote.error || "Failed to delete from Google Sheet",
+            error: remote.error || "Failed to delete from Database",
           });
         } else {
-          sheetWarning = remote.error || "Could not delete from Google Sheet";
+          sheetWarning = remote.error || "Could not delete from Database";
         }
       }
     }
@@ -2998,7 +2998,7 @@ app.post("/api/inventory/:itemId/assign", async (req, res) => {
           String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === targetId ||
           (parentAsset.assetCode && String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === String(parentAsset.assetCode).replace(/^0+/, "").trim())
         );
-        if (rowIndex === -1) throw new Error("Asset not found in Google Sheet");
+        if (rowIndex === -1) throw new Error("Asset not found in Database");
         const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
         const updatedRow = buildMasterAssetRow(assetData, existingMaster);
         const masterHeaders = getDefaultAssetHeaders();
@@ -3149,7 +3149,7 @@ app.post("/api/inventory/:itemId/return", async (req, res) => {
         const rowIndex = rows.findIndex((row: any[]) =>
           String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === targetId
         );
-        if (rowIndex === -1) throw new Error("Asset not found in Google Sheet");
+        if (rowIndex === -1) throw new Error("Asset not found in Database");
         const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
         const updatedRow = buildMasterAssetRow(assetData, existingMaster);
         const masterHeaders = getDefaultAssetHeaders();
@@ -3308,7 +3308,7 @@ app.post("/api/inventory/:itemId/transfer", async (req, res) => {
         const rowIndex = rows.findIndex((row: any[]) =>
           String(row[idCol !== -1 ? idCol : 0]).replace(/^0+/, "").trim() === targetId
         );
-        if (rowIndex === -1) throw new Error("Asset not found in Google Sheet");
+        if (rowIndex === -1) throw new Error("Asset not found in Database");
         const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
         const updatedRow = buildMasterAssetRow(assetData, existingMaster);
         const masterHeaders = getDefaultAssetHeaders();
@@ -3828,7 +3828,7 @@ async function syncAssetStatusUpdate(assetId: string, status: string, updatedBy 
         (existing.assetCode && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.assetCode)) ||
         (existing.serialNumber && normalizeId(row[idCol !== -1 ? idCol : 0]) === normalizeId(existing.serialNumber))
       );
-      if (rowIndex === -1) throw new Error("Asset not found in Google Sheet");
+      if (rowIndex === -1) throw new Error("Asset not found in Database");
 
       const existingMaster = sheetRowToMasterRow(sheetHeaders, rows[rowIndex] as string[]);
       const updatedRow = buildMasterAssetRow(assetData, existingMaster);

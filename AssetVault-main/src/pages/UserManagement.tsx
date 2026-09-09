@@ -395,7 +395,7 @@ export default function UserManagement() {
           <div className="p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
             <p className="text-gray-600 mb-3">
               {users.length === 0
-                ? 'No users in Google Sheet yet. Add users here or in the Users tab.'
+                ? 'No users in Database yet. Add users here or in the Users tab.'
                 : 'No users found under your location/plant access.'}
             </p>
             {syncHint && <p className="text-sm text-amber-700 mb-3">{syncHint}</p>}

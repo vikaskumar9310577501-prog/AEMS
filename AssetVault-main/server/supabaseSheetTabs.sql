@@ -1,4 +1,4 @@
--- Google Sheet jaisi tabs (Table Editor me dikhengi)
+-- Supabase Table Editor views (replaces Google Sheets tabs)
 
 create or replace view asset_sheet as
 select
@@ -94,6 +94,15 @@ select * from asset_sheet where "Main Category" = 'OPERATIONS';
 create or replace view "OQC" as
 select * from asset_sheet where "Main Category" = 'OQC';
 
+create or replace view "HE QUALITY" as
+select * from asset_sheet where "Main Category" = 'HE QUALITY';
+
+create or replace view "SMT QA Press-Shop" as
+select * from asset_sheet where "Main Category" = 'SMT QA Press-Shop';
+
+create or replace view "SMT QA Paint-Shop" as
+select * from asset_sheet where "Main Category" = 'SMT QA Paint-Shop';
+
 create or replace view "2040" as
 select * from asset_sheet where "Plant Name" = '2040';
 
@@ -166,6 +175,9 @@ grant select on "IQC" to postgres, service_role;
 grant select on "QA ELECTRONICS" to postgres, service_role;
 grant select on "OPERATIONS" to postgres, service_role;
 grant select on "OQC" to postgres, service_role;
+grant select on "HE QUALITY" to postgres, service_role;
+grant select on "SMT QA Press-Shop" to postgres, service_role;
+grant select on "SMT QA Paint-Shop" to postgres, service_role;
 grant select on "2040" to postgres, service_role;
 grant select on "4020" to postgres, service_role;
 grant select on "4010" to postgres, service_role;

@@ -116,7 +116,7 @@ export default function SettingsPage() {
       if (data.sheetWarning) {
         toast.error(`Saved locally but Database sync failed: ${data.sheetWarning}`);
       } else {
-        toast.success('Saved — Locations/Plants tabs + location/plant view sheets updated in Google Sheet');
+        toast.success('Saved — Locations/Plants updated in Database');
       }
     } catch (err: any) {
       toast.error(err.message);
@@ -588,7 +588,7 @@ export default function SettingsPage() {
               <h3 className="text-lg font-black text-slate-900">Delete or Archive Location?</h3>
             </div>
             <p className="text-slate-600 text-sm mb-6">
-              You are about to remove the location <strong>"{deleteLocTarget}"</strong>. Do you want to permanently delete the associated Google Sheet tab, or archive it (rename to ARCHIVED_{deleteLocTarget})?
+              You are about to remove the location <strong>"{deleteLocTarget}"</strong>. Do you want to permanently delete this record from the Database, or archive it (rename to ARCHIVED_{deleteLocTarget})?
             </p>
             <div className="flex gap-2 flex-wrap justify-end">
               <button
@@ -629,7 +629,7 @@ export default function SettingsPage() {
               <h3 className="text-lg font-black text-slate-900">Delete or Archive Plant?</h3>
             </div>
             <p className="text-slate-600 text-sm mb-6">
-              You are about to remove the plant code <strong>"{deletePlantTarget}"</strong>. Do you want to permanently delete the associated Google Sheet tab, or archive it (rename to ARCHIVED_{deletePlantTarget})?
+              You are about to remove the plant code <strong>"{deletePlantTarget}"</strong>. Do you want to permanently delete this record from the Database, or archive it (rename to ARCHIVED_{deletePlantTarget})?
             </p>
             <div className="flex gap-2 flex-wrap justify-end">
               <button

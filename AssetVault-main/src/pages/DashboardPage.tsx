@@ -857,7 +857,7 @@ function DashboardPageContent() {
                 );
               }}
               className={`p-2 sm:px-2.5 sm:py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
-              title="Sync with Google Sheets / SQL"
+              title="Sync Database"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin text-blue-600' : ''} />
               <span className="sr-only">Sync</span>

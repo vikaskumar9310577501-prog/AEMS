@@ -1,6 +1,6 @@
 import { isItAdminRole } from './userPermissions';
 
-/** Pull latest assets from Google Sheets. Sheet rebuild is best-effort for IT Admin. */
+/** Pull latest assets from Supabase. Rebuild is best-effort for IT Admin. */
 export async function syncDatabaseAssets(opts: {
   userEmail?: string;
   userRole?: string | null;

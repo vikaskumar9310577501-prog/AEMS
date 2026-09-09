@@ -223,7 +223,7 @@ export async function deleteHistoryEntryRemote(
   }
 
   if (notFound) return { ok: false, error: lastError || "Record not found", notFound: true };
-  return { ok: false, error: lastError || "Could not delete from Google Sheet" };
+  return { ok: false, error: lastError || "Could not delete from Database" };
 }
 
 export async function fetchHistoryFromGas(
