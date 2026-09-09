@@ -28,7 +28,16 @@ var CATEGORIES = [
   "Furniture Assets",
   "Software License Assets",
   "Admin Facility Assets",
-  "Maintenance Assets"
+  "Maintenance Assets",
+  "IDU",
+  "ODU",
+  "IQC",
+  "QA ELECTRONICS",
+  "OPERATIONS",
+  "OQC",
+  "HE QUALITY",
+  "SMT QA Press-Shop",
+  "SMT QA Paint-Shop"
 ];
 
 /** Rename legacy category sheet tabs without losing data */
@@ -143,7 +152,10 @@ var CATEGORY_SHEET_MAP_ = {
   "IQC": "IQC",
   "QA ELECTRONICS": "QA ELECTRONICS",
   "OPERATIONS": "OPERATIONS",
-  "OQC": "OQC"
+  "OQC": "OQC",
+  "HE QUALITY": "HE QUALITY",
+  "SMT QA Press-Shop": "SMT QA Press-Shop",
+  "SMT QA Paint-Shop": "SMT QA Paint-Shop"
 };
 
 var SHEET_TO_MAIN_CATEGORY_ = {
@@ -162,7 +174,10 @@ var SHEET_TO_MAIN_CATEGORY_ = {
   "IQC": "IQC",
   "QA ELECTRONICS": "QA ELECTRONICS",
   "OPERATIONS": "OPERATIONS",
-  "OQC": "OQC"
+  "OQC": "OQC",
+  "HE QUALITY": "HE QUALITY",
+  "SMT QA Press-Shop": "SMT QA Press-Shop",
+  "SMT QA Paint-Shop": "SMT QA Paint-Shop"
 };
 
 var SYSTEM_SHEET_NAMES_ = {

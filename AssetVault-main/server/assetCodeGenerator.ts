@@ -23,6 +23,9 @@ const CATEGORY_PREFIX: Record<string, string> = {
   "QA ELECTRONICS": "QAE",
   "OPERATIONS": "OPS",
   "OQC": "OQC",
+  "HE QUALITY": "HEQ",
+  "SMT QA Press-Shop": "SQPR",
+  "SMT QA Paint-Shop": "SQPA",
 };
 
 const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";

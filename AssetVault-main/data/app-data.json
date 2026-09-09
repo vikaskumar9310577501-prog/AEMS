@@ -374,7 +374,10 @@
         "ODU",
         "QA ELECTRONICS",
         "OPERATIONS",
-        "OQC"
+        "OQC",
+        "HE QUALITY",
+        "SMT QA Press-Shop",
+        "SMT QA Paint-Shop"
       ],
       "brandsByType": {
         "Laptop": {

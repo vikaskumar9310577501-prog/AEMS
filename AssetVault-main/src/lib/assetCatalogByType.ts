@@ -147,7 +147,9 @@ export const MAIN_CATEGORIES = [
   "QA ELECTRONICS",
   "OPERATIONS",
   "OQC",
-  "HE QUALITY"
+  "HE QUALITY",
+  "SMT QA Press-Shop",
+  "SMT QA Paint-Shop"
 ] as const;
 
 export type MainCategory = typeof MAIN_CATEGORIES[number];
@@ -168,7 +170,10 @@ export const CATEGORY_SHEET_MAP: Record<string, string> = {
   "IQC": "IQC",
   "QA ELECTRONICS": "QA ELECTRONICS",
   "OPERATIONS": "OPERATIONS",
-  "OQC": "OQC"
+  "OQC": "OQC",
+  "HE QUALITY": "HE QUALITY",
+  "SMT QA Press-Shop": "SMT QA Press-Shop",
+  "SMT QA Paint-Shop": "SMT QA Paint-Shop"
 };
 
 export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
@@ -342,6 +347,29 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "Pre-Dispatch Inspection",
     "Barcode & Packaging Scanner",
     "Other OQC Asset"
+  ],
+  "HE QUALITY": [
+    "HE Inspection Standard",
+    "Leak Detection Rig",
+    "Performance Test Chamber",
+    "Calibrated Master Tool",
+    "Other HE Quality Asset"
+  ],
+  "SMT QA Press-Shop": [
+    "Press Tool Inspection Equipment",
+    "Dimensional Measurement Tool",
+    "Surface Defect Inspection Rig",
+    "Thickness Gauge / Micrometer",
+    "Hardness Tester",
+    "Other Press-Shop QA Asset"
+  ],
+  "SMT QA Paint-Shop": [
+    "Paint Thickness Gauge (DFT)",
+    "Gloss Meter",
+    "Color Matching Cabinet / Spectrophotometer",
+    "Adhesion Cross-Hatch Tester",
+    "Baking Oven Temperature Logger",
+    "Other Paint-Shop QA Asset"
   ]
 };
 
@@ -391,6 +419,11 @@ const MAIN_CATEGORY_ALIASES: Record<string, string> = {
   'qa electronics': 'QA ELECTRONICS',
   operations: 'OPERATIONS',
   oqc: 'OQC',
+  'he quality': 'HE QUALITY',
+  'smt qa press-shop': 'SMT QA Press-Shop',
+  'smt qa press shop': 'SMT QA Press-Shop',
+  'smt qa paint-shop': 'SMT QA Paint-Shop',
+  'smt qa paint shop': 'SMT QA Paint-Shop',
 };
 
 /** Asset-code prefix → main category (matches server/assetCodeGenerator.ts). */
@@ -411,6 +444,9 @@ const CODE_PREFIX_TO_MAIN: Record<string, string> = {
   QAE: 'QA ELECTRONICS',
   OPS: 'OPERATIONS',
   OQC: 'OQC',
+  HEQ: 'HE QUALITY',
+  SQPR: 'SMT QA Press-Shop',
+  SQPA: 'SMT QA Paint-Shop',
 };
 
 /** Return canonical main category if `value` is a known category label, else null. */
