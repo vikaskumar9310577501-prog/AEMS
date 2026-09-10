@@ -89,6 +89,8 @@ export interface MaintenanceMachine {
   plantCode: string;
   /** Machine warranty status used before PM planning. */
   warrantyStatus?: 'in_warranty' | 'out_of_warranty';
+  /** Date up to which the machine is in warranty (yyyy-mm-dd) */
+  warrantyExpiryDate?: string;
   /** Model number (especially for tracking in-warranty machines) */
   modelNumber?: string;
   /** Serial number (especially for tracking in-warranty machines) */

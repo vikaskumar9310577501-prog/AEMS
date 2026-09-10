@@ -40,6 +40,7 @@ export default function NewMaintenanceMachinePage() {
     location: '',
     plantCode: '',
     warrantyStatus: '' as '' | WarrantyStatus,
+    warrantyExpiryDate: '',
     trendMonths: DEFAULT_TREND_MONTHS as number,
     nextMaintenanceDate: '',
     remarks: '',
@@ -111,6 +112,9 @@ export default function NewMaintenanceMachinePage() {
     if (!form.modelNumber.trim()) return toast.error('Model Number is required.');
     if (!form.location.trim() || !form.plantCode.trim()) return toast.error('Location and plant are required');
     if (!form.warrantyStatus) return toast.error('Select In Warranty or Out of Warranty');
+    if (form.warrantyStatus === 'in_warranty' && !form.warrantyExpiryDate.trim()) {
+      return toast.error('Please enter Warranty Valid Till date');
+    }
     if (!form.nextMaintenanceDate.trim()) return toast.error('Maintenance date is required');
 
     setSaving(true);
@@ -129,6 +133,7 @@ export default function NewMaintenanceMachinePage() {
           location: form.location.trim(),
           plantCode: form.plantCode.trim(),
           warrantyStatus: form.warrantyStatus,
+          warrantyExpiryDate: form.warrantyStatus === 'in_warranty' ? form.warrantyExpiryDate.trim() : undefined,
           trendMonths: form.trendMonths,
           customPlanDates: isCustomTrend(form.trendMonths) ? customPlanDates : [],
           nextMaintenanceDate: form.nextMaintenanceDate,
@@ -352,6 +357,7 @@ export default function NewMaintenanceMachinePage() {
                   setForm((prev) => ({
                     ...prev,
                     warrantyStatus: 'out_of_warranty',
+                    warrantyExpiryDate: '',
                     trendMonths: DEFAULT_TREND_MONTHS,
                   }))
                 }
@@ -370,6 +376,24 @@ export default function NewMaintenanceMachinePage() {
                 </div>
               </button>
             </div>
+
+            {form.warrantyStatus === 'in_warranty' && (
+              <div className="pt-3 border-t border-slate-200/80 space-y-1.5 animate-in fade-in duration-200">
+                <label className="label-caps">
+                  Warranty Valid Till (Expiry Date) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={form.warrantyExpiryDate}
+                  onChange={(e) => setForm((prev) => ({ ...prev, warrantyExpiryDate: e.target.value }))}
+                  className="w-full input-geometric bg-white font-semibold"
+                />
+                <p className="text-[11px] text-slate-500">
+                  Select the date up to which this machine is covered under warranty.
+                </p>
+              </div>
+            )}
           </div>
 
           {form.warrantyStatus ? (
@@ -445,7 +469,11 @@ export default function NewMaintenanceMachinePage() {
             >
               Cancel
             </button>
-            <button type="submit" disabled={saving || !form.warrantyStatus} className="btn-primary-geometric disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={saving || !form.warrantyStatus || (form.warrantyStatus === 'in_warranty' && !form.warrantyExpiryDate.trim())}
+              className="btn-primary-geometric disabled:opacity-50"
+            >
               {saving ? 'Saving…' : 'Save Machine'}
             </button>
           </div>

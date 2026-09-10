@@ -107,6 +107,7 @@ export default function MaintenanceMachineEditModal({
   const [location, setLocation] = useState('');
   const [plantCode, setPlantCode] = useState('');
   const [warrantyStatus, setWarrantyStatus] = useState<WarrantyStatus>('out_of_warranty');
+  const [warrantyExpiryDate, setWarrantyExpiryDate] = useState('');
   const [modelNumber, setModelNumber] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [trendMonths, setTrendMonths] = useState(2);
@@ -127,6 +128,7 @@ export default function MaintenanceMachineEditModal({
     setLocation(machine.location || '');
     setPlantCode(machine.plantCode || '');
     setWarrantyStatus(machine.warrantyStatus === 'in_warranty' ? 'in_warranty' : 'out_of_warranty');
+    setWarrantyExpiryDate(machine.warrantyExpiryDate ? toDateInputValue(machine.warrantyExpiryDate) : '');
     setTrendMonths(Number(machine.trendMonths) === CUSTOM_TREND_MONTHS ? CUSTOM_TREND_MONTHS : Number(machine.trendMonths) || 2);
     setNextMaintenanceDate(toDateInputValue(machine.nextMaintenanceDate));
     setStatus(machine.status || 'Active');
@@ -168,6 +170,7 @@ export default function MaintenanceMachineEditModal({
       location: location.trim(),
       plantCode: plantCode.trim(),
       warrantyStatus,
+      warrantyExpiryDate: warrantyStatus === 'in_warranty' ? warrantyExpiryDate.trim() || undefined : undefined,
       trendMonths,
       nextMaintenanceDate: custom ? merged!.nextMaintenanceDate : nextMaintenanceDate,
       status,
@@ -323,6 +326,17 @@ export default function MaintenanceMachineEditModal({
                   <option value="out_of_warranty">{warrantyStatusLabel('out_of_warranty')}</option>
                 </select>
               </div>
+              {warrantyStatus === 'in_warranty' && (
+                <div className="space-y-1.5 animate-in fade-in duration-200">
+                  <label className="label-caps">Warranty Valid Till (Expiry Date)</label>
+                  <input
+                    type="date"
+                    value={warrantyExpiryDate}
+                    onChange={(e) => setWarrantyExpiryDate(e.target.value)}
+                    className="w-full input-geometric bg-white font-semibold"
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="label-caps">
                   Model Number <span className="text-red-500">*</span>

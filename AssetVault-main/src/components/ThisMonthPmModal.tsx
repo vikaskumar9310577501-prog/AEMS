@@ -97,6 +97,7 @@ export default function ThisMonthPmModal({
       'PM Status': statusBadge(m).label,
       Responsibility: m.responsibility || '',
       'Warranty Status': m.warrantyStatus || '',
+      'Warranty Valid Till': m.warrantyExpiryDate || '',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();

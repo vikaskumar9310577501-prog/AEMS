@@ -109,6 +109,7 @@ export async function getDb(): Promise<Database> {
     if (!mmCols.includes('modelNumber')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN modelNumber TEXT`);
     if (!mmCols.includes('serialNumber')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN serialNumber TEXT`);
     if (!mmCols.includes('warrantyStatus')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN warrantyStatus TEXT`);
+    if (!mmCols.includes('warrantyExpiryDate')) await db.exec(`ALTER TABLE Maintenance_Machines ADD COLUMN warrantyExpiryDate TEXT`);
   } catch {}
 
   // Initialize Maintenance_Complaints table

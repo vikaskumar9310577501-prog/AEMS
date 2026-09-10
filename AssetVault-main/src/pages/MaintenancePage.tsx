@@ -2421,12 +2421,17 @@ function MachineDetailPopup({
                     label="Warranty"
                     value={
                       machine.warrantyStatus === 'in_warranty'
-                        ? 'In Warranty'
+                        ? machine.warrantyExpiryDate
+                          ? `In Warranty (Till ${formatDate(machine.warrantyExpiryDate)})`
+                          : 'In Warranty'
                         : machine.warrantyStatus === 'out_of_warranty'
                           ? 'Out of Warranty'
                           : '—'
                     }
                   />
+                  {machine.warrantyStatus === 'in_warranty' && machine.warrantyExpiryDate ? (
+                    <DetailField label="Warranty Valid Till" value={formatDate(machine.warrantyExpiryDate)} />
+                  ) : null}
                   {machine.modelNumber ? <DetailField label="Model No." value={machine.modelNumber} /> : null}
                   {machine.serialNumber ? <DetailField label="Serial No." value={machine.serialNumber} /> : null}
                 </div>

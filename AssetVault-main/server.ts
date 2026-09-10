@@ -4033,6 +4033,10 @@ app.post("/api/maintenance/machines", async (req, res) => {
     if (!warrantyStatus) {
       return res.status(400).json({ error: "Select In Warranty or Out of Warranty" });
     }
+    const warrantyExpiryDate =
+      warrantyStatus === "in_warranty"
+        ? String((body as { warrantyExpiryDate?: string }).warrantyExpiryDate || "").trim() || undefined
+        : undefined;
     const machine: MaintenanceMachine = {
       id: `mach_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
       machineType,
@@ -4046,6 +4050,7 @@ app.post("/api/maintenance/machines", async (req, res) => {
       location,
       plantCode,
       warrantyStatus,
+      warrantyExpiryDate,
       trendMonths,
       customPlanDates: merged.customPlanDates.length ? merged.customPlanDates : undefined,
       nextMaintenanceDate: merged.nextMaintenanceDate,
@@ -4168,6 +4173,25 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
                 : current.warrantyStatus;
             })()
           : current.warrantyStatus,
+      warrantyExpiryDate: (() => {
+        const effStatus =
+          body.warrantyStatus !== undefined
+            ? (() => {
+                const raw = String(body.warrantyStatus || "")
+                  .trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, "_");
+                return raw === "in_warranty" || raw === "out_of_warranty"
+                  ? (raw as "in_warranty" | "out_of_warranty")
+                  : current.warrantyStatus;
+              })()
+            : current.warrantyStatus;
+        if (effStatus === "out_of_warranty") return undefined;
+        if (body.warrantyExpiryDate !== undefined) {
+          return String(body.warrantyExpiryDate || "").trim() || undefined;
+        }
+        return current.warrantyExpiryDate;
+      })(),
       trendMonths,
       customPlanDates: merged.customPlanDates.length ? merged.customPlanDates : undefined,
       nextMaintenanceDate: merged.nextMaintenanceDate,
