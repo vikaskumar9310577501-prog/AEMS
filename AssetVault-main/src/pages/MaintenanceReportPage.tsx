@@ -77,6 +77,7 @@ export default function MaintenanceReportPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!machine || submitting) return;
+    setSubmitting(true);
     const text = complaintText.trim();
     const remarkText = remark.trim();
     const nameText = reporterName.trim();
@@ -84,35 +85,41 @@ export default function MaintenanceReportPage() {
     const phoneText = reporterPhone.trim();
 
     if (text.length < 5) {
+      setSubmitting(false);
       setError('Please describe the breakdown (at least 5 characters).');
       return;
     }
     if (remarkText.length < 3) {
+      setSubmitting(false);
       setError('Remark is required.');
       return;
     }
     if (nameText.length < 2) {
+      setSubmitting(false);
       setError('Your name is required (at least 2 characters).');
       return;
     }
     if (empCodeText.length < 2) {
+      setSubmitting(false);
       setError('Employee code is required.');
       return;
     }
     if (!/^[A-Z0-9][A-Z0-9\-_/]{1,24}$/i.test(empCodeText)) {
+      setSubmitting(false);
       setError('Enter a valid employee code (letters / numbers).');
       return;
     }
     if (!/^\d{7,15}$/.test(phoneText.replace(/[\s\-+()]/g, ''))) {
+      setSubmitting(false);
       setError('Enter a valid mobile / phone number (7–15 digits).');
       return;
     }
     if (!photoData) {
+      setSubmitting(false);
       setError('Photo is required — please take a photo of the breakdown.');
       return;
     }
 
-    setSubmitting(true);
     setError('');
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/maintenance/complaints/public`, {

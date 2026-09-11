@@ -38,10 +38,10 @@ function getMailer(overridePass?: string) {
   return nodemailer.createTransport({
     host: getEnv("SMTP_HOST") || "smtp.office365.com",
     port: parseInt(getEnv("SMTP_PORT") || "587", 10),
-    secure: getEnv("SMTP_SECURE") === "true",
+    secure: false,
     auth: { user, pass },
     tls: {
-      ciphers: "SSLv3",
+      minVersion: "TLSv1.2",
       rejectUnauthorized: false,
     },
   });

@@ -566,10 +566,10 @@ async function sendViaSmtp(
       const transporter = nodemailer.createTransport({
         host,
         port,
-        secure,
+        secure: false,
         auth: { user, pass },
         tls: {
-          ciphers: "SSLv3",
+          minVersion: "TLSv1.2",
           rejectUnauthorized: false,
         },
       });

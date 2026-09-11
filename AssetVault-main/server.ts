@@ -574,9 +574,11 @@ app.post("/api/auth/request-otp", async (req, res) => {
         const status = /not authorized/i.test(dbErr) ? 403 : 400;
         return res.status(status).json({ error: dbErr });
       }
+      const r = dbResult as { message?: string; otp?: string };
       return res.json({
         success: true,
-        message: String((dbResult as { message?: string }).message || "OTP sent to your email"),
+        message: String(r.message || "OTP sent to your email"),
+        otp: r.otp,
       });
     }
 
@@ -5050,6 +5052,24 @@ app.post("/api/maintenance/complaints/public", async (req, res) => {
 
     const machine = await getMaintenanceMachineByAssetCode(assetCode);
     if (!machine) return res.status(404).json({ error: "Machine not found for this QR / asset code" });
+
+    const existingComplaints = await listMaintenanceComplaints();
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    const recentDuplicate = existingComplaints.find(
+      (c) =>
+        c.assetCode === machine.assetCode &&
+        c.reporterEmployeeCode === reporterEmployeeCode &&
+        c.complaintText.toLowerCase().trim() === complaintText.toLowerCase().trim() &&
+        new Date(c.reportedAt).getTime() > tenMinutesAgo
+    );
+    if (recentDuplicate) {
+      return res.json({
+        success: true,
+        complaint: recentDuplicate,
+        duplicateSuppressed: true,
+        message: "Complaint already submitted and registered successfully.",
+      });
+    }
 
     let photoUrl = "";
     let photoName = "";

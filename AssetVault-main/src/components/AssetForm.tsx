@@ -1400,6 +1400,8 @@ export default function AssetForm({ initialData, onSubmit, onCancel, loading, la
     e.preventDefault();
     if (isSubmitting || loading || advanceGuardRef.current || !saveReady) return;
     if (formStepRef.current !== 3) return;
+    setIsSubmitting(true);
+    advanceGuardRef.current = true;
 
     const detailsForSave = effectiveDynamicDetails();
 

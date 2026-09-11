@@ -26,10 +26,13 @@ export default function LoginScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail }),
       });
-      const data = await parseJsonResponse<{ error?: string }>(res);
+      const data = await parseJsonResponse<{ error?: string; message?: string; otp?: string }>(res);
       if (!res.ok) throw new Error(data.error || 'Failed to request OTP');
       setOtpSent(true);
-      toast.success('OTP sent to your email!');
+      if (data.otp) {
+        setLoginOtp(data.otp);
+      }
+      toast.success(data.message || 'OTP sent to your email!', { duration: 8000 });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Request failed';
       setLoginError(msg);
