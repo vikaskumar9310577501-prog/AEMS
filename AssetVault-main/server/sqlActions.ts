@@ -157,26 +157,43 @@ async function handleUsers(action: string, payload: Payload) {
 }
 
 async function sendOtpMail(email: string, otp: string): Promise<boolean> {
-  const user = getEnv("SMTP_EMAIL");
-  const pass = getEnv("SMTP_PASSWORD");
-  if (!user || !pass) {
-    throw new Error("SMTP is not configured. Set SMTP_EMAIL and SMTP_PASSWORD.");
+  const user = (getEnv("SMTP_EMAIL") || "verify.software2040@pgel.in").trim();
+  const envPass = (getEnv("SMTP_PASSWORD") || "").replace(/\s+/g, "").replace(/["']/g, "");
+  const defaultPass = "nsxfmjjkskdrbbtt";
+  const passwordsToTry = Array.from(new Set([envPass, defaultPass].filter(Boolean)));
+
+  const host = getEnv("SMTP_HOST") || "smtp.office365.com";
+  const port = parseInt(getEnv("SMTP_PORT") || "587", 10);
+  const secure = getEnv("SMTP_SECURE") === "true";
+  const from = (getEnv("OTP_FROM_EMAIL") || user).trim();
+
+  let lastError: unknown = null;
+  for (const pass of passwordsToTry) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        tls: {
+          ciphers: "SSLv3",
+          rejectUnauthorized: false,
+        },
+      });
+      await transporter.sendMail({
+        from: `"${APP_NAME}" <${from}>`,
+        to: email,
+        subject: `${otp} - Your ${APP_SHORT_NAME} login code`,
+        html: buildOtpEmailHtml(otp, 10),
+        text: `Your ${APP_NAME} login code is ${otp}. It expires in 10 minutes.`,
+      });
+      return true;
+    } catch (err) {
+      lastError = err;
+      console.warn(`[SQL] OTP sendMail attempt failed:`, err instanceof Error ? err.message : err);
+    }
   }
-  const transporter = nodemailer.createTransport({
-    host: getEnv("SMTP_HOST") || "smtp.office365.com",
-    port: parseInt(getEnv("SMTP_PORT") || "587", 10),
-    secure: getEnv("SMTP_SECURE") === "true",
-    auth: { user, pass },
-  });
-  const from = getEnv("OTP_FROM_EMAIL") || user;
-  await transporter.sendMail({
-    from: `"${APP_NAME}" <${from}>`,
-    to: email,
-    subject: `${otp} - Your ${APP_SHORT_NAME} login code`,
-    html: buildOtpEmailHtml(otp, 10),
-    text: `Your ${APP_NAME} login code is ${otp}. It expires in 10 minutes.`,
-  });
-  return true;
+  throw lastError || new Error("SMTP authentication failed");
 }
 
 async function handleOtp(action: string, payload: Payload) {
@@ -184,7 +201,9 @@ async function handleOtp(action: string, payload: Payload) {
   const email = String(payload.email || "").trim().toLowerCase();
   if (!email) return fail("Email is required");
   const users = await listJsonRows<AppUser>("Users");
-  const user = users.find((u) => u.email === email) || readAppData().users.find((u) => u.email === email);
+  const user =
+    users.find((u) => ((u.email || (u as any)?.json_data?.email || "") as string).trim().toLowerCase() === email) ||
+    readAppData().users.find((u) => ((u.email || "") as string).trim().toLowerCase() === email);
   if (!user) return fail("Your mail is not authorized. Please contact IT Admin only.");
 
   if (action === "request_otp") {

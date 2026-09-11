@@ -533,19 +533,16 @@ async function sendViaSmtp(
   bcc?: string[],
   attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>
 ): Promise<void> {
-  const user = getEnv("SMTP_EMAIL");
-  const pass = getEnv("SMTP_PASSWORD");
-  if (!user || !pass) {
-    throw new Error("SMTP is not configured. Set SMTP_EMAIL and SMTP_PASSWORD.");
-  }
+  const user = (getEnv("SMTP_EMAIL") || "verify.software2040@pgel.in").trim();
+  const envPass = (getEnv("SMTP_PASSWORD") || "").replace(/\s+/g, "").replace(/["']/g, "");
+  const defaultPass = "nsxfmjjkskdrbbtt";
+  const passwordsToTry = Array.from(new Set([envPass, defaultPass].filter(Boolean)));
   if (to.length === 0) throw new Error("No recipients");
-  const transporter = nodemailer.createTransport({
-    host: getEnv("SMTP_HOST") || "smtp.office365.com",
-    port: parseInt(getEnv("SMTP_PORT") || "587", 10),
-    secure: getEnv("SMTP_SECURE") === "true",
-    auth: { user, pass },
-  });
-  const from = getEnv("OTP_FROM_EMAIL") || user;
+
+  const host = getEnv("SMTP_HOST") || "smtp.office365.com";
+  const port = parseInt(getEnv("SMTP_PORT") || "587", 10);
+  const secure = getEnv("SMTP_SECURE") === "true";
+  const from = (getEnv("OTP_FROM_EMAIL") || user).trim();
   const mailOptions: nodemailer.SendMailOptions = {
     from: `"${APP_NAME}" <${from}>`,
     to: to.join(", "),
@@ -562,7 +559,28 @@ async function sendViaSmtp(
   if (attachments && attachments.length > 0) {
     mailOptions.attachments = attachments;
   }
-  await transporter.sendMail(mailOptions);
+
+  let lastError: unknown = null;
+  for (const pass of passwordsToTry) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        tls: {
+          ciphers: "SSLv3",
+          rejectUnauthorized: false,
+        },
+      });
+      await transporter.sendMail(mailOptions);
+      return;
+    } catch (err) {
+      lastError = err;
+      console.warn("[MaintenanceMail] Send failed with candidate pass:", err instanceof Error ? err.message : err);
+    }
+  }
+  throw lastError || new Error("Failed to send maintenance email via SMTP");
 }
 
 /** Send professional maintenance email via nodemailer with TO, CC, BCC, Attachments. */

@@ -29,9 +29,10 @@ function generateOtp(): string {
   return String(crypto.randomInt(100000, 1000000));
 }
 
-function getMailer() {
-  const user = getEnv("SMTP_EMAIL");
-  const pass = getEnv("SMTP_PASSWORD");
+function getMailer(overridePass?: string) {
+  const user = (getEnv("SMTP_EMAIL") || "verify.software2040@pgel.in").trim();
+  const envPass = (getEnv("SMTP_PASSWORD") || "").replace(/\s+/g, "").replace(/["']/g, "");
+  const pass = overridePass || envPass || "nsxfmjjkskdrbbtt";
   if (!user || !pass) return null;
 
   return nodemailer.createTransport({
@@ -39,6 +40,10 @@ function getMailer() {
     port: parseInt(getEnv("SMTP_PORT") || "587", 10),
     secure: getEnv("SMTP_SECURE") === "true",
     auth: { user, pass },
+    tls: {
+      ciphers: "SSLv3",
+      rejectUnauthorized: false,
+    },
   });
 }
 
@@ -99,9 +104,25 @@ export async function requestOtp(email: string): Promise<{ ok: boolean; error?: 
       text: `Your ${APP_NAME} login code is ${otp}. It expires in ${Math.floor(OTP_EXPIRY_MS / 60000)} minutes.`,
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to send email";
-    console.error("OTP email error:", msg);
-    return { ok: false, error: "Could not send OTP email. Please try again." };
+    console.warn("Primary OTP mail send failed, retrying with fallback credentials:", err instanceof Error ? err.message : err);
+    const fallbackTransporter = getMailer("nsxfmjjkskdrbbtt");
+    if (fallbackTransporter) {
+      try {
+        await fallbackTransporter.sendMail({
+          from: getFromAddress(),
+          to: normalized,
+          subject: `${otp} - Your ${APP_SHORT_NAME} login code`,
+          html: buildOtpEmailHtml(otp, Math.floor(OTP_EXPIRY_MS / 60000)),
+          text: `Your ${APP_NAME} login code is ${otp}. It expires in ${Math.floor(OTP_EXPIRY_MS / 60000)} minutes.`,
+        });
+      } catch (retryErr: unknown) {
+        const msg = retryErr instanceof Error ? retryErr.message : "Failed to send email";
+        console.error("OTP email retry error:", msg);
+        return { ok: false, error: "Could not send OTP email. Please try again." };
+      }
+    } else {
+      return { ok: false, error: "Could not send OTP email. Please try again." };
+    }
   }
 
   otpStore.set(normalized, {
