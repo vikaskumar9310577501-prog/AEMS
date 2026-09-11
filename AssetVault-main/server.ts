@@ -574,11 +574,10 @@ app.post("/api/auth/request-otp", async (req, res) => {
         const status = /not authorized/i.test(dbErr) ? 403 : 400;
         return res.status(status).json({ error: dbErr });
       }
-      const r = dbResult as { message?: string; otp?: string };
+      const r = dbResult as { message?: string };
       return res.json({
         success: true,
         message: String(r.message || "OTP sent to your email"),
-        otp: r.otp,
       });
     }
 

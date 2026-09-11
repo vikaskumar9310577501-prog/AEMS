@@ -209,21 +209,12 @@ async function handleOtp(action: string, payload: Payload) {
   if (action === "request_otp") {
     const otp = String(crypto.randomInt(100000, 1000000));
     await saveOtp(email, otp, new Date(Date.now() + 10 * 60 * 1000));
-    let mailDispatched = false;
-    let mailError = "";
     try {
       await sendOtpMail(email, otp);
-      mailDispatched = true;
     } catch (error) {
-      mailError = error instanceof Error ? error.message : String(error);
+      const mailError = error instanceof Error ? error.message : String(error);
       console.warn("[SQL] OTP email failed:", mailError);
-    }
-    if (!mailDispatched) {
-      // Fail-safe: When cloud SMTP is blocked or delayed, provide OTP directly so authorized user can log in
-      return ok({
-        message: `Verification code: ${otp} (Cloud email dispatch notice: ${mailError})`,
-        otp,
-      });
+      return fail(`Could not send OTP email: ${mailError}`);
     }
     return ok({ message: "OTP sent to your email" });
   }

@@ -3140,20 +3140,12 @@ async function handleOtp(action, payload) {
   if (action === "request_otp") {
     const otp = String(crypto2.randomInt(1e5, 1e6));
     await saveOtp3(email, otp, new Date(Date.now() + 10 * 60 * 1e3));
-    let mailDispatched = false;
-    let mailError = "";
     try {
       await sendOtpMail(email, otp);
-      mailDispatched = true;
     } catch (error) {
-      mailError = error instanceof Error ? error.message : String(error);
+      const mailError = error instanceof Error ? error.message : String(error);
       console.warn("[SQL] OTP email failed:", mailError);
-    }
-    if (!mailDispatched) {
-      return ok({
-        message: `Verification code: ${otp} (Cloud email dispatch notice: ${mailError})`,
-        otp
-      });
+      return fail(`Could not send OTP email: ${mailError}`);
     }
     return ok({ message: "OTP sent to your email" });
   }
@@ -11489,8 +11481,7 @@ app.post("/api/auth/request-otp", async (req, res) => {
       const r = dbResult;
       return res.json({
         success: true,
-        message: String(r.message || "OTP sent to your email"),
-        otp: r.otp
+        message: String(r.message || "OTP sent to your email")
       });
     }
     const user = await ensureLocalOtpUser(email);
