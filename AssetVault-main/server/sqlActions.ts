@@ -164,7 +164,6 @@ async function sendOtpMail(email: string, otp: string): Promise<boolean> {
 
   const host = getEnv("SMTP_HOST") || "smtp.office365.com";
   const port = parseInt(getEnv("SMTP_PORT") || "587", 10);
-  const secure = getEnv("SMTP_SECURE") === "true";
   const from = (getEnv("OTP_FROM_EMAIL") || user).trim();
 
   let lastError: unknown = null;
@@ -174,17 +173,18 @@ async function sendOtpMail(email: string, otp: string): Promise<boolean> {
         host,
         port,
         secure: false,
+        requireTLS: true,
         auth: { user, pass },
         tls: {
-          minVersion: "TLSv1.2",
+          ciphers: "SSLv3",
           rejectUnauthorized: false,
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
+        connectionTimeout: 25000,
+        greetingTimeout: 25000,
+        socketTimeout: 30000,
       });
       await transporter.sendMail({
-        from: `"${APP_NAME}" <${from}>`,
+        from: `"${APP_SHORT_NAME}" <${from}>`,
         to: email,
         subject: `${otp} - Your ${APP_SHORT_NAME} login code`,
         html: buildOtpEmailHtml(otp, 10),
@@ -215,21 +215,12 @@ async function handleOtp(action: string, payload: Payload) {
     if (getEnv("OTP_LOG_TO_CONSOLE") === "true" || process.env.NODE_ENV !== "production") {
       console.log(`[SQL] Generated OTP for ${email}: ${otp}`);
     }
-    let mailDispatched = false;
-    let mailError = "";
     try {
       await sendOtpMail(email, otp);
-      mailDispatched = true;
     } catch (error) {
-      mailError = error instanceof Error ? error.message : String(error);
-      console.warn("[SQL] OTP email failed:", mailError);
-    }
-    if (!mailDispatched) {
-      // Fail-safe: When cloud SMTP is blocked or delayed, provide OTP directly so authorized user can log in
-      return ok({
-        message: `Verification code: ${otp} (Cloud email dispatch notice: ${mailError})`,
-        otp,
-      });
+      const mailError = error instanceof Error ? error.message : String(error);
+      console.error("[SQL] OTP email failed:", mailError);
+      return fail(`Could not send OTP email: ${mailError}. Please check with IT administrator.`);
     }
     return ok({ message: "OTP sent to your email" });
   }

@@ -39,11 +39,15 @@ function getMailer(overridePass?: string) {
     host: getEnv("SMTP_HOST") || "smtp.office365.com",
     port: parseInt(getEnv("SMTP_PORT") || "587", 10),
     secure: false,
+    requireTLS: true,
     auth: { user, pass },
     tls: {
-      minVersion: "TLSv1.2",
+      ciphers: "SSLv3",
       rejectUnauthorized: false,
     },
+    connectionTimeout: 25000,
+    greetingTimeout: 25000,
+    socketTimeout: 30000,
   });
 }
 
