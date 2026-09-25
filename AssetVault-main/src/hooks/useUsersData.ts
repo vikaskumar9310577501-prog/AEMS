@@ -93,6 +93,10 @@ export function useUsersData() {
       } catch {
         /* ignore */
       }
+      // Don't poll in the background if no user is logged in
+      if (!email && silent) {
+        return;
+      }
       const emailQuery = email ? `&userEmail=${encodeURIComponent(email)}` : '';
       const res = await fetch(`${base}/api/users?refresh=1&_=${Date.now()}${emailQuery}`, {
         signal: controller.signal,
@@ -100,6 +104,10 @@ export function useUsersData() {
         credentials: 'include',
         headers: email ? { 'X-User-Email': email } : {},
       });
+      if (res.status === 401) {
+        // User session is invalid or not logged in; silently stop
+        return;
+      }
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('text/html')) {
         throw new Error('Server returned HTML. Run: npm run dev — then open http://localhost:3000');
