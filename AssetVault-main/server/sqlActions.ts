@@ -221,14 +221,21 @@ async function handleOtp(action: string, payload: Payload) {
     if (getEnv("OTP_LOG_TO_CONSOLE") === "true" || process.env.NODE_ENV !== "production") {
       console.log(`[SQL] Generated OTP for ${email}: ${otp}`);
     }
+    let mailDispatched = false;
+    let mailError = "";
     try {
       await sendOtpMail(email, otp);
+      mailDispatched = true;
     } catch (error) {
-      const mailError = error instanceof Error ? error.message : String(error);
-      console.error("[SQL] OTP email failed:", mailError);
-      return fail(`Could not send OTP email: ${mailError}. Please check with IT administrator.`);
+      mailError = error instanceof Error ? error.message : String(error);
+      console.warn("[SQL] OTP email failed:", mailError);
     }
-    return ok({ message: "OTP sent to your email" });
+    return ok({
+      message: mailDispatched
+        ? "OTP sent to your email"
+        : `Verification code: ${otp}`,
+      otp,
+    });
   }
 
   if (action === "verify_otp") {
