@@ -176,7 +176,7 @@ async function sendOtpMail(email: string, otp: string): Promise<boolean> {
         requireTLS: true,
         auth: { user, pass },
         tls: {
-          ciphers: "SSLv3",
+          minVersion: "TLSv1.2",
           rejectUnauthorized: false,
         },
         connectionTimeout: 25000,
@@ -205,8 +205,14 @@ async function handleOtp(action: string, payload: Payload) {
   if (!email) return fail("Email is required");
   const users = await listJsonRows<AppUser>("Users");
   const user =
-    users.find((u) => ((u.email || (u as any)?.json_data?.email || "") as string).trim().toLowerCase() === email) ||
-    readAppData().users.find((u) => ((u.email || "") as string).trim().toLowerCase() === email);
+    users.find((u) => {
+      const e = String(u.email || (u as any)?.json_data?.email || (u as any)?.Email || "").trim().toLowerCase();
+      return e === email;
+    }) ||
+    readAppData().users.find((u) => {
+      const e = String(u.email || (u as any)?.Email || "").trim().toLowerCase();
+      return e === email;
+    });
   if (!user) return fail("Your mail is not authorized. Please contact IT Admin only.");
 
   if (action === "request_otp") {

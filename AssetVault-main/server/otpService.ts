@@ -42,7 +42,7 @@ function getMailer(overridePass?: string) {
     requireTLS: true,
     auth: { user, pass },
     tls: {
-      ciphers: "SSLv3",
+      minVersion: "TLSv1.2",
       rejectUnauthorized: false,
     },
     connectionTimeout: 25000,

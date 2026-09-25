@@ -3111,7 +3111,7 @@ async function sendOtpMail(email, otp) {
         requireTLS: true,
         auth: { user, pass },
         tls: {
-          ciphers: "SSLv3",
+          minVersion: "TLSv1.2",
           rejectUnauthorized: false
         },
         connectionTimeout: 25e3,
@@ -3138,7 +3138,13 @@ async function handleOtp(action, payload) {
   const email = String(payload.email || "").trim().toLowerCase();
   if (!email) return fail("Email is required");
   const users = await listJsonRows3("Users");
-  const user = users.find((u) => (u.email || u?.json_data?.email || "").trim().toLowerCase() === email) || readAppData().users.find((u) => (u.email || "").trim().toLowerCase() === email);
+  const user = users.find((u) => {
+    const e = String(u.email || u?.json_data?.email || u?.Email || "").trim().toLowerCase();
+    return e === email;
+  }) || readAppData().users.find((u) => {
+    const e = String(u.email || u?.Email || "").trim().toLowerCase();
+    return e === email;
+  });
   if (!user) return fail("Your mail is not authorized. Please contact IT Admin only.");
   if (action === "request_otp") {
     const otp = String(crypto2.randomInt(1e5, 1e6));
@@ -5572,7 +5578,7 @@ function getMailer(overridePass) {
     requireTLS: true,
     auth: { user, pass },
     tls: {
-      ciphers: "SSLv3",
+      minVersion: "TLSv1.2",
       rejectUnauthorized: false
     },
     connectionTimeout: 25e3,
