@@ -449,6 +449,7 @@ const DEPT_PRESETS = [
   'HE QUALITY',
   'SMT QA Press-Shop',
   'SMT QA Paint-Shop',
+  'ELT',
   'Stores',
   'Packing',
   'Assembly',

@@ -235,6 +235,7 @@ var init_assetCatalogDefaults = __esm({
       "HE QUALITY",
       "SMT QA Press-Shop",
       "SMT QA Paint-Shop",
+      "ELT",
       "Admin",
       "Sales",
       "Purchase",
@@ -447,7 +448,8 @@ var init_assetCatalogByType = __esm({
       "OQC",
       "HE QUALITY",
       "SMT QA Press-Shop",
-      "SMT QA Paint-Shop"
+      "SMT QA Paint-Shop",
+      "ELT"
     ];
     CATEGORY_SHEET_MAP = {
       "IT Assets": "IT Assets",
@@ -468,7 +470,8 @@ var init_assetCatalogByType = __esm({
       "OQC": "OQC",
       "HE QUALITY": "HE QUALITY",
       "SMT QA Press-Shop": "SMT QA Press-Shop",
-      "SMT QA Paint-Shop": "SMT QA Paint-Shop"
+      "SMT QA Paint-Shop": "SMT QA Paint-Shop",
+      "ELT": "ELT"
     };
     CATEGORY_SUBCATEGORIES = {
       "Quality Assets": [
@@ -664,6 +667,14 @@ var init_assetCatalogByType = __esm({
         "Adhesion Cross-Hatch Tester",
         "Baking Oven Temperature Logger",
         "Other Paint-Shop QA Asset"
+      ],
+      "ELT": [
+        "Life Test Chamber",
+        "Continuous Run Test Rig",
+        "Thermal Chamber",
+        "Power Cycling Station",
+        "Vibration Test Rig",
+        "Other ELT Asset"
       ]
     };
     SUB_TO_MAIN_MAP = {};
@@ -713,7 +724,10 @@ var init_assetCatalogByType = __esm({
       "smt qa press-shop": "SMT QA Press-Shop",
       "smt qa press shop": "SMT QA Press-Shop",
       "smt qa paint-shop": "SMT QA Paint-Shop",
-      "smt qa paint shop": "SMT QA Paint-Shop"
+      "smt qa paint shop": "SMT QA Paint-Shop",
+      elt: "ELT",
+      "elt asset": "ELT",
+      "elt quality": "ELT"
     };
     CODE_PREFIX_TO_MAIN = {
       IT: "IT Assets",
@@ -734,7 +748,8 @@ var init_assetCatalogByType = __esm({
       OQC: "OQC",
       HEQ: "HE QUALITY",
       SQPR: "SMT QA Press-Shop",
-      SQPA: "SMT QA Paint-Shop"
+      SQPA: "SMT QA Paint-Shop",
+      ELT: "ELT"
     };
     PERIPHERAL_GRID_TYPES = PERIPHERAL_TYPES.filter(
       (t) => t !== "Camera" && t !== "NVR"
@@ -6025,7 +6040,8 @@ var CATEGORY_PREFIX = {
   "OQC": "OQC",
   "HE QUALITY": "HEQ",
   "SMT QA Press-Shop": "SQPR",
-  "SMT QA Paint-Shop": "SQPA"
+  "SMT QA Paint-Shop": "SQPA",
+  "ELT": "ELT"
 };
 var isServerless3 = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";
 var CACHE_DIR2 = isServerless3 ? path5.join(os4.tmpdir(), "assetqr-cache") : path5.join(process.cwd(), "data", "cache");
@@ -9144,6 +9160,18 @@ var DEFAULT_TYPE_DEFINITIONS = [
       { key: "test_rig_number", label: "Test Rig / Station ID", type: "text" },
       { key: "calibration_due_date", label: "Calibration Due Date", type: "date" }
     ]
+  },
+  {
+    id: "elt_asset",
+    name: "ELT Asset",
+    mainCategory: "ELT",
+    fields: [
+      { key: "equipment_type", label: "ELT Equipment / Chamber Type", type: "select", options: ["End Life Test Chamber", "Continuous Run Rig", "Thermal Chamber", "Power Cycling Station", "Vibration Test Rig", "Other"] },
+      { key: "chamber_id", label: "Chamber / Station ID", type: "text", placeholder: "e.g. ELT Chamber 1" },
+      { key: "calibration_due_date", label: "Calibration Due Date", type: "date" },
+      { key: "model_number", label: "Model Number", type: "text" },
+      { key: "serial_number", label: "Serial Number", type: "text" }
+    ]
   }
 ];
 var DEFAULT_DEPARTMENTS2 = [];
@@ -10492,7 +10520,8 @@ var CATEGORIES = [
   "OQC",
   "HE QUALITY",
   "SMT QA Press-Shop",
-  "SMT QA Paint-Shop"
+  "SMT QA Paint-Shop",
+  "ELT"
 ];
 function sanitizeSqlName(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "_");

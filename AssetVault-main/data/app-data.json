@@ -377,7 +377,8 @@
         "OQC",
         "HE QUALITY",
         "SMT QA Press-Shop",
-        "SMT QA Paint-Shop"
+        "SMT QA Paint-Shop",
+        "ELT"
       ],
       "brandsByType": {
         "Laptop": {
@@ -1394,6 +1395,47 @@
               "key": "calibration_due_date",
               "label": "Calibration Due Date",
               "type": "date"
+            }
+          ]
+        },
+        {
+          "id": "elt_asset",
+          "name": "ELT Asset",
+          "mainCategory": "ELT",
+          "fields": [
+            {
+              "key": "equipment_type",
+              "label": "ELT Equipment / Chamber Type",
+              "type": "select",
+              "options": [
+                "End Life Test Chamber",
+                "Continuous Run Rig",
+                "Thermal Chamber",
+                "Power Cycling Station",
+                "Vibration Test Rig",
+                "Other"
+              ]
+            },
+            {
+              "key": "chamber_id",
+              "label": "Chamber / Station ID",
+              "type": "text",
+              "placeholder": "e.g. ELT Chamber 1"
+            },
+            {
+              "key": "calibration_due_date",
+              "label": "Calibration Due Date",
+              "type": "date"
+            },
+            {
+              "key": "model_number",
+              "label": "Model Number",
+              "type": "text"
+            },
+            {
+              "key": "serial_number",
+              "label": "Serial Number",
+              "type": "text"
             }
           ]
         }

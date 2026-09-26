@@ -103,6 +103,9 @@ select * from asset_sheet where "Main Category" = 'SMT QA Press-Shop';
 create or replace view "SMT QA Paint-Shop" as
 select * from asset_sheet where "Main Category" = 'SMT QA Paint-Shop';
 
+create or replace view "ELT" as
+select * from asset_sheet where "Main Category" = 'ELT';
+
 create or replace view "2040" as
 select * from asset_sheet where "Plant Name" = '2040';
 
@@ -178,6 +181,7 @@ grant select on "OQC" to postgres, service_role;
 grant select on "HE QUALITY" to postgres, service_role;
 grant select on "SMT QA Press-Shop" to postgres, service_role;
 grant select on "SMT QA Paint-Shop" to postgres, service_role;
+grant select on "ELT" to postgres, service_role;
 grant select on "2040" to postgres, service_role;
 grant select on "4020" to postgres, service_role;
 grant select on "4010" to postgres, service_role;

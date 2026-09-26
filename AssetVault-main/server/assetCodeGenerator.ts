@@ -26,6 +26,7 @@ const CATEGORY_PREFIX: Record<string, string> = {
   "HE QUALITY": "HEQ",
   "SMT QA Press-Shop": "SQPR",
   "SMT QA Paint-Shop": "SQPA",
+  "ELT": "ELT",
 };
 
 const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.NODE_ENV === "production";

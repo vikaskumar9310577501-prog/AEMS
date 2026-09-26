@@ -62,6 +62,7 @@ export const DEFAULT_DEPARTMENTS = [
   "HE QUALITY",
   "SMT QA Press-Shop",
   "SMT QA Paint-Shop",
+  "ELT",
   "Admin",
   "Sales",
   "Purchase",

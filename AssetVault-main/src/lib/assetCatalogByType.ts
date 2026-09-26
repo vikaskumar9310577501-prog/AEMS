@@ -149,7 +149,8 @@ export const MAIN_CATEGORIES = [
   "OQC",
   "HE QUALITY",
   "SMT QA Press-Shop",
-  "SMT QA Paint-Shop"
+  "SMT QA Paint-Shop",
+  "ELT"
 ] as const;
 
 export type MainCategory = typeof MAIN_CATEGORIES[number];
@@ -173,7 +174,8 @@ export const CATEGORY_SHEET_MAP: Record<string, string> = {
   "OQC": "OQC",
   "HE QUALITY": "HE QUALITY",
   "SMT QA Press-Shop": "SMT QA Press-Shop",
-  "SMT QA Paint-Shop": "SMT QA Paint-Shop"
+  "SMT QA Paint-Shop": "SMT QA Paint-Shop",
+  "ELT": "ELT"
 };
 
 export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
@@ -370,6 +372,14 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "Adhesion Cross-Hatch Tester",
     "Baking Oven Temperature Logger",
     "Other Paint-Shop QA Asset"
+  ],
+  "ELT": [
+    "Life Test Chamber",
+    "Continuous Run Test Rig",
+    "Thermal Chamber",
+    "Power Cycling Station",
+    "Vibration Test Rig",
+    "Other ELT Asset"
   ]
 };
 
@@ -424,6 +434,9 @@ const MAIN_CATEGORY_ALIASES: Record<string, string> = {
   'smt qa press shop': 'SMT QA Press-Shop',
   'smt qa paint-shop': 'SMT QA Paint-Shop',
   'smt qa paint shop': 'SMT QA Paint-Shop',
+  elt: 'ELT',
+  'elt asset': 'ELT',
+  'elt quality': 'ELT',
 };
 
 /** Asset-code prefix → main category (matches server/assetCodeGenerator.ts). */
@@ -447,6 +460,7 @@ const CODE_PREFIX_TO_MAIN: Record<string, string> = {
   HEQ: 'HE QUALITY',
   SQPR: 'SMT QA Press-Shop',
   SQPA: 'SMT QA Paint-Shop',
+  ELT: 'ELT',
 };
 
 /** Return canonical main category if `value` is a known category label, else null. */

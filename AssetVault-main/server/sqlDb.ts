@@ -23,7 +23,8 @@ const CATEGORIES = [
   "OQC",
   "HE QUALITY",
   "SMT QA Press-Shop",
-  "SMT QA Paint-Shop"
+  "SMT QA Paint-Shop",
+  "ELT"
 ];
 
 export function sanitizeSqlName(name: string): string {
