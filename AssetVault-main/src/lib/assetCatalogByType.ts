@@ -311,11 +311,11 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "Other IDU Asset"
   ],
   "ODU": [
-    "Assembly Line",
-    "Compressor Mounting",
-    "Brazing Station",
-    "Performance Test Chamber",
-    "Packaging Line",
+    "PCB Functional Tester",
+    "Oscilloscope / Analyzer",
+    "Digital Multimeter",
+    "Soldering & Rework Station",
+    "Component Reliability Tester",
     "Other ODU Asset"
   ],
   "IQC": [
@@ -327,11 +327,11 @@ export const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
     "Other IQC Asset"
   ],
   "QA ELECTRONICS": [
-    "PCB Functional Tester",
-    "Oscilloscope / Analyzer",
-    "Digital Multimeter",
-    "Soldering & Rework Station",
-    "Component Reliability Tester",
+    "Assembly Line",
+    "Compressor Mounting",
+    "Brazing Station",
+    "Performance Test Chamber",
+    "Packaging Line",
     "Other QA Electronics Asset"
   ],
   "OPERATIONS": [
@@ -439,9 +439,9 @@ const CODE_PREFIX_TO_MAIN: Record<string, string> = {
   ADM: 'Furniture Assets',
   MNT: 'Maintenance Assets',
   IDU: 'IDU',
-  ODU: 'ODU',
+  ODU: 'QA ELECTRONICS',
   IQC: 'IQC',
-  QAE: 'QA ELECTRONICS',
+  QAE: 'ODU',
   OPS: 'OPERATIONS',
   OQC: 'OQC',
   HEQ: 'HE QUALITY',

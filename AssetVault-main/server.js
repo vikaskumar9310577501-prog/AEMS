@@ -605,11 +605,11 @@ var init_assetCatalogByType = __esm({
         "Other IDU Asset"
       ],
       "ODU": [
-        "Assembly Line",
-        "Compressor Mounting",
-        "Brazing Station",
-        "Performance Test Chamber",
-        "Packaging Line",
+        "PCB Functional Tester",
+        "Oscilloscope / Analyzer",
+        "Digital Multimeter",
+        "Soldering & Rework Station",
+        "Component Reliability Tester",
         "Other ODU Asset"
       ],
       "IQC": [
@@ -621,11 +621,11 @@ var init_assetCatalogByType = __esm({
         "Other IQC Asset"
       ],
       "QA ELECTRONICS": [
-        "PCB Functional Tester",
-        "Oscilloscope / Analyzer",
-        "Digital Multimeter",
-        "Soldering & Rework Station",
-        "Component Reliability Tester",
+        "Assembly Line",
+        "Compressor Mounting",
+        "Brazing Station",
+        "Performance Test Chamber",
+        "Packaging Line",
         "Other QA Electronics Asset"
       ],
       "OPERATIONS": [
@@ -727,9 +727,9 @@ var init_assetCatalogByType = __esm({
       ADM: "Furniture Assets",
       MNT: "Maintenance Assets",
       IDU: "IDU",
-      ODU: "ODU",
+      ODU: "QA ELECTRONICS",
       IQC: "IQC",
-      QAE: "QA ELECTRONICS",
+      QAE: "ODU",
       OPS: "OPERATIONS",
       OQC: "OQC",
       HEQ: "HE QUALITY",
@@ -6018,9 +6018,9 @@ var CATEGORY_PREFIX = {
   "Admin / Facility Assets": "ADM",
   "Maintenance Assets": "MNT",
   "IDU": "IDU",
-  "ODU": "ODU",
+  "ODU": "QAE",
   "IQC": "IQC",
-  "QA ELECTRONICS": "QAE",
+  "QA ELECTRONICS": "ODU",
   "OPERATIONS": "OPS",
   "OQC": "OQC",
   "HE QUALITY": "HEQ",
@@ -9100,10 +9100,9 @@ var DEFAULT_TYPE_DEFINITIONS = [
     name: "ODU Asset",
     mainCategory: "ODU",
     fields: [
-      { key: "line_number", label: "Line / Station Number", type: "text", placeholder: "e.g. ODU Line 1" },
-      { key: "equipment_type", label: "Equipment Type", type: "select", options: ["Assembly Conveyor", "Compressor Mount Station", "Brazing Rig", "Testing Chamber", "Packaging Line", "Other"] },
-      { key: "model_number", label: "Model Number", type: "text" },
-      { key: "serial_number", label: "Serial Number", type: "text" }
+      { key: "equipment_type", label: "Testing / QA Equipment", type: "select", options: ["PCB Functional Tester", "Oscilloscope", "Multimeter", "Soldering & Rework Station", "LCR Meter", "Other"] },
+      { key: "calibration_due_date", label: "Calibration Due Date", type: "date" },
+      { key: "test_bench", label: "Test Bench / Station", type: "text" }
     ]
   },
   {
@@ -9121,9 +9120,10 @@ var DEFAULT_TYPE_DEFINITIONS = [
     name: "QA Electronics Asset",
     mainCategory: "QA ELECTRONICS",
     fields: [
-      { key: "equipment_type", label: "Testing / QA Equipment", type: "select", options: ["PCB Functional Tester", "Oscilloscope", "Multimeter", "Soldering & Rework Station", "LCR Meter", "Other"] },
-      { key: "calibration_due_date", label: "Calibration Due Date", type: "date" },
-      { key: "test_bench", label: "Test Bench / Station", type: "text" }
+      { key: "line_number", label: "Line / Station Number", type: "text", placeholder: "e.g. Line 1" },
+      { key: "equipment_type", label: "Equipment Type", type: "select", options: ["Assembly Conveyor", "Compressor Mount Station", "Brazing Rig", "Testing Chamber", "Packaging Line", "Other"] },
+      { key: "model_number", label: "Model Number", type: "text" },
+      { key: "serial_number", label: "Serial Number", type: "text" }
     ]
   },
   {

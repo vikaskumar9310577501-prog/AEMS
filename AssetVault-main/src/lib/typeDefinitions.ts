@@ -308,10 +308,9 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
     name: 'ODU Asset',
     mainCategory: 'ODU',
     fields: [
-      { key: 'line_number', label: 'Line / Station Number', type: 'text', placeholder: 'e.g. ODU Line 1' },
-      { key: 'equipment_type', label: 'Equipment Type', type: 'select', options: ['Assembly Conveyor', 'Compressor Mount Station', 'Brazing Rig', 'Testing Chamber', 'Packaging Line', 'Other'] },
-      { key: 'model_number', label: 'Model Number', type: 'text' },
-      { key: 'serial_number', label: 'Serial Number', type: 'text' },
+      { key: 'equipment_type', label: 'Testing / QA Equipment', type: 'select', options: ['PCB Functional Tester', 'Oscilloscope', 'Multimeter', 'Soldering & Rework Station', 'LCR Meter', 'Other'] },
+      { key: 'calibration_due_date', label: 'Calibration Due Date', type: 'date' },
+      { key: 'test_bench', label: 'Test Bench / Station', type: 'text' },
     ],
   },
   {
@@ -329,9 +328,10 @@ export const DEFAULT_TYPE_DEFINITIONS: AssetTypeDefinition[] = [
     name: 'QA Electronics Asset',
     mainCategory: 'QA ELECTRONICS',
     fields: [
-      { key: 'equipment_type', label: 'Testing / QA Equipment', type: 'select', options: ['PCB Functional Tester', 'Oscilloscope', 'Multimeter', 'Soldering & Rework Station', 'LCR Meter', 'Other'] },
-      { key: 'calibration_due_date', label: 'Calibration Due Date', type: 'date' },
-      { key: 'test_bench', label: 'Test Bench / Station', type: 'text' },
+      { key: 'line_number', label: 'Line / Station Number', type: 'text', placeholder: 'e.g. Line 1' },
+      { key: 'equipment_type', label: 'Equipment Type', type: 'select', options: ['Assembly Conveyor', 'Compressor Mount Station', 'Brazing Rig', 'Testing Chamber', 'Packaging Line', 'Other'] },
+      { key: 'model_number', label: 'Model Number', type: 'text' },
+      { key: 'serial_number', label: 'Serial Number', type: 'text' },
     ],
   },
   {
