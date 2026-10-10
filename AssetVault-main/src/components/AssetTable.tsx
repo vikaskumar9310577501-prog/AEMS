@@ -29,6 +29,7 @@ interface AssetTableProps {
   onViewQR: (asset: Asset) => void;
   onViewAsset: (asset: Asset) => void;
   role?: string;
+  allowDelete?: boolean;
   viewMode?: AssetViewMode;
   selectedAssetIds?: (string | number)[];
   onSelectionChange?: (ids: (string | number)[]) => void;
@@ -50,6 +51,7 @@ export default function AssetTable({
   onViewQR,
   onViewAsset,
   role,
+  allowDelete,
   viewMode = "table",
   selectedAssetIds = [],
   onSelectionChange
@@ -215,7 +217,7 @@ export default function AssetTable({
         >
           <Edit2 size={16} />
         </button>
-        {role === 'IT Admin' && (
+        {(role === 'IT Admin' || (role === 'Admin' && allowDelete)) && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -614,7 +616,7 @@ export default function AssetTable({
                         <button type="button" onClick={() => onEdit(asset)} className="p-1 text-slate-400 hover:text-slate-900" title="Edit">
                           <Edit2 size={14} />
                         </button>
-                        {role === "IT Admin" && (
+                        {(role === "IT Admin" || (role === "Admin" && allowDelete)) && (
                           <button type="button" onClick={() => asset.id && onDelete(asset.id)} className="p-1 text-slate-400 hover:text-red-500" title="Delete">
                             <Trash2 size={14} />
                           </button>

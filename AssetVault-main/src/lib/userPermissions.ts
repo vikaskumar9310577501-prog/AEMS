@@ -42,6 +42,14 @@ export function canDeleteUser(
   return isAdminRole(actorRole) && !isProtectedItAdminUser(target);
 }
 
+export function canDeleteAsset(
+  user: { role?: string; allowDelete?: boolean } | null | undefined
+): boolean {
+  if (!user) return false;
+  if (isItAdminRole(user.role)) return true;
+  return isAdminRole(user.role) && Boolean(user.allowDelete);
+}
+
 export function isHrRole(role: string | undefined | null): boolean {
   return normalizeRole(role) === 'hr';
 }

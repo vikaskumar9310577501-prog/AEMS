@@ -17,7 +17,7 @@ import {
   mapSheetRow,
   type MappedAsset,
 } from "./server/assetHelpers.js";
-import { upsertLocalUser, deleteLocalUser, normalizeUser, canDeleteUserRecord, isItAdminRole, fetchUsersFromGas } from "./server/usersService.js";
+import { upsertLocalUser, deleteLocalUser, normalizeUser, canDeleteUserRecord, fetchUsersFromGas } from "./server/usersService.js";
 import { generateAssetPdf } from "./server/pdfGenerator.js";
 import { persistUserToSheet } from "./server/userSheetSync.js";
 import { listUsersFromGoogleSheet, verifyOtpFromGoogleSheet } from "./server/sheetsUsers.js";
@@ -32,10 +32,11 @@ import {
   getAssetsSyncMeta,
   scheduleAssetsSyncIfStale,
 } from "./server/assetCache.js";
-import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode, generateNextAssetId, reserveAssetId, releaseAssetId } from "./server/assetCodeGenerator.js";
+import { generateAssetCode, isManualAssetCodeCategory, releaseIssuedCode, registerSavingCode, releaseSavingCode, isSavingCode, generateNextAssetId, reserveAssetId, releaseAssetId, isAssetIdReserved } from "./server/assetCodeGenerator.js";
 import { healMisalignedAssetFields } from "./src/lib/healAssetFields.js";
 import { mapMasterRowToSheetHeaders } from "./server/sheetRowMapper.js";
 import { getUsersWithCache, syncUsersNow, getCachedUsers, getUsersSyncMeta, invalidateUsersCache } from "./server/usersSync.js";
+import { writeCache } from "./server/cacheStore.js";
 import {
   listMaintenanceMachines,
   getMaintenanceMachine,
@@ -2051,7 +2052,9 @@ app.get("/api/users", requireItAdminRole, async (req, res) => {
     const deps = userSyncDeps();
 
     if (!GAS_WEBAPP_URL) {
-      return res.json(getCachedUsers());
+      const cached = getCachedUsers();
+      if (cached && cached.length > 0) return res.json(cached);
+      return res.json(readAppData().users);
     }
 
     const { users, fromCache, syncing } = await getUsersWithCache(deps, force);
@@ -2092,7 +2095,9 @@ app.post("/api/users", requireItAdminRole, async (req, res) => {
 
     upsertLocalUser(user);
     invalidateUsersCache();
-    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [user];
+    const freshUsers = readAppData().users;
+    writeCache("users", freshUsers);
+    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : freshUsers;
     recordAudit(
       req.authUser?.email || getFallbackEmail(req),
       "User Created",
@@ -2127,7 +2132,9 @@ app.put("/api/users/:email", requireItAdminRole, async (req, res) => {
 
     upsertLocalUser(user);
     invalidateUsersCache();
-    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : data.users;
+    const freshUsers = readAppData().users;
+    writeCache("users", freshUsers);
+    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : freshUsers;
     recordAudit(
       req.authUser?.email || getFallbackEmail(req),
       "User Updated",
@@ -2163,6 +2170,8 @@ app.delete("/api/users/:email", requireItAdminRole, async (req, res) => {
 
     deleteLocalUser(email);
     invalidateUsersCache();
+    const freshUsers = readAppData().users;
+    writeCache("users", freshUsers);
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [];
     recordAudit(
       req.authUser?.email || getFallbackEmail(req),
@@ -5919,10 +5928,12 @@ app.delete("/api/assets/:id", async (req, res) => {
     const sessionUser = req.authUser;
     const actorEmail = user?.email || sessionUser?.email || "";
     const actorRole = user?.role || sessionUser?.role || "";
+    const allowDelete = Boolean(user?.allowDelete ?? sessionUser?.allowDelete);
     if (!actorEmail) {
       return res.status(403).json({ error: "Authentication required." });
     }
-    if (!isItAdminRole(actorRole)) {
+    const canDelete = isItAdminRole(actorRole) || (actorRole.trim().toLowerCase() === "admin" && allowDelete);
+    if (!canDelete) {
       return res.status(403).json({ error: "You do not have permission to delete assets." });
     }
 
@@ -5932,6 +5943,19 @@ app.delete("/api/assets/:id", async (req, res) => {
     const assets = await getAssetsForOps();
     const existing = findMappedAssetByAnyId(assets, id);
     const canonicalId = String(existing?.id || id);
+
+    // If Admin (not IT Admin), check plant/location/category scoping on the existing asset
+    if (!isItAdminRole(actorRole) && existing) {
+      const plants = data.settings.plants || [];
+      const hasPlantLocAccess = userCanAccessPlantLocation(user, existing.location, existing.plantCode, plants);
+      const userCats = (user?.categories || []).map((c: string) => c.trim().toLowerCase());
+      const hasAllCats = userCats.includes("all");
+      const assetCat = String(existing.mainCategory || "").trim().toLowerCase();
+      const hasCatAccess = hasAllCats || userCats.length === 0 || userCats.includes(assetCat);
+      if (!hasPlantLocAccess || !hasCatAccess) {
+        return res.status(403).json({ error: "You do not have permission to delete assets outside your assigned plant or category." });
+      }
+    }
 
     if (existing) {
       await archiveDeletedAsset(existing as unknown as Record<string, unknown>, actorEmail).catch(() => {});

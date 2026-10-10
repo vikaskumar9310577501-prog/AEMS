@@ -18,10 +18,16 @@ import {
 import {
   daysUntilDateIst,
   istCalendarDaysSince,
+  istHour,
   istMailSlotKey,
   COMPLAINT_RESOLVE_SLA_DAYS,
   effectiveNextMaintenanceDate,
 } from "../src/lib/maintenanceCodes.js";
+import {
+  DAILY_OVERDUE_MAIL_HOUR_IST,
+  isDailyOverduePlant,
+  sendDailyOverduePlantMails,
+} from "./dailyOverdueMail.js";
 import type { MaintenanceComplaint, MaintenanceMachine } from "../src/types/maintenance.js";
 
 export { getPlantMaintenanceEmails };
@@ -62,6 +68,12 @@ export async function runMaintenanceCron(): Promise<MaintenanceCronResult> {
     complaintOverdueSent: 0,
     errors: [],
   };
+
+  if (istHour() >= DAILY_OVERDUE_MAIL_HOUR_IST) {
+    const digest = await sendDailyOverduePlantMails();
+    result.overdueSent += digest.sent;
+    result.errors.push(...digest.errors);
+  }
 
   const meta = await getMaintenanceMeta();
   const plantContacts = meta.plantContacts || {};
@@ -110,6 +122,9 @@ export async function runMaintenanceCron(): Promise<MaintenanceCronResult> {
       }
       continue;
     }
+
+    // NGM / PGTL / PGEL get one consolidated mail at 9:00 IST, not one mail per machine.
+    if (days < 0 && isDailyOverduePlant(machine.plantCode)) continue;
 
     // After the due date: overdue reminders twice daily (9:00 AM and 4:00 PM IST) with reminder count
     if (days < 0) {

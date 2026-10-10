@@ -1321,6 +1321,7 @@ function DashboardPageContent() {
             onViewQR={setViewingQR}
             onViewAsset={(a) => navigate(`/assets/${assetRouteId(a)}`)}
             role={user?.role}
+            allowDelete={user?.allowDelete}
             viewMode={viewMode}
             selectedAssetIds={selectedAssetIds}
             onSelectionChange={setSelectedAssetIds}

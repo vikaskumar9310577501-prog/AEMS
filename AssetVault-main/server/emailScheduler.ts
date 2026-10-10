@@ -227,6 +227,12 @@ export async function runEmailAutomationScheduler(force = false): Promise<{
   let skipped = 0;
   const errors: string[] = [];
 
+  const { sendDailyOverduePlantMails, isDailyOverduePlant } = await import("./dailyOverdueMail.js");
+  const digest = await sendDailyOverduePlantMails();
+  sent += digest.sent;
+  skipped += digest.skipped;
+  errors.push(...digest.errors);
+
   for (const auto of activeAutomations) {
     // Check timing unless force is requested
     if (!force && !isTimeMatch(auto.scheduleTimes, time)) {
@@ -270,6 +276,10 @@ export async function runEmailAutomationScheduler(force = false): Promise<{
         }
 
         for (const [plantCode, machines] of Object.entries(plantGroups)) {
+          if (isDailyOverduePlant(plantCode)) {
+            skipped++;
+            continue;
+          }
           const idempotencyKey = `${auto.id}_${date}_${time.slice(0, 2)}_${plantCode}`;
           if (!force && (await isIdempotentAlreadySent(idempotencyKey))) {
             skipped++;

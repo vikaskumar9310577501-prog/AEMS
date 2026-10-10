@@ -23,7 +23,7 @@ import {
   patchAssetsList,
 } from '../lib/optimisticAssets';
 import { buildCleanedSubmitPayload, preserveExistingEditValues } from '../lib/submitAssetPayload';
-import { isItAdminRole } from '../lib/userPermissions';
+import { isItAdminRole, canDeleteAsset } from '../lib/userPermissions';
 import {
   ASSETS_CACHE_KEY,
   DAY_MS,
@@ -238,24 +238,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             if (!cancelled) setUser(parsedUser);
             if (!cancelled) {
               const base = import.meta.env.VITE_API_BASE_URL || '';
-              const emailParam = parsedUser.email ? `&userEmail=${encodeURIComponent(parsedUser.email)}` : '';
-              fetch(`${base}/api/users?refresh=1${emailParam}`, {
-                credentials: 'include',
-                headers: parsedUser.email ? { 'X-User-Email': parsedUser.email } : {},
-              })
+              fetch(`${base}/api/auth/session`, { credentials: 'include' })
                 .then((r) => (r.ok ? r.json() : null))
-                .then((usersList) => {
-                  if (usersList && Array.isArray(usersList)) {
-                    const fresh = usersList.find(
-                      (u: { email: string }) =>
-                        u.email.toLowerCase() === parsedUser.email.toLowerCase()
-                    );
-                    if (fresh) {
-                      const freshUser = normalizeUser(fresh as Record<string, unknown>);
-                      setUser(freshUser);
-                      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(freshUser));
-                      localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(freshUser));
-                    }
+                .then((data) => {
+                  if (data?.user) {
+                    const freshUser = normalizeUser(data.user as Record<string, unknown>);
+                    setUser(freshUser);
+                    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(freshUser));
+                    localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(freshUser));
                   }
                 })
                 .catch(() => {});
@@ -739,9 +729,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const executeDelete = useCallback(
     (id: number | string): Promise<void> => {
       if (!user) return Promise.reject(new Error('Not authenticated'));
-      if (!isItAdminRole(user.role)) {
-        toast.error('Only IT Admin can delete assets');
-        return Promise.reject(new Error('Only IT Admin can delete assets'));
+      if (!canDeleteAsset(user)) {
+        toast.error('You do not have permission to delete assets');
+        return Promise.reject(new Error('You do not have permission to delete assets'));
       }
 
       const previousSnapshot = [...assetsRef.current];

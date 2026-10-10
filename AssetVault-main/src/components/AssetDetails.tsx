@@ -24,6 +24,7 @@ interface AssetDetailsProps {
   onEdit: (asset: Asset) => void;
   onDelete: (id: number) => void;
   role?: string;
+  allowDelete?: boolean;
 }
 
 export default function AssetDetails({
@@ -33,6 +34,7 @@ export default function AssetDetails({
   onEdit,
   onDelete,
   role,
+  allowDelete,
 }: AssetDetailsProps) {
   const navigate = useNavigate();
   const scanUrl = buildScanUrl(asset);
@@ -312,7 +314,7 @@ export default function AssetDetails({
             <Edit2 size={18} />
             <span className="text-[10px] font-black uppercase">Edit</span>
           </button>
-          {role === "IT Admin" && (
+          {(role === "IT Admin" || (role === "Admin" && Boolean(allowDelete ?? user?.allowDelete))) && (
             <button
               type="button"
               onClick={() => asset.id != null && onDelete(asset.id as number)}

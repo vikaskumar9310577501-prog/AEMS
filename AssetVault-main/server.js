@@ -4031,6 +4031,2086 @@ var init_assetHelpers = __esm({
   }
 });
 
+// src/types/maintenance.ts
+function isCustomTrend(months) {
+  return Number(months) === CUSTOM_TREND_MONTHS;
+}
+function trendMonthsLabel(months) {
+  switch (months) {
+    case CUSTOM_TREND_MONTHS:
+      return "Custom (manual dates)";
+    case 1:
+      return "Monthly (1 month)";
+    case 2:
+      return "Every 2 months";
+    case 3:
+      return "Quarterly (3 months)";
+    case 4:
+      return "Every 4 months";
+    case 5:
+      return "Every 5 months";
+    case 6:
+      return "Half-yearly (6 months)";
+    case 12:
+      return "Yearly (12 months)";
+    default:
+      return `Every ${months} months`;
+  }
+}
+var CUSTOM_TREND_MONTHS, TREND_MONTH_OPTIONS, DEFAULT_TREND_MONTHS, TREND_SELECT_OPTIONS, DEFAULT_MACHINE_TYPES;
+var init_maintenance = __esm({
+  "src/types/maintenance.ts"() {
+    CUSTOM_TREND_MONTHS = 0;
+    TREND_MONTH_OPTIONS = [1, 2, 3, 4, 5, 6, 12];
+    DEFAULT_TREND_MONTHS = 2;
+    TREND_SELECT_OPTIONS = [CUSTOM_TREND_MONTHS, ...TREND_MONTH_OPTIONS];
+    DEFAULT_MACHINE_TYPES = [
+      "Injection Molding Machine",
+      "CNC Machine",
+      "Press Machine",
+      "Compressor",
+      "Generator",
+      "Conveyor",
+      "Packaging Machine",
+      "Extruder",
+      "Chiller",
+      "Boiler"
+    ];
+  }
+});
+
+// server/maintenanceStore.ts
+import fs6 from "fs";
+import path6 from "path";
+async function withLock2(name, fn) {
+  const previous = locks2.get(name) || Promise.resolve();
+  let release = () => void 0;
+  const current = new Promise((resolve) => {
+    release = resolve;
+  });
+  locks2.set(
+    name,
+    previous.then(() => current)
+  );
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+function localPath(name) {
+  return path6.join(process.cwd(), "data", `${name}.json`);
+}
+async function loadJson(name, fallback) {
+  if (isSupabaseMode()) {
+    const remote = await downloadFromStorage(`tables/${name}.json`, DATA_BUCKET);
+    if (!remote) return fallback;
+    try {
+      return JSON.parse(new TextDecoder().decode(remote.bytes));
+    } catch {
+      return fallback;
+    }
+  }
+  try {
+    const file = localPath(name);
+    if (!fs6.existsSync(file)) return fallback;
+    return JSON.parse(fs6.readFileSync(file, "utf-8"));
+  } catch {
+    return fallback;
+  }
+}
+async function saveJson(name, data) {
+  if (isSupabaseMode()) {
+    await uploadToStorage(
+      `tables/${name}.json`,
+      Buffer.from(JSON.stringify(data, null, 2)),
+      "application/json",
+      DATA_BUCKET
+    );
+    return;
+  }
+  const file = localPath(name);
+  fs6.mkdirSync(path6.dirname(file), { recursive: true });
+  fs6.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+}
+function defaultMeta() {
+  return {
+    machineTypes: [...DEFAULT_MACHINE_TYPES],
+    plantContacts: {},
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+async function listMaintenanceMachines() {
+  const rows = await loadJson(MACHINES_FILE, []);
+  return Array.isArray(rows) ? rows : [];
+}
+async function getMaintenanceMachine(id) {
+  const rows = await listMaintenanceMachines();
+  return rows.find((r) => r.id === id) || null;
+}
+async function getMaintenanceMachineByAssetCode(assetCode) {
+  const code = String(assetCode || "").trim().toUpperCase();
+  if (!code) return null;
+  const rows = await listMaintenanceMachines();
+  return rows.find((r) => String(r.assetCode || "").trim().toUpperCase() === code) || null;
+}
+async function upsertMaintenanceMachine(machine) {
+  return withLock2(MACHINES_FILE, async () => {
+    const rows = await listMaintenanceMachines();
+    const idx = rows.findIndex((r) => r.id === machine.id);
+    if (idx >= 0) rows[idx] = machine;
+    else rows.push(machine);
+    await saveJson(MACHINES_FILE, rows);
+    if (isSupabaseMode()) {
+      mirrorMachineToPostgres(machine).catch(() => void 0);
+    }
+    return machine;
+  });
+}
+async function deleteMaintenanceMachine(id) {
+  return withLock2(MACHINES_FILE, async () => {
+    const rows = await listMaintenanceMachines();
+    const next = rows.filter((r) => r.id !== id);
+    if (next.length === rows.length) return false;
+    await saveJson(MACHINES_FILE, next);
+    if (isSupabaseMode()) {
+      deleteMirroredMachine(id).catch(() => void 0);
+    }
+    return true;
+  });
+}
+async function listMaintenanceComplaints() {
+  const rows = await loadJson(COMPLAINTS_FILE, []);
+  return Array.isArray(rows) ? rows : [];
+}
+async function getMaintenanceComplaint(id) {
+  const rows = await listMaintenanceComplaints();
+  return rows.find((r) => r.id === id) || null;
+}
+async function upsertMaintenanceComplaint(complaint) {
+  return withLock2(COMPLAINTS_FILE, async () => {
+    const rows = await listMaintenanceComplaints();
+    const idx = rows.findIndex((r) => r.id === complaint.id);
+    if (idx >= 0) rows[idx] = complaint;
+    else rows.push(complaint);
+    await saveJson(COMPLAINTS_FILE, rows);
+    return complaint;
+  });
+}
+async function getMaintenanceMeta() {
+  const meta = await loadJson(META_FILE, null);
+  if (!meta || !Array.isArray(meta.machineTypes)) return defaultMeta();
+  const merged = Array.from(
+    new Set([...DEFAULT_MACHINE_TYPES, ...meta.machineTypes].map((t) => String(t).trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+  return {
+    ...meta,
+    machineTypes: merged,
+    plantContacts: meta.plantContacts || {}
+  };
+}
+async function saveMaintenanceMeta(meta) {
+  return withLock2(META_FILE, async () => {
+    const next = {
+      ...meta,
+      machineTypes: Array.from(
+        new Set((meta.machineTypes || []).map((t) => String(t).trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b)),
+      plantContacts: meta.plantContacts || {},
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await saveJson(META_FILE, next);
+    return next;
+  });
+}
+async function addMachineType(typeName) {
+  const name = String(typeName || "").trim();
+  if (!name) throw new Error("Machine type is required");
+  const meta = await getMaintenanceMeta();
+  if (!meta.machineTypes.some((t) => t.toLowerCase() === name.toLowerCase())) {
+    meta.machineTypes.push(name);
+  }
+  return saveMaintenanceMeta(meta);
+}
+async function removeMachineType(typeName) {
+  const name = String(typeName || "").trim().toLowerCase();
+  if (!name) throw new Error("Machine type is required");
+  const meta = await getMaintenanceMeta();
+  meta.machineTypes = (meta.machineTypes || []).filter((t) => t.trim().toLowerCase() !== name);
+  return saveMaintenanceMeta(meta);
+}
+var MACHINES_FILE, META_FILE, COMPLAINTS_FILE, locks2;
+var init_maintenanceStore = __esm({
+  "server/maintenanceStore.ts"() {
+    init_sqlConfig();
+    init_supabaseClient();
+    init_maintenance();
+    init_postgresMirror();
+    MACHINES_FILE = "maintenance_machines";
+    META_FILE = "maintenance_meta";
+    COMPLAINTS_FILE = "maintenance_complaints";
+    locks2 = /* @__PURE__ */ new Map();
+  }
+});
+
+// src/lib/maintenanceCodes.ts
+function nextMaintenanceAssetCode(machines) {
+  let max = 0;
+  for (const m of machines) {
+    const match = String(m.assetCode || "").trim().toUpperCase().match(/^PM-(\d+)$/);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (Number.isFinite(n)) max = Math.max(max, n);
+    }
+  }
+  return `PM-${String(max + 1).padStart(5, "0")}`;
+}
+function normalizeMachineNumber(raw) {
+  return String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
+}
+function istTodayKey(d = /* @__PURE__ */ new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(d);
+}
+function istHour(d = /* @__PURE__ */ new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    hour12: false
+  }).formatToParts(d);
+  return parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+}
+function istMailSlot(d = /* @__PURE__ */ new Date()) {
+  const h = istHour(d);
+  if (h >= 16) return "pm";
+  if (h >= 8) return "am";
+  return null;
+}
+function istMailSlotKey(d = /* @__PURE__ */ new Date()) {
+  const slot = istMailSlot(d);
+  if (!slot) return null;
+  return `${istTodayKey(d)}-${slot}`;
+}
+function daysUntilDate(dateStr, now = /* @__PURE__ */ new Date()) {
+  const raw = String(dateStr || "").trim();
+  if (!raw) return null;
+  const d = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((target.getTime() - start.getTime()) / (24 * 60 * 60 * 1e3));
+}
+function daysUntilDateIst(dateStr, now = /* @__PURE__ */ new Date()) {
+  const raw = String(dateStr || "").trim().slice(0, 10);
+  if (!raw) return null;
+  const today = istTodayKey(now);
+  const t = Date.parse(`${today}T00:00:00`);
+  const d = Date.parse(`${raw}T00:00:00`);
+  if (Number.isNaN(t) || Number.isNaN(d)) return null;
+  return Math.round((d - t) / (24 * 60 * 60 * 1e3));
+}
+function istCalendarDaysSince(iso, now = /* @__PURE__ */ new Date()) {
+  const reported = new Date(iso);
+  if (Number.isNaN(reported.getTime())) return 0;
+  const a = Date.parse(`${istTodayKey(reported)}T00:00:00`);
+  const b = Date.parse(`${istTodayKey(now)}T00:00:00`);
+  return Math.max(0, Math.round((b - a) / (24 * 60 * 60 * 1e3)));
+}
+function dateKey(value) {
+  if (!value) return "";
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : formatDateOnly(value);
+  const d = parseDateOnly(value);
+  return d ? formatDateOnly(d) : "";
+}
+function completedPlanDateKeys(machine) {
+  const keys = /* @__PURE__ */ new Set();
+  for (const log of machine.pmLogs || []) {
+    const planned = dateKey(log.plannedDate);
+    const done = dateKey(log.doneOn);
+    if (planned) keys.add(planned);
+    if (done) keys.add(done);
+  }
+  const last = dateKey(machine.lastMaintenanceDate);
+  if (last) keys.add(last);
+  return keys;
+}
+function manualPlanDates(machine) {
+  const sorted = uniqueDates([machine.nextMaintenanceDate, ...machine.customPlanDates || []]);
+  return sorted.sort((a, b) => a.getTime() - b.getTime());
+}
+function isPlanDateCompleted(machine, planned) {
+  const k = formatDateOnly(planned);
+  if (completedPlanDateKeys(machine).has(k)) return true;
+  const last = parseDateOnly(machine.lastMaintenanceDate);
+  if (last && planned.getTime() <= last.getTime()) return true;
+  return false;
+}
+function pendingPlanDates(machine) {
+  if (isCustomTrend(machineTrendMonths(machine))) {
+    return manualPlanDates(machine).filter((d) => !isPlanDateCompleted(machine, d)).sort((a, b) => a.getTime() - b.getTime());
+  }
+  const next = parseDateOnly(machine.nextMaintenanceDate);
+  if (!next) return [];
+  return isPlanDateCompleted(machine, next) ? [] : [next];
+}
+function effectiveNextMaintenanceDate(machine) {
+  const pending = pendingPlanDates(machine);
+  if (pending[0]) return formatDateOnly(pending[0]);
+  return String(machine.nextMaintenanceDate || "").trim();
+}
+function mergeCustomPlan(next, extras) {
+  const all = normalizeCustomPlanDates([next, ...extras || []]);
+  if (!all.length) return { nextMaintenanceDate: String(next || "").trim(), customPlanDates: [] };
+  return {
+    nextMaintenanceDate: all[0],
+    customPlanDates: all.slice(1)
+  };
+}
+function maintenancePendingDays(machine, now = /* @__PURE__ */ new Date()) {
+  const days = daysUntilDate(effectiveNextMaintenanceDate(machine), now);
+  if (days == null) return 0;
+  if (days >= 0) return 0;
+  return Math.abs(days);
+}
+function normalizeTrendMonths(raw, fallback = DEFAULT_TREND_MONTHS) {
+  const n = typeof raw === "number" ? raw : parseInt(String(raw || ""), 10);
+  if (n === CUSTOM_TREND_MONTHS) return CUSTOM_TREND_MONTHS;
+  if (Number.isFinite(n) && n >= 1 && n <= 24) return Math.round(n);
+  return fallback;
+}
+function machineTrendMonths(machine) {
+  const n = typeof machine.trendMonths === "number" ? machine.trendMonths : parseInt(String(machine.trendMonths || ""), 10);
+  if (n === CUSTOM_TREND_MONTHS) return CUSTOM_TREND_MONTHS;
+  return normalizeTrendMonths(machine.trendMonths);
+}
+function normalizeCustomPlanDates(raw) {
+  const arr = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,;\s]+/) : [];
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const v of arr) {
+    const d = parseDateOnly(String(v || "").trim());
+    if (!d) continue;
+    const k = formatDateOnly(d);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+  }
+  return out.sort();
+}
+function addMonthsToDate(from, months) {
+  const base = typeof from === "string" ? new Date(from.includes("T") ? from : `${from}T00:00:00`) : new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  d.setMonth(d.getMonth() + months);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function suggestNextMaintenanceDate(from = /* @__PURE__ */ new Date(), trendMonths = DEFAULT_TREND_MONTHS) {
+  const trend = normalizeTrendMonths(trendMonths);
+  if (isCustomTrend(trend)) return "";
+  return addMonthsToDate(from, trend);
+}
+function nextDateForTrend(machine, trendMonths, now = /* @__PURE__ */ new Date()) {
+  const trend = normalizeTrendMonths(trendMonths);
+  if (isCustomTrend(trend)) {
+    return String(machine.nextMaintenanceDate || "").trim() || todayIso(now);
+  }
+  const base = machine.lastMaintenanceDate?.trim() || todayIso(now);
+  return addMonthsToDate(base, trend);
+}
+function todayIso(now = /* @__PURE__ */ new Date()) {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function formatDowntimeLabel(minutes) {
+  const n = Math.round(Number(minutes) || 0);
+  if (n <= 0) return "";
+  const h = Math.floor(n / 60);
+  const m = n % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+function parseDateOnly(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const d = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function formatDateOnly(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function uniqueDates(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const v of values) {
+    const d = parseDateOnly(v);
+    if (!d) continue;
+    const k = formatDateOnly(d);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(d);
+  }
+  return out;
+}
+var COMPLAINT_RESOLVE_SLA_DAYS;
+var init_maintenanceCodes = __esm({
+  "src/lib/maintenanceCodes.ts"() {
+    init_maintenance();
+    COMPLAINT_RESOLVE_SLA_DAYS = 7;
+  }
+});
+
+// src/lib/plantDisplay.ts
+function samePlant(a, b) {
+  const l = String(a || "").trim().toLowerCase();
+  const r = String(b || "").trim().toLowerCase();
+  if (!l || !r) return false;
+  if (l === r) return true;
+  if (l.includes(r) || r.includes(l)) return true;
+  return false;
+}
+function plantShortName(code, plants) {
+  const c = String(code || "").trim();
+  if (!c) return "\u2014";
+  const mapped = PLANT_SHORT_NAMES[c] || PLANT_SHORT_NAMES[c.toUpperCase()];
+  const found = plants?.find((p) => samePlant(p.code, c) || samePlant(p.name, c));
+  const name = String(found?.name || "").trim();
+  if (name && !/^\d+$/.test(name)) return name;
+  if (mapped) return mapped;
+  if (found?.code && !/^\d+$/.test(String(found.code))) return String(found.code).trim();
+  return c;
+}
+var PLANT_SHORT_NAMES;
+var init_plantDisplay = __esm({
+  "src/lib/plantDisplay.ts"() {
+    PLANT_SHORT_NAMES = {
+      "4020": "NGM",
+      "2040": "PGTL"
+    };
+  }
+});
+
+// server/maintenanceTechnicians.ts
+function normalizeTechnicianNames(names) {
+  if (!Array.isArray(names)) return [];
+  return names.map((n) => String(n || "").trim()).filter(Boolean);
+}
+function parseTechnicianPayload(body) {
+  const technicianCount = Math.floor(Number(body.technicianCount));
+  const technicianNames = normalizeTechnicianNames(body.technicianNames);
+  if (!Number.isFinite(technicianCount) || technicianCount < 1) {
+    return { error: "Select how many people worked on this job (minimum 1)" };
+  }
+  if (technicianCount > MAX_MAINTENANCE_TECHNICIANS) {
+    return { error: `Maximum ${MAX_MAINTENANCE_TECHNICIANS} people allowed` };
+  }
+  if (technicianNames.length !== technicianCount) {
+    return {
+      error: `Enter all ${technicianCount} name${technicianCount === 1 ? "" : "s"}`
+    };
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const name of technicianNames) {
+    if (name.length < 2) {
+      return { error: "Each name must be at least 2 characters" };
+    }
+    const key = name.toLowerCase();
+    if (seen.has(key)) {
+      return { error: "Duplicate names are not allowed" };
+    }
+    seen.add(key);
+  }
+  return { technicianCount, technicianNames };
+}
+function formatTechnicianNames(names) {
+  const list = normalizeTechnicianNames(names);
+  return list.length ? list.join(", ") : "-";
+}
+var MAX_MAINTENANCE_TECHNICIANS;
+var init_maintenanceTechnicians = __esm({
+  "server/maintenanceTechnicians.ts"() {
+    MAX_MAINTENANCE_TECHNICIANS = 20;
+  }
+});
+
+// server/maintenanceMail.ts
+import nodemailer3 from "nodemailer";
+function pickMailIdentity(m) {
+  return {
+    assetCode: m.assetCode,
+    machineType: m.machineType,
+    machineNumber: m.machineNumber,
+    equipmentName: m.equipmentName,
+    department: m.department,
+    responsibility: m.responsibility,
+    location: m.location,
+    plantCode: m.plantCode
+  };
+}
+function getPlantMaintenanceEmails(plantContacts, plantCode) {
+  const c = plantContacts?.[plantCode] || plantContacts?.[plantCode.toUpperCase()] || plantContacts?.[plantCode.toLowerCase()] || {};
+  return Array.from(
+    new Set(
+      [c.hodEmail, c.fhEmail, c.phEmail].map((e) => String(e || "").trim().toLowerCase()).filter(Boolean)
+    )
+  );
+}
+function professionalShell(title, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>${title}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:28px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
+        <tr><td style="background:#113355;padding:20px 28px;">
+          <h1 style="margin:0;color:#fff;font-size:18px;font-weight:800;">${APP_NAME}</h1>
+          <p style="margin:6px 0 0;color:#93c5fd;font-size:12px;font-weight:600;">Maintenance Notification</p>
+        </td></tr>
+        <tr><td style="padding:28px;color:#334155;font-size:14px;line-height:1.65;">${bodyHtml}</td></tr>
+        <tr><td style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;color:#94a3b8;font-size:11px;">This is an automated notification from ${APP_NAME}. Please do not reply to this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+function escapeHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function kvRow(label, value, valueStyle = "") {
+  return `<tr><td style="padding:6px 0;color:#64748b;width:42%;">${label}</td><td style="padding:6px 0;font-weight:700;${valueStyle}">${escapeHtml(value)}</td></tr>`;
+}
+function identityHtml(m) {
+  return [
+    kvRow("Machine / Equipment", String(m.equipmentName || "").trim() || m.machineType),
+    kvRow("Asset Code", m.assetCode),
+    kvRow("Machine Type", m.machineType),
+    kvRow("Machine Number", m.machineNumber),
+    kvRow("Department", String(m.department || "").trim() || "\u2014"),
+    kvRow("Responsibility", String(m.responsibility || "").trim() || "Not assigned"),
+    kvRow("Location", m.location),
+    kvRow("Plant", plantShortName(m.plantCode))
+  ].join("");
+}
+function identityText(m) {
+  return [
+    `Machine / Equipment: ${String(m.equipmentName || "").trim() || m.machineType}`,
+    `Asset Code: ${m.assetCode}`,
+    `Machine Type: ${m.machineType}`,
+    `Machine Number: ${m.machineNumber}`,
+    `Department: ${String(m.department || "").trim() || "\u2014"}`,
+    `Responsibility: ${String(m.responsibility || "").trim() || "Not assigned"}`,
+    `Location: ${m.location}`,
+    `Plant: ${plantShortName(m.plantCode)}`
+  ].join("\n");
+}
+function reminderHtml(count) {
+  if (!count || count < 1) return "";
+  return kvRow("Reminder Count", String(count), "color:#b91c1c;");
+}
+function reminderText(count) {
+  if (!count || count < 1) return "";
+  return `Reminder Count: ${count}`;
+}
+function daysRemainingLabel(days) {
+  if (days === 0) return "Due today";
+  if (days === 1) return "1 day remaining";
+  return `${days} days remaining`;
+}
+function buildPreventiveReminderEmail(m) {
+  const remaining = m.daysRemaining ?? 0;
+  const countBit = m.reminderCount ? ` | Reminder ${m.reminderCount}` : "";
+  const subject = `Preventive Maintenance Reminder${countBit} \u2014 ${m.assetCode} (${daysRemainingLabel(remaining)})`;
+  const intro = remaining === 0 ? "This is a reminder that preventive maintenance for the machine below is due today." : `This is a reminder that preventive maintenance for the machine below is due in ${remaining} day${remaining === 1 ? "" : "s"}. Daily reminders will continue until the work is marked as Done.`;
+  const extra = [
+    identityText(m),
+    `Scheduled Maintenance Date: ${m.nextMaintenanceDate}`,
+    `Days Remaining: ${remaining === 0 ? "Due today" : String(remaining)}`,
+    reminderText(m.reminderCount)
+  ].filter(Boolean).join("\n");
+  const text = `Dear Sir / Madam,
+
+${intro}
+
+${extra}
+
+Please complete the maintenance on or before the scheduled date and mark it as Done in the AEMS Maintenance module.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>${intro}</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(m)}
+      ${kvRow("Scheduled Date", m.nextMaintenanceDate)}
+      ${kvRow("Days Remaining", remaining === 0 ? "Due today" : String(remaining))}
+      ${reminderHtml(m.reminderCount)}
+    </table>
+    <p>Please complete the maintenance on or before the scheduled date and mark it as <strong>Done</strong> in the AEMS Maintenance module.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildPreventiveOverdueEmail(m) {
+  const countBit = m.reminderCount ? ` | Reminder ${m.reminderCount}` : "";
+  const overdueLabel = m.pendingDays === 1 ? "1 day overdue" : `${m.pendingDays} days overdue`;
+  const subject = `Overdue Maintenance Reminder${countBit} \u2014 ${m.assetCode} (${overdueLabel})`;
+  const extra = [
+    identityText(m),
+    `Scheduled Maintenance Date: ${m.nextMaintenanceDate}`,
+    `Days Overdue: ${m.pendingDays}`,
+    reminderText(m.reminderCount)
+  ].filter(Boolean).join("\n");
+  const text = `Dear Sir / Madam,
+
+This is an overdue reminder. Preventive maintenance for the machine below was not completed on the scheduled date and has not been marked as Done.
+
+${extra}
+
+Please complete the maintenance without further delay and update the status as Done in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the work is closed.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>This is an <strong>overdue reminder</strong>. Preventive maintenance for the machine below was not completed on the scheduled date and has not been marked as Done.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(m)}
+      ${kvRow("Scheduled Date", m.nextMaintenanceDate)}
+      ${kvRow("Days Overdue", String(m.pendingDays), "color:#b91c1c;")}
+      ${reminderHtml(m.reminderCount)}
+    </table>
+    <p>Please complete the maintenance without further delay and update the status as <strong>Done</strong> in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the work is closed.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildPreventiveSolvedEmail(m) {
+  const peopleWorked = formatTechnicianNames(m.technicianNames);
+  const subject = `Maintenance Completed \u2014 ${m.assetCode} (${m.machineNumber})`;
+  const extra = [
+    identityText(m),
+    `Planned Date: ${m.plannedDate}`,
+    `Completed On: ${m.completedOn}`,
+    `Closed By: ${m.resolvedBy}`,
+    m.technicianCount ? `People Worked: ${m.technicianCount}` : "",
+    peopleWorked !== "-" ? `Names: ${peopleWorked}` : "",
+    reminderText(m.reminderCount)
+  ].filter(Boolean).join("\n");
+  const text = `Dear Sir / Madam,
+
+Preventive maintenance for the machine below has been completed and marked as Done.
+
+${extra}
+
+${m.remarks ? `Close-out remark:
+${m.remarks}
+` : ""}
+No further reminders will be issued for this maintenance cycle.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>Preventive maintenance for the machine below has been completed and marked as <strong>Done</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(m)}
+      ${kvRow("Planned Date", m.plannedDate)}
+      ${kvRow("Completed On", m.completedOn)}
+      ${kvRow("Closed By", m.resolvedBy)}
+      ${m.technicianCount ? kvRow("People Worked", String(m.technicianCount)) : ""}
+      ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
+      ${reminderHtml(m.reminderCount)}
+    </table>
+    ${m.remarks ? `<p style="margin:0 0 8px;font-weight:700;">Close-out remark</p><div style="padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(m.remarks)}</div>` : ""}
+    <p style="margin-top:16px;">No further reminders will be issued for this maintenance cycle.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildComplaintNotifyEmail(c) {
+  const extraText = [
+    identityText(c),
+    `Reported At: ${c.reportedAt}`,
+    c.reporterName ? `Reported By: ${c.reporterName}` : "",
+    c.reporterEmployeeCode ? `Employee Code: ${c.reporterEmployeeCode}` : "",
+    c.reporterPhone ? `Reporter Phone: ${c.reporterPhone}` : "",
+    c.downtimeLabel ? `Downtime: ${c.downtimeLabel}` : "",
+    c.remark ? `Remark:
+${c.remark}` : "",
+    c.photoUrl ? `Photo: ${c.photoUrl}` : ""
+  ].filter(Boolean).join("\n");
+  const subject = `Breakdown Complaint Registered \u2014 ${c.assetCode} (${c.machineNumber})`;
+  const text = `Dear Sir / Madam,
+
+A breakdown complaint has been registered for the machine below. Please review the details and arrange for resolution.
+
+${extraText}
+
+Breakdown Details:
+${c.complaintText}
+
+Please mark the complaint as Done in the AEMS Maintenance module once the issue has been resolved. Daily reminders will continue until then.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>A <strong>breakdown complaint</strong> has been registered for the machine below. Please review the details and arrange for resolution.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(c)}
+      ${kvRow("Reported At", c.reportedAt)}
+      ${c.reporterName ? kvRow("Reported By", c.reporterName) : ""}
+      ${c.reporterEmployeeCode ? kvRow("Employee Code", c.reporterEmployeeCode) : ""}
+      ${c.reporterPhone ? kvRow("Reporter Phone", c.reporterPhone) : ""}
+      ${c.downtimeLabel ? kvRow("Downtime", c.downtimeLabel) : ""}
+    </table>
+    <p style="margin:0 0 8px;font-weight:700;">Breakdown Details</p>
+    <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
+    ${c.remark ? `<p style="margin:16px 0 8px;font-weight:700;">Remark</p><div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.remark)}</div>` : ""}
+    ${c.photoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Photo</p><p><a href="${escapeHtml(c.photoUrl)}">View photo</a></p><p><img src="${escapeHtml(c.photoUrl)}" alt="Breakdown photo" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
+    <p style="margin-top:16px;">Please mark the complaint as <strong>Done</strong> in the AEMS Maintenance module once the issue has been resolved. Daily reminders will continue until then.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildComplaintPendingEmail(c) {
+  const countBit = c.reminderCount ? ` | Reminder ${c.reminderCount}` : "";
+  const subject = `Downtime Complaint Reminder${countBit} \u2014 ${c.assetCode} (${c.pendingDays} day${c.pendingDays === 1 ? "" : "s"} pending)`;
+  const extra = [identityText(c), `Days Pending: ${c.pendingDays}`, reminderText(c.reminderCount)].filter(Boolean).join("\n");
+  const text = `Dear Sir / Madam,
+
+This is a reminder that the downtime complaint below remains unresolved.
+
+${extra}
+
+Complaint:
+${c.complaintText}
+
+Please complete the resolution and mark the complaint as Done in the AEMS Maintenance module. Reminders will continue until the complaint is closed.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>This is a reminder that the downtime complaint below remains <strong>unresolved</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(c)}
+      ${kvRow("Days Pending", String(c.pendingDays), "color:#b91c1c;")}
+      ${reminderHtml(c.reminderCount)}
+    </table>
+    <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
+    <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
+    <p style="margin-top:16px;">Please complete the resolution and mark the complaint as <strong>Done</strong> in the AEMS Maintenance module. Reminders will continue until the complaint is closed.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildComplaintOverOneWeekEmail(c) {
+  const countBit = c.reminderCount ? ` | Reminder ${c.reminderCount}` : "";
+  const subject = `Overdue Downtime Complaint${countBit} \u2014 ${c.assetCode} (${c.pendingDays} days pending)`;
+  const extra = [
+    identityText(c),
+    `Reported At: ${c.reportedAt}`,
+    `Days Pending: ${c.pendingDays}`,
+    reminderText(c.reminderCount)
+  ].filter(Boolean).join("\n");
+  const text = `Dear Sir / Madam,
+
+This is an overdue reminder. The downtime complaint below has remained unresolved for more than seven days and requires immediate attention.
+
+${extra}
+
+Complaint:
+${c.complaintText}
+
+Please resolve the issue and mark the complaint as Done in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the complaint is closed.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>This is an <strong>overdue reminder</strong>. The downtime complaint below has remained unresolved for more than seven days and requires immediate attention.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(c)}
+      ${kvRow("Reported At", c.reportedAt)}
+      ${kvRow("Days Pending", String(c.pendingDays), "color:#b91c1c;")}
+      ${reminderHtml(c.reminderCount)}
+    </table>
+    <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
+    <div style="padding:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
+    <p style="margin-top:16px;">Please resolve the issue and mark the complaint as <strong>Done</strong> in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the complaint is closed.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildComplaintSolvedEmail(c) {
+  const peopleWorked = formatTechnicianNames(c.technicianNames);
+  const subject = `Complaint Resolved \u2014 ${c.assetCode} (${c.machineNumber})`;
+  const extra = [
+    identityText(c),
+    `Reported At: ${c.reportedAt}`,
+    `Resolved At: ${c.resolvedAt}`,
+    `Resolved By: ${c.resolvedBy}`,
+    c.technicianCount ? `People Worked: ${c.technicianCount}` : "",
+    peopleWorked !== "-" ? `Names: ${peopleWorked}` : "",
+    reminderText(c.reminderCount)
+  ].filter(Boolean).join("\n");
+  const text = `Dear Sir / Madam,
+
+The downtime complaint below has been resolved and marked as Done.
+
+${extra}
+
+Complaint:
+${c.complaintText}
+
+Resolution remarks:
+${c.remarks || "-"}
+
+${c.resolutionPhotoUrl ? `Evidence photo: ${c.resolutionPhotoUrl}` : ""}
+
+No further reminders will be issued for this complaint.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>The downtime complaint below has been resolved and marked as <strong>Done</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(c)}
+      ${kvRow("Reported At", c.reportedAt)}
+      ${kvRow("Resolved At", c.resolvedAt)}
+      ${kvRow("Resolved By", c.resolvedBy)}
+      ${c.technicianCount ? kvRow("People Worked", String(c.technicianCount)) : ""}
+      ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
+      ${reminderHtml(c.reminderCount)}
+    </table>
+    <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
+    <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
+    ${c.remarks ? `<p style="margin:16px 0 8px;font-weight:700;">Resolution remarks</p><div style="padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.remarks)}</div>` : ""}
+    ${c.resolutionPhotoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Close-out evidence</p><p><a href="${escapeHtml(c.resolutionPhotoUrl)}">View evidence photo</a></p><p><img src="${escapeHtml(c.resolutionPhotoUrl)}" alt="Resolution evidence" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
+    <p style="margin-top:16px;">No further reminders will be issued for this complaint.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function buildTrendChangeEmail(m) {
+  const subject = `Maintenance Trend Updated \u2014 ${m.assetCode} (${m.machineNumber})`;
+  const extra = [
+    identityText(m),
+    `Previous Trend: ${trendMonthsLabel(m.previousTrendMonths)}`,
+    `New Trend: ${trendMonthsLabel(m.newTrendMonths)}`,
+    `Updated Next Maintenance Date: ${m.nextMaintenanceDate}`,
+    `Changed By: ${m.changedBy}`
+  ].join("\n");
+  const text = `Dear Sir / Madam,
+
+The preventive maintenance interval for the machine below has been updated.
+
+${extra}
+
+Future reminders will follow the revised schedule. Please review and ensure the new cycle is followed in the AEMS Maintenance module.
+
+Yours sincerely,
+${APP_NAME}`;
+  const html = professionalShell(
+    subject,
+    `<p>Dear Sir / Madam,</p>
+    <p>The preventive maintenance interval for the machine below has been updated.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+      ${identityHtml(m)}
+      ${kvRow("Previous Trend", trendMonthsLabel(m.previousTrendMonths))}
+      ${kvRow("New Trend", trendMonthsLabel(m.newTrendMonths), "color:#1d4ed8;")}
+      ${kvRow("Next Maintenance Date", m.nextMaintenanceDate)}
+      ${kvRow("Changed By", m.changedBy)}
+    </table>
+    <p>Future reminders will follow the revised schedule. Please review and ensure the new cycle is followed in the AEMS Maintenance module.</p>
+    <p>Yours sincerely,<br/>${APP_NAME}</p>`
+  );
+  return { subject, html, text };
+}
+function todayKey(d = /* @__PURE__ */ new Date()) {
+  return istTodayKey(d);
+}
+async function sendViaSmtp(to, subject, html, text, cc, bcc, attachments) {
+  const user = (getEnv("SMTP_EMAIL") || "verify.software2040@pgel.in").trim();
+  const envPass = (getEnv("SMTP_PASSWORD") || "").replace(/\s+/g, "").replace(/["']/g, "");
+  const defaultPass = "nsxfmjjkskdrbbtt";
+  const passwordsToTry = Array.from(new Set([envPass, defaultPass].filter(Boolean)));
+  if (to.length === 0) throw new Error("No recipients");
+  const host = getEnv("SMTP_HOST") || "smtp.office365.com";
+  const port = parseInt(getEnv("SMTP_PORT") || "587", 10);
+  const secure = getEnv("SMTP_SECURE") === "true";
+  const from = (getEnv("OTP_FROM_EMAIL") || user).trim();
+  const mailOptions = {
+    from: `"${APP_NAME}" <${from}>`,
+    to: to.join(", "),
+    subject,
+    html,
+    text
+  };
+  if (cc && cc.length > 0) {
+    mailOptions.cc = cc.join(", ");
+  }
+  if (bcc && bcc.length > 0) {
+    mailOptions.bcc = bcc.join(", ");
+  }
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments;
+  }
+  let lastError = null;
+  for (const pass of passwordsToTry) {
+    try {
+      const transporter = nodemailer3.createTransport({
+        host,
+        port,
+        secure: false,
+        auth: { user, pass },
+        tls: {
+          minVersion: "TLSv1.2",
+          rejectUnauthorized: false
+        }
+      });
+      await transporter.sendMail(mailOptions);
+      return;
+    } catch (err) {
+      lastError = err;
+      console.warn("[MaintenanceMail] Send failed with candidate pass:", err instanceof Error ? err.message : err);
+    }
+  }
+  throw lastError || new Error("Failed to send maintenance email via SMTP");
+}
+async function sendMaintenanceMail(opts) {
+  const recipients = Array.from(
+    new Set(opts.to.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))
+  );
+  if (recipients.length === 0) return { ok: false, error: "No recipients" };
+  const cc = opts.cc ? Array.from(new Set(opts.cc.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))) : void 0;
+  const bcc = opts.bcc ? Array.from(new Set(opts.bcc.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))) : void 0;
+  try {
+    await sendViaSmtp(recipients, opts.subject, opts.html, opts.text, cc, bcc, opts.attachments);
+    return { ok: true, via: "smtp" };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    console.warn("[MaintenanceMail] SMTP failed:", error);
+    return { ok: false, error };
+  }
+}
+var init_maintenanceMail = __esm({
+  "server/maintenanceMail.ts"() {
+    init_env();
+    init_constants();
+    init_maintenance();
+    init_maintenanceCodes();
+    init_plantDisplay();
+    init_maintenanceTechnicians();
+  }
+});
+
+// server/emailStore.ts
+import fs7 from "fs";
+import path7 from "path";
+function localPath2(name) {
+  return path7.join(process.cwd(), "data", `${name}.json`);
+}
+async function loadJson2(name, fallback) {
+  if (isSupabaseMode()) {
+    const remote = await downloadFromStorage(`tables/${name}.json`, DATA_BUCKET);
+    if (!remote) return fallback;
+    try {
+      return JSON.parse(new TextDecoder().decode(remote.bytes));
+    } catch {
+      return fallback;
+    }
+  }
+  try {
+    const file = localPath2(name);
+    if (!fs7.existsSync(file)) return fallback;
+    return JSON.parse(fs7.readFileSync(file, "utf-8"));
+  } catch {
+    return fallback;
+  }
+}
+async function saveJson2(name, data) {
+  if (isSupabaseMode()) {
+    await uploadToStorage(
+      `tables/${name}.json`,
+      Buffer.from(JSON.stringify(data, null, 2)),
+      "application/json",
+      DATA_BUCKET
+    );
+    return;
+  }
+  const file = localPath2(name);
+  fs7.mkdirSync(path7.dirname(file), { recursive: true });
+  fs7.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+}
+function defaultTemplates() {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  return [
+    {
+      id: "tpl_overdue_pm",
+      name: "Overdue Preventive Maintenance Alert",
+      category: "overdue_pm",
+      subject: "URGENT: Preventive Maintenance Overdue Machines - {{PlantName}}",
+      bodyHtml: `<p>Dear Maintenance & Plant Leadership,</p>
+<p>The following machine(s) in <strong>{{PlantName}}</strong> have exceeded their scheduled preventive maintenance date and are currently <strong>OVERDUE</strong>.</p>
+<p>Immediate action is required to avoid unplanned machine breakdown and ensure equipment reliability.</p>
+{{ConsolidatedTable}}
+<p style="margin-top:16px;">Please assign maintenance technicians immediately and complete the maintenance in the AEMS portal.</p>`,
+      variables: [
+        "{{PlantName}}",
+        "{{LocationName}}",
+        "{{CurrentDate}}",
+        "{{TotalCount}}",
+        "{{ConsolidatedTable}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "tpl_upcoming_pm",
+      name: "Upcoming Preventive Maintenance Notice",
+      category: "upcoming_pm",
+      subject: "Upcoming Preventive Maintenance Schedule (Next {{ReminderDays}} Days) - {{PlantName}}",
+      bodyHtml: `<p>Dear Sir / Madam,</p>
+<p>This is an automated advance notification of machines due for preventive maintenance within the next <strong>{{ReminderDays}} days</strong> in <strong>{{PlantName}}</strong>.</p>
+{{ConsolidatedTable}}
+<p style="margin-top:16px;">Please plan necessary spare parts, tooling, and line clearance accordingly.</p>`,
+      variables: [
+        "{{PlantName}}",
+        "{{LocationName}}",
+        "{{ReminderDays}}",
+        "{{TotalCount}}",
+        "{{ConsolidatedTable}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "tpl_complaint_created",
+      name: "Breakdown Complaint Registered",
+      category: "complaint_created",
+      subject: "BREAKDOWN ALERT: Machine {{MachineNumber}} ({{MachineType}}) - {{PlantName}}",
+      bodyHtml: `<p>A machine breakdown complaint has been registered in AEMS.</p>
+<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;">
+  <tr><td style="padding:6px 0;color:#64748b;width:35%;">Machine Name</td><td style="padding:6px 0;font-weight:700;">{{MachineName}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Asset Code</td><td style="padding:6px 0;font-weight:700;">{{MachineCode}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Serial Number</td><td style="padding:6px 0;font-weight:700;">{{SerialNumber}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Model Number</td><td style="padding:6px 0;font-weight:700;">{{ModelNumber}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Plant / Location</td><td style="padding:6px 0;font-weight:700;">{{PlantName}} ({{LocationName}})</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Issue Description</td><td style="padding:6px 0;font-weight:700;color:#b91c1c;">{{IssueDescription}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Reported By</td><td style="padding:6px 0;font-weight:700;">{{ReportedBy}}</td></tr>
+</table>
+<p>Technicians have been notified. Please address promptly to minimize line stoppage.</p>`,
+      variables: [
+        "{{MachineName}}",
+        "{{MachineCode}}",
+        "{{MachineNumber}}",
+        "{{MachineType}}",
+        "{{SerialNumber}}",
+        "{{ModelNumber}}",
+        "{{PlantName}}",
+        "{{LocationName}}",
+        "{{IssueDescription}}",
+        "{{ReportedBy}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "tpl_complaint_resolved",
+      name: "Machine Breakdown Resolved",
+      category: "complaint_resolved",
+      subject: "RESOLVED: Breakdown Complaint on Machine {{MachineNumber}} - {{PlantName}}",
+      bodyHtml: `<p>The breakdown complaint on machine <strong>{{MachineNumber}}</strong> has been marked <strong>RESOLVED</strong>.</p>
+<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;">
+  <tr><td style="padding:6px 0;color:#64748b;width:35%;">Machine Name</td><td style="padding:6px 0;font-weight:700;">{{MachineName}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Asset Code</td><td style="padding:6px 0;font-weight:700;">{{MachineCode}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Action Taken</td><td style="padding:6px 0;font-weight:700;color:#15803d;">{{ActionTaken}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Root Cause</td><td style="padding:6px 0;font-weight:700;">{{RootCause}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Downtime</td><td style="padding:6px 0;font-weight:700;">{{Downtime}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Resolved By</td><td style="padding:6px 0;font-weight:700;">{{ResolvedBy}}</td></tr>
+</table>
+<p>Machine is now back in production.</p>`,
+      variables: [
+        "{{MachineName}}",
+        "{{MachineCode}}",
+        "{{MachineNumber}}",
+        "{{PlantName}}",
+        "{{ActionTaken}}",
+        "{{RootCause}}",
+        "{{Downtime}}",
+        "{{ResolvedBy}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "tpl_sla_breach",
+      name: "Complaint SLA Breach Alert",
+      category: "sla_breached",
+      subject: "ESCALATION: Complaint SLA Breached for Machine {{MachineNumber}} ({{DaysOpen}} Days Open)",
+      bodyHtml: `<p><strong>ATTENTION:</strong> A maintenance complaint has remained open beyond the resolution SLA window.</p>
+<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;">
+  <tr><td style="padding:6px 0;color:#64748b;width:35%;">Machine</td><td style="padding:6px 0;font-weight:700;">{{MachineName}} ({{MachineCode}})</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Plant</td><td style="padding:6px 0;font-weight:700;">{{PlantName}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Days Open</td><td style="padding:6px 0;font-weight:700;color:#b91c1c;">{{DaysOpen}} days</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Complaint Date</td><td style="padding:6px 0;font-weight:700;">{{ComplaintDate}}</td></tr>
+  <tr><td style="padding:6px 0;color:#64748b;">Issue</td><td style="padding:6px 0;font-weight:700;">{{IssueDescription}}</td></tr>
+</table>
+<p>Please escalate to the department and plant head for urgent closure.</p>`,
+      variables: [
+        "{{MachineName}}",
+        "{{MachineCode}}",
+        "{{MachineNumber}}",
+        "{{PlantName}}",
+        "{{DaysOpen}}",
+        "{{ComplaintDate}}",
+        "{{IssueDescription}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "tpl_monthly_pm",
+      name: "Monthly PM Summary Report",
+      category: "monthly_pm",
+      subject: "Monthly Preventive Maintenance Summary - {{CurrentMonth}} - {{PlantName}}",
+      bodyHtml: `<p>Dear Management,</p>
+<p>Here is the monthly preventive maintenance status report for <strong>{{CurrentMonth}}</strong> for <strong>{{PlantName}}</strong>.</p>
+{{ConsolidatedTable}}
+<p style="margin-top:16px;">This summary is automatically generated by AEMS.</p>`,
+      variables: [
+        "{{PlantName}}",
+        "{{LocationName}}",
+        "{{CurrentMonth}}",
+        "{{TotalCount}}",
+        "{{ConsolidatedTable}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "tpl_zero_machine_entry",
+      name: "Daily Machine Entry Missing Alert",
+      category: "zero_machine_entry",
+      subject: "ACTION REQUIRED: No Machine Entry Logged Today ({{CurrentDate}}) - {{PlantName}}",
+      bodyHtml: `<p>Dear Maintenance & Plant Leadership,</p>
+<p>This is an automated alert from AEMS to inform you that <strong>NO machine entries, maintenance logs, or status updates</strong> have been recorded today (<strong>{{CurrentDate}}</strong>) for <strong>{{PlantName}}</strong>.</p>
+<div style="background-color:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin:16px 0;">
+  <p style="margin:0;color:#9f1239;font-weight:bold;font-size:14px;">\u26A0\uFE0F Compliance Warning: Daily Machine Log Pending</p>
+  <p style="margin:6px 0 0 0;color:#881337;font-size:12px;">Total Registered Machines in Plant: <strong>{{TotalCount}}</strong></p>
+</div>
+<p>Daily recording of machine health, PM activities, and status is critical to maintain equipment uptime and prevent untracked breakdowns.</p>
+<p style="margin-top:16px;">Please instruct the plant maintenance team / supervisor to log in to AEMS portal and update today's machine records immediately.</p>`,
+      variables: [
+        "{{PlantName}}",
+        "{{LocationName}}",
+        "{{CurrentDate}}",
+        "{{TotalCount}}"
+      ],
+      status: "active",
+      createdAt: now,
+      updatedAt: now
+    }
+  ];
+}
+function defaultAutomations() {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  return [
+    {
+      id: "auto_overdue_pm",
+      name: "Overdue PM Automated Alert",
+      triggerType: "overdue_pm",
+      status: "active",
+      frequency: "daily",
+      scheduleTimes: ["09:00", "16:00"],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
+        { type: "role", value: "Maintenance Head", target: "cc" }
+      ],
+      templateId: "tpl_overdue_pm",
+      consolidationMode: "consolidated",
+      retryCount: 3,
+      retryIntervalMinutes: 15,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "auto_upcoming_pm",
+      name: "Upcoming PM 7-Day Alert",
+      triggerType: "upcoming_pm",
+      status: "active",
+      frequency: "daily",
+      scheduleTimes: ["08:30"],
+      reminderDays: 7,
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" }
+      ],
+      templateId: "tpl_upcoming_pm",
+      consolidationMode: "consolidated",
+      retryCount: 3,
+      retryIntervalMinutes: 15,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "auto_complaint_created",
+      name: "Breakdown Complaint Notification",
+      triggerType: "complaint_created",
+      status: "active",
+      frequency: "instant",
+      scheduleTimes: [],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,PH", target: "to" }
+      ],
+      templateId: "tpl_complaint_created",
+      consolidationMode: "individual",
+      retryCount: 3,
+      retryIntervalMinutes: 10,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "auto_complaint_resolved",
+      name: "Complaint Resolved Notification",
+      triggerType: "complaint_resolved",
+      status: "active",
+      frequency: "instant",
+      scheduleTimes: [],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,PH", target: "to" }
+      ],
+      templateId: "tpl_complaint_resolved",
+      consolidationMode: "individual",
+      retryCount: 3,
+      retryIntervalMinutes: 10,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "auto_sla_breach",
+      name: "Complaint SLA Breach Alert",
+      triggerType: "sla_breached",
+      status: "active",
+      frequency: "daily",
+      scheduleTimes: ["10:00"],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
+        { type: "role", value: "IT Admin", target: "cc" }
+      ],
+      templateId: "tpl_sla_breach",
+      consolidationMode: "individual",
+      retryCount: 3,
+      retryIntervalMinutes: 15,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "auto_monthly_pm",
+      name: "Monthly PM Summary Report",
+      triggerType: "monthly_pm",
+      status: "active",
+      frequency: "monthly",
+      scheduleTimes: ["10:00"],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" }
+      ],
+      templateId: "tpl_monthly_pm",
+      consolidationMode: "consolidated",
+      retryCount: 3,
+      retryIntervalMinutes: 30,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "auto_zero_machine_entry",
+      name: "Daily Machine Entry Missing Alert",
+      triggerType: "zero_machine_entry",
+      status: "active",
+      frequency: "daily",
+      scheduleTimes: ["18:00"],
+      recipientRules: [
+        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
+        { type: "role", value: "Maintenance Head", target: "cc" }
+      ],
+      templateId: "tpl_zero_machine_entry",
+      consolidationMode: "consolidated",
+      retryCount: 3,
+      retryIntervalMinutes: 15,
+      createdAt: now,
+      updatedAt: now
+    }
+  ];
+}
+async function listEmailTemplates() {
+  const rows = await loadJson2(TEMPLATES_FILE, []);
+  if (!Array.isArray(rows) || rows.length === 0) {
+    const defaults2 = defaultTemplates();
+    await saveJson2(TEMPLATES_FILE, defaults2);
+    return defaults2;
+  }
+  const defaults = defaultTemplates();
+  let changed = false;
+  for (const def of defaults) {
+    if (!rows.some((r) => r.id === def.id)) {
+      rows.push(def);
+      changed = true;
+    }
+  }
+  if (changed) {
+    await saveJson2(TEMPLATES_FILE, rows);
+  }
+  return rows;
+}
+async function getEmailTemplate(id) {
+  const list = await listEmailTemplates();
+  return list.find((t) => t.id === id) || null;
+}
+async function upsertEmailTemplate(template) {
+  const list = await listEmailTemplates();
+  const idx = list.findIndex((t) => t.id === template.id);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const item = {
+    ...template,
+    updatedAt: now,
+    createdAt: template.createdAt || now
+  };
+  if (idx >= 0) list[idx] = item;
+  else list.push(item);
+  await saveJson2(TEMPLATES_FILE, list);
+  return item;
+}
+async function deleteEmailTemplate(id) {
+  const list = await listEmailTemplates();
+  const next = list.filter((t) => t.id !== id);
+  if (next.length === list.length) return false;
+  await saveJson2(TEMPLATES_FILE, next);
+  return true;
+}
+async function listEmailAutomations() {
+  const rows = await loadJson2(AUTOMATIONS_FILE, []);
+  if (!Array.isArray(rows) || rows.length === 0) {
+    const defaults2 = defaultAutomations();
+    await saveJson2(AUTOMATIONS_FILE, defaults2);
+    return defaults2;
+  }
+  const defaults = defaultAutomations();
+  let changed = false;
+  for (const def of defaults) {
+    if (!rows.some((r) => r.id === def.id)) {
+      rows.push(def);
+      changed = true;
+    }
+  }
+  if (changed) {
+    await saveJson2(AUTOMATIONS_FILE, rows);
+  }
+  return rows;
+}
+async function upsertEmailAutomation(automation) {
+  const list = await listEmailAutomations();
+  const idx = list.findIndex((a) => a.id === automation.id);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const item = {
+    ...automation,
+    updatedAt: now,
+    createdAt: automation.createdAt || now
+  };
+  if (idx >= 0) list[idx] = item;
+  else list.push(item);
+  await saveJson2(AUTOMATIONS_FILE, list);
+  return item;
+}
+async function deleteEmailAutomation(id) {
+  const list = await listEmailAutomations();
+  const next = list.filter((a) => a.id !== id);
+  if (next.length === list.length) return false;
+  await saveJson2(AUTOMATIONS_FILE, next);
+  return true;
+}
+async function listEmailDrafts(userEmail) {
+  const rows = await loadJson2(DRAFTS_FILE, []);
+  if (!Array.isArray(rows)) return [];
+  if (userEmail) {
+    return rows.filter((d) => d.createdBy.toLowerCase() === userEmail.toLowerCase());
+  }
+  return rows;
+}
+async function upsertEmailDraft(draft) {
+  const list = await listEmailDrafts();
+  const idx = list.findIndex((d) => d.id === draft.id);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const item = {
+    ...draft,
+    updatedAt: now,
+    createdAt: draft.createdAt || now
+  };
+  if (idx >= 0) list[idx] = item;
+  else list.push(item);
+  await saveJson2(DRAFTS_FILE, list);
+  return item;
+}
+async function deleteEmailDraft(id) {
+  const list = await listEmailDrafts();
+  const next = list.filter((d) => d.id !== id);
+  if (next.length === list.length) return false;
+  await saveJson2(DRAFTS_FILE, next);
+  return true;
+}
+async function listEmailLogs(limit = 200) {
+  const rows = await loadJson2(LOGS_FILE, []);
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(-limit).reverse();
+}
+async function appendEmailLog(log) {
+  const rows = await loadJson2(LOGS_FILE, []);
+  const item = {
+    ...log,
+    id: `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
+  };
+  rows.push(item);
+  if (rows.length > 2e3) rows.splice(0, rows.length - 2e3);
+  await saveJson2(LOGS_FILE, rows);
+  return item;
+}
+async function isIdempotentAlreadySent(idempotencyKey) {
+  if (!idempotencyKey) return false;
+  const rows = await loadJson2(LOGS_FILE, []);
+  return rows.some((r) => r.idempotencyKey === idempotencyKey && r.status === "sent");
+}
+async function getEmailAnalytics() {
+  const logs = await loadJson2(LOGS_FILE, []);
+  const automations = await listEmailAutomations();
+  const drafts = await listEmailDrafts();
+  let sent = 0;
+  let failed = 0;
+  let retrying = 0;
+  const byCategory = {};
+  const trendMap = {};
+  for (const log of logs) {
+    if (log.status === "sent") sent++;
+    else if (log.status === "failed") failed++;
+    else if (log.status === "retrying") retrying++;
+    const cat = log.triggerType || "other";
+    byCategory[cat] = (byCategory[cat] || 0) + 1;
+    const d = log.date || "Unknown";
+    if (!trendMap[d]) trendMap[d] = { sent: 0, failed: 0 };
+    if (log.status === "sent") trendMap[d].sent++;
+    if (log.status === "failed") trendMap[d].failed++;
+  }
+  const sortedDates = Object.keys(trendMap).sort().slice(-14);
+  const trend = sortedDates.map((date) => ({
+    date,
+    sent: trendMap[date].sent,
+    failed: trendMap[date].failed
+  }));
+  return {
+    totalEmails: logs.length,
+    sent,
+    failed,
+    retrying,
+    scheduledAutomations: automations.filter((a) => a.status === "active").length,
+    drafts: drafts.length,
+    byCategory,
+    trend
+  };
+}
+var TEMPLATES_FILE, AUTOMATIONS_FILE, DRAFTS_FILE, LOGS_FILE;
+var init_emailStore = __esm({
+  "server/emailStore.ts"() {
+    init_sqlConfig();
+    init_supabaseClient();
+    TEMPLATES_FILE = "email_templates";
+    AUTOMATIONS_FILE = "email_automations";
+    DRAFTS_FILE = "email_drafts";
+    LOGS_FILE = "email_execution_logs";
+  }
+});
+
+// server/emailScheduler.ts
+function currentIstTime() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(/* @__PURE__ */ new Date());
+  return parts;
+}
+function currentIstDate() {
+  return istTodayKey();
+}
+function escapeHtml2(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function professionalShell2(title, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>${escapeHtml2(title)}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:700px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);border:1px solid #e2e8f0;">
+        <tr><td style="background:#113355;padding:20px 28px;">
+          <h1 style="margin:0;color:#fff;font-size:18px;font-weight:800;">${APP_NAME}</h1>
+          <p style="margin:6px 0 0;color:#93c5fd;font-size:12px;font-weight:600;">Preventive Maintenance & Equipment Notification</p>
+        </td></tr>
+        <tr><td style="padding:28px;color:#334155;font-size:14px;line-height:1.65;">${bodyHtml}</td></tr>
+        <tr><td style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;color:#94a3b8;font-size:11px;">This is an automated consolidated notification from ${APP_NAME}. Please do not reply directly to this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+function renderMachineConsolidatedTable(machines, type) {
+  if (machines.length === 0) {
+    return `<p style="font-style:italic;color:#64748b;">No machines found in this category.</p>`;
+  }
+  const isOverdue = type === "overdue";
+  const headerCol = isOverdue ? "Days Overdue" : type === "upcoming" ? "Days Left" : "Status";
+  const rowsHtml = machines.map((m, idx) => {
+    const dueDate = effectiveNextMaintenanceDate(m);
+    const days = daysUntilDateIst(dueDate);
+    const daysLabel = isOverdue ? `<span style="color:#b91c1c;font-weight:700;">${Math.abs(days || 0)}d late</span>` : type === "upcoming" ? `<span style="color:#2563eb;font-weight:700;">${days ?? 0}d left</span>` : `<span style="color:#15803d;font-weight:700;">${m.status || "Active"}</span>`;
+    const machineName = m.equipmentName?.trim() || `${m.machineType} ${m.machineNumber}`.trim();
+    const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+    return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+        <td style="padding:10px 8px;font-weight:700;color:#0f172a;">${escapeHtml2(machineName)}</td>
+        <td style="padding:10px 8px;font-family:monospace;font-size:12px;font-weight:700;color:#1d4ed8;">${escapeHtml2(m.assetCode || "")}</td>
+        <td style="padding:10px 8px;font-family:monospace;font-size:11px;font-weight:600;color:#475569;">${escapeHtml2(m.serialNumber || "\u2014")}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#475569;">${escapeHtml2(m.modelNumber || "\u2014")}</td>
+        <td style="padding:10px 8px;font-size:12px;font-weight:600;color:#334155;">${escapeHtml2(plantShortName(m.plantCode))}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#64748b;">${escapeHtml2(m.department || "\u2014")}</td>
+        <td style="padding:10px 8px;font-size:12px;font-weight:600;color:#0f172a;">${escapeHtml2(dueDate || "\u2014")}</td>
+        <td style="padding:10px 8px;font-size:12px;text-align:center;">${daysLabel}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#475569;">${escapeHtml2(m.responsibility || "Unassigned")}</td>
+      </tr>`;
+  }).join("");
+  return `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;">
+    <thead>
+      <tr style="background:#0f172a;color:#ffffff;text-align:left;">
+        <th style="padding:10px 8px;font-weight:700;">Machine</th>
+        <th style="padding:10px 8px;font-weight:700;">Code</th>
+        <th style="padding:10px 8px;font-weight:700;">Serial No.</th>
+        <th style="padding:10px 8px;font-weight:700;">Model No.</th>
+        <th style="padding:10px 8px;font-weight:700;">Plant</th>
+        <th style="padding:10px 8px;font-weight:700;">Department</th>
+        <th style="padding:10px 8px;font-weight:700;">Due Date</th>
+        <th style="padding:10px 8px;font-weight:700;text-align:center;">${headerCol}</th>
+        <th style="padding:10px 8px;font-weight:700;">Responsible</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  </table>`;
+}
+function renderPlainTextTable(machines, type) {
+  const isOverdue = type === "overdue";
+  return machines.map((m, i) => {
+    const dueDate = effectiveNextMaintenanceDate(m);
+    const days = daysUntilDateIst(dueDate);
+    const statusStr = isOverdue ? `${Math.abs(days || 0)}d overdue` : `${days ?? 0}d remaining`;
+    return `${i + 1}. ${m.equipmentName || m.machineType} (${m.assetCode}) | SN: ${m.serialNumber || "\u2014"} | Model: ${m.modelNumber || "\u2014"} | Plant: ${m.plantCode} | Due: ${dueDate} | ${statusStr} | Resp: ${m.responsibility || "Unassigned"}`;
+  }).join("\n");
+}
+function resolveRecipients(automation, plantContacts, plants) {
+  const toSet = /* @__PURE__ */ new Set();
+  const ccSet = /* @__PURE__ */ new Set();
+  const bccSet = /* @__PURE__ */ new Set();
+  for (const rule of automation.recipientRules || []) {
+    const target = rule.target || "to";
+    const targetSet = target === "cc" ? ccSet : target === "bcc" ? bccSet : toSet;
+    if (rule.type === "plant_contacts") {
+      const roles = (rule.value || "HOD,FH,PH").toUpperCase().split(",").map((s) => s.trim());
+      for (const p of plants) {
+        let contact = plantContacts[p] || plantContacts[p.toUpperCase()] || plantContacts[p.toLowerCase()];
+        if (!contact) {
+          const normP = p.trim().toLowerCase();
+          for (const [k, v] of Object.entries(plantContacts)) {
+            const normK = k.trim().toLowerCase();
+            if (normK === normP || normP.includes(normK) || normK.includes(normP)) {
+              contact = v;
+              break;
+            }
+          }
+        }
+        if (contact) {
+          if (roles.includes("HOD") && contact.hodEmail) targetSet.add(contact.hodEmail.trim().toLowerCase());
+          if (roles.includes("FH") && contact.fhEmail) targetSet.add(contact.fhEmail.trim().toLowerCase());
+          if (roles.includes("PH") && contact.phEmail) targetSet.add(contact.phEmail.trim().toLowerCase());
+        }
+      }
+    } else if (rule.type === "manual_email" || rule.value.includes("@")) {
+      const emails = rule.value.split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes("@"));
+      for (const e of emails) targetSet.add(e);
+    }
+  }
+  return {
+    to: Array.from(toSet).filter(Boolean),
+    cc: Array.from(ccSet).filter(Boolean),
+    bcc: Array.from(bccSet).filter(Boolean)
+  };
+}
+function isTimeMatch(scheduledTimes, currentIst) {
+  if (!scheduledTimes || scheduledTimes.length === 0) return true;
+  const [currH, currM] = currentIst.split(":").map((n) => parseInt(n, 10));
+  return scheduledTimes.some((timeStr) => {
+    const [h, m] = timeStr.split(":").map((n) => parseInt(n, 10));
+    const diff = Math.abs(currH * 60 + currM - (h * 60 + m));
+    return diff <= 5;
+  });
+}
+async function runEmailAutomationScheduler(force = false) {
+  const date = currentIstDate();
+  const time = currentIstTime();
+  const automations = await listEmailAutomations();
+  const activeAutomations = automations.filter((a) => a.status === "active");
+  const meta = await getMaintenanceMeta();
+  const plantContacts = meta.plantContacts || {};
+  const allMachines = await listMaintenanceMachines();
+  const activeMachines = allMachines.filter((m) => m.status !== "Decommissioned");
+  let processed = 0;
+  let sent = 0;
+  let skipped = 0;
+  const errors = [];
+  const { sendDailyOverduePlantMails: sendDailyOverduePlantMails2, isDailyOverduePlant: isDailyOverduePlant2 } = await Promise.resolve().then(() => (init_dailyOverdueMail(), dailyOverdueMail_exports));
+  const digest = await sendDailyOverduePlantMails2();
+  sent += digest.sent;
+  skipped += digest.skipped;
+  errors.push(...digest.errors);
+  for (const auto of activeAutomations) {
+    if (!force && !isTimeMatch(auto.scheduleTimes, time)) {
+      continue;
+    }
+    processed++;
+    try {
+      const template = await getEmailTemplate(auto.templateId) || {
+        id: auto.templateId,
+        name: auto.name,
+        category: auto.triggerType,
+        subject: `${auto.name} - {{PlantName}}`,
+        bodyHtml: `<p>Notification for {{PlantName}}</p>{{ConsolidatedTable}}`,
+        variables: [],
+        status: "active",
+        createdAt: "",
+        updatedAt: ""
+      };
+      if (auto.triggerType === "overdue_pm") {
+        const overdueMachines = activeMachines.filter((m) => {
+          const due = effectiveNextMaintenanceDate(m);
+          const days = daysUntilDateIst(due);
+          return days != null && days < 0;
+        });
+        if (overdueMachines.length === 0) {
+          skipped++;
+          continue;
+        }
+        const plantGroups = {};
+        for (const m of overdueMachines) {
+          const p = m.plantCode || "General";
+          if (!plantGroups[p]) plantGroups[p] = [];
+          plantGroups[p].push(m);
+        }
+        for (const [plantCode, machines] of Object.entries(plantGroups)) {
+          if (isDailyOverduePlant2(plantCode)) {
+            skipped++;
+            continue;
+          }
+          const idempotencyKey = `${auto.id}_${date}_${time.slice(0, 2)}_${plantCode}`;
+          if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
+            skipped++;
+            continue;
+          }
+          const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
+          if (recipients.to.length === 0) {
+            skipped++;
+            continue;
+          }
+          const tableHtml = renderMachineConsolidatedTable(machines, "overdue");
+          const tableText = renderPlainTextTable(machines, "overdue");
+          const plantName = plantShortName(plantCode);
+          let subject = template.subject.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{TotalCount\}\}/g, String(machines.length)).replace(/\{\{CurrentDate\}\}/g, date);
+          let bodyHtml = template.bodyHtml.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{TotalCount\}\}/g, String(machines.length)).replace(/\{\{CurrentDate\}\}/g, date).replace(/\{\{ConsolidatedTable\}\}/g, tableHtml);
+          const fullHtml = professionalShell2(subject, bodyHtml);
+          const fullText = `Preventive Maintenance Overdue Machines - ${plantName}
+
+Total Overdue: ${machines.length}
+
+${tableText}
+
+${APP_NAME}`;
+          const sendResult = await sendMaintenanceMail({
+            to: recipients.to,
+            cc: recipients.cc,
+            bcc: recipients.bcc,
+            subject,
+            html: fullHtml,
+            text: fullText
+          });
+          await appendEmailLog({
+            automationId: auto.id,
+            automationName: auto.name,
+            triggerType: auto.triggerType,
+            idempotencyKey,
+            date,
+            time,
+            sender: APP_NAME,
+            to: recipients.to,
+            cc: recipients.cc,
+            bcc: recipients.bcc,
+            subject,
+            plantCode,
+            status: sendResult.ok ? "sent" : "failed",
+            sentAt: sendResult.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
+            failureReason: sendResult.error,
+            retryCount: sendResult.ok ? 0 : 1,
+            machineCount: machines.length
+          });
+          if (sendResult.ok) sent++;
+          else errors.push(`[${plantCode}] ${sendResult.error}`);
+        }
+      } else if (auto.triggerType === "upcoming_pm") {
+        const reminderDays = auto.reminderDays || 7;
+        const upcomingMachines = activeMachines.filter((m) => {
+          const due = effectiveNextMaintenanceDate(m);
+          const days = daysUntilDateIst(due);
+          return days != null && days >= 0 && days <= reminderDays;
+        });
+        if (upcomingMachines.length === 0) {
+          skipped++;
+          continue;
+        }
+        const plantGroups = {};
+        for (const m of upcomingMachines) {
+          const p = m.plantCode || "General";
+          if (!plantGroups[p]) plantGroups[p] = [];
+          plantGroups[p].push(m);
+        }
+        for (const [plantCode, machines] of Object.entries(plantGroups)) {
+          const idempotencyKey = `${auto.id}_${date}_upcoming_${plantCode}`;
+          if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
+            skipped++;
+            continue;
+          }
+          const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
+          if (recipients.to.length === 0) {
+            skipped++;
+            continue;
+          }
+          const tableHtml = renderMachineConsolidatedTable(machines, "upcoming");
+          const tableText = renderPlainTextTable(machines, "upcoming");
+          const plantName = plantShortName(plantCode);
+          let subject = template.subject.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{ReminderDays\}\}/g, String(reminderDays)).replace(/\{\{TotalCount\}\}/g, String(machines.length));
+          let bodyHtml = template.bodyHtml.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{ReminderDays\}\}/g, String(reminderDays)).replace(/\{\{TotalCount\}\}/g, String(machines.length)).replace(/\{\{ConsolidatedTable\}\}/g, tableHtml);
+          const fullHtml = professionalShell2(subject, bodyHtml);
+          const fullText = `Upcoming PM Schedule (${reminderDays} Days) - ${plantName}
+
+Total Due: ${machines.length}
+
+${tableText}
+
+${APP_NAME}`;
+          const sendResult = await sendMaintenanceMail({
+            to: recipients.to,
+            cc: recipients.cc,
+            bcc: recipients.bcc,
+            subject,
+            html: fullHtml,
+            text: fullText
+          });
+          await appendEmailLog({
+            automationId: auto.id,
+            automationName: auto.name,
+            triggerType: auto.triggerType,
+            idempotencyKey,
+            date,
+            time,
+            sender: APP_NAME,
+            to: recipients.to,
+            cc: recipients.cc,
+            bcc: recipients.bcc,
+            subject,
+            plantCode,
+            status: sendResult.ok ? "sent" : "failed",
+            sentAt: sendResult.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
+            failureReason: sendResult.error,
+            retryCount: sendResult.ok ? 0 : 1,
+            machineCount: machines.length
+          });
+          if (sendResult.ok) sent++;
+          else errors.push(`[${plantCode}] ${sendResult.error}`);
+        }
+      } else if (auto.triggerType === "zero_machine_entry") {
+        const plantGroups = {};
+        for (const m of activeMachines) {
+          const p = m.plantCode || "General";
+          if (!plantGroups[p]) plantGroups[p] = [];
+          plantGroups[p].push(m);
+        }
+        for (const [plantCode, machines] of Object.entries(plantGroups)) {
+          const hasEntryToday = machines.some((m) => {
+            const createdToday = m.createdAt && m.createdAt.startsWith(date);
+            const updatedToday = m.updatedAt && m.updatedAt.startsWith(date);
+            const pmLoggedToday = Array.isArray(m.pmLogs) && m.pmLogs.some((l) => l.doneOn && l.doneOn.startsWith(date));
+            return createdToday || updatedToday || pmLoggedToday;
+          });
+          if (!hasEntryToday && machines.length > 0) {
+            const idempotencyKey = `${auto.id}_${date}_zero_entry_${plantCode}`;
+            if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
+              skipped++;
+              continue;
+            }
+            const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
+            if (recipients.to.length === 0) {
+              skipped++;
+              continue;
+            }
+            const plantName = plantShortName(plantCode);
+            const locationName = machines[0]?.location || "";
+            let subject = template.subject.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{LocationName\}\}/g, locationName).replace(/\{\{CurrentDate\}\}/g, date).replace(/\{\{TotalCount\}\}/g, String(machines.length));
+            let bodyHtml = template.bodyHtml.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{LocationName\}\}/g, locationName).replace(/\{\{CurrentDate\}\}/g, date).replace(/\{\{TotalCount\}\}/g, String(machines.length));
+            const fullHtml = professionalShell2(subject, bodyHtml);
+            const fullText = `ACTION REQUIRED: No Machine Entry Logged Today (${date}) - ${plantName}
+
+Total Registered Machines: ${machines.length}
+Location: ${locationName}
+Please log machine records in AEMS portal immediately.
+
+${APP_NAME}`;
+            const sendResult = await sendMaintenanceMail({
+              to: recipients.to,
+              cc: recipients.cc,
+              bcc: recipients.bcc,
+              subject,
+              html: fullHtml,
+              text: fullText
+            });
+            await appendEmailLog({
+              automationId: auto.id,
+              automationName: auto.name,
+              triggerType: auto.triggerType,
+              idempotencyKey,
+              date,
+              time,
+              sender: APP_NAME,
+              to: recipients.to,
+              cc: recipients.cc,
+              bcc: recipients.bcc,
+              subject,
+              plantCode,
+              status: sendResult.ok ? "sent" : "failed",
+              sentAt: sendResult.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
+              failureReason: sendResult.error,
+              retryCount: sendResult.ok ? 0 : 1,
+              machineCount: machines.length
+            });
+            if (sendResult.ok) sent++;
+            else errors.push(`[${plantCode}] ${sendResult.error}`);
+          } else {
+            skipped++;
+          }
+        }
+      }
+    } catch (err) {
+      errors.push(`[${auto.name}] ${err.message || String(err)}`);
+    }
+  }
+  return { processed, sent, skipped, errors };
+}
+function startEmailSchedulerTimer() {
+  if (timerRef) return;
+  console.log("[EmailScheduler] Background scheduler initialized (runs every 60s in IST)");
+  timerRef = setInterval(() => {
+    runEmailAutomationScheduler(false).catch((err) => {
+      console.warn("[EmailScheduler] Scheduler cycle error:", err);
+    });
+  }, 6e4);
+}
+var timerRef;
+var init_emailScheduler = __esm({
+  "server/emailScheduler.ts"() {
+    init_emailStore();
+    init_maintenanceStore();
+    init_maintenanceMail();
+    init_maintenanceCodes();
+    init_plantDisplay();
+    init_constants();
+    timerRef = null;
+  }
+});
+
+// server/dailyOverdueMail.ts
+var dailyOverdueMail_exports = {};
+__export(dailyOverdueMail_exports, {
+  DAILY_OVERDUE_MAIL_HOUR_IST: () => DAILY_OVERDUE_MAIL_HOUR_IST,
+  DAILY_OVERDUE_PLANTS: () => DAILY_OVERDUE_PLANTS,
+  isDailyOverduePlant: () => isDailyOverduePlant,
+  sendDailyOverduePlantMails: () => sendDailyOverduePlantMails
+});
+function isDailyOverduePlant(plantCode) {
+  return DAILY_OVERDUE_PLANT_CODES.has(String(plantCode || "").trim());
+}
+function shell(title, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" /><title>${title}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:920px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+        <tr><td style="background:#113355;padding:20px 28px;">
+          <h1 style="margin:0;color:#fff;font-size:18px;font-weight:800;">${APP_NAME}</h1>
+          <p style="margin:6px 0 0;color:#93c5fd;font-size:12px;font-weight:600;">Overdue Preventive Maintenance</p>
+        </td></tr>
+        <tr><td style="padding:28px;color:#334155;font-size:14px;line-height:1.65;">${bodyHtml}</td></tr>
+        <tr><td style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;color:#94a3b8;font-size:11px;">This is an automated notification from ${APP_NAME}. Please do not reply to this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+function istTimeLabel(d = /* @__PURE__ */ new Date()) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(d);
+}
+async function sendDailyOverduePlantMails(opts) {
+  const force = Boolean(opts?.force);
+  const ignoreHour = Boolean(opts?.ignoreHour);
+  if (!force && !ignoreHour && istHour() < DAILY_OVERDUE_MAIL_HOUR_IST) {
+    return { sent: 0, skipped: 0, errors: [] };
+  }
+  const date = istTodayKey();
+  const time = istTimeLabel();
+  const machines = await listMaintenanceMachines();
+  const overdue = machines.filter((m) => {
+    if (String(m.status) === "Decommissioned") return false;
+    const days = daysUntilDateIst(effectiveNextMaintenanceDate(m));
+    return days != null && days < 0;
+  });
+  let sent = 0;
+  let skipped = 0;
+  const errors = [];
+  for (const plant of DAILY_OVERDUE_PLANTS) {
+    const idempotencyKey = `daily_overdue_${date}_${plant.code}`;
+    if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
+      skipped++;
+      continue;
+    }
+    const rows = overdue.filter((m) => String(m.plantCode) === plant.code).sort((a, b) => {
+      const da = daysUntilDateIst(effectiveNextMaintenanceDate(a)) ?? 0;
+      const db = daysUntilDateIst(effectiveNextMaintenanceDate(b)) ?? 0;
+      return da - db;
+    });
+    if (rows.length === 0) {
+      skipped++;
+      continue;
+    }
+    const subject = `URGENT: Preventive Maintenance Overdue Machines - ${plant.name} (${rows.length})`;
+    const tableHtml = renderMachineConsolidatedTable(rows, "overdue");
+    const body = `<p>Dear Sir,</p>
+<p>The following machine(s) in <strong>${plant.name}</strong> have passed their scheduled preventive maintenance date and are currently <strong>OVERDUE</strong>.</p>
+<p>Total overdue machines: <strong>${rows.length}</strong>. Date: ${date}.</p>
+<p>Please arrange maintenance and mark the machines as Done in the AEMS Preventive Setup module.</p>
+${tableHtml}`;
+    const text = `Overdue preventive maintenance \u2014 ${plant.name}
+Total: ${rows.length}
+Date: ${date}
+
+${rows.map((m, i) => {
+      const due = effectiveNextMaintenanceDate(m);
+      const days = Math.abs(daysUntilDateIst(due) || 0);
+      return `${i + 1}. ${m.equipmentName || m.machineType} (${m.assetCode}) | Due: ${due} | ${days} days overdue`;
+    }).join("\n")}`;
+    const result = await sendMaintenanceMail({
+      to: plant.to,
+      cc: CC,
+      subject,
+      html: shell(subject, body),
+      text
+    });
+    await appendEmailLog({
+      automationId: "daily_overdue_9am",
+      automationName: "Daily Overdue PM Alert (9:00 IST)",
+      triggerType: "overdue_pm",
+      idempotencyKey,
+      date,
+      time,
+      sender: APP_NAME,
+      to: plant.to,
+      cc: CC,
+      bcc: [],
+      subject,
+      plantCode: plant.code,
+      status: result.ok ? "sent" : "failed",
+      sentAt: result.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
+      failureReason: result.error,
+      retryCount: result.ok ? 0 : 1,
+      machineCount: rows.length
+    });
+    if (result.ok) sent++;
+    else errors.push(`[${plant.name}] ${result.error || "send failed"}`);
+  }
+  return { sent, skipped, errors };
+}
+var DAILY_OVERDUE_MAIL_HOUR_IST, CC, DAILY_OVERDUE_PLANTS, DAILY_OVERDUE_PLANT_CODES;
+var init_dailyOverdueMail = __esm({
+  "server/dailyOverdueMail.ts"() {
+    init_emailStore();
+    init_maintenanceStore();
+    init_maintenanceMail();
+    init_emailScheduler();
+    init_maintenanceCodes();
+    init_constants();
+    DAILY_OVERDUE_MAIL_HOUR_IST = 9;
+    CC = ["naresh.kukreja@pgel.in", "dhruv.tak4@pgel.in", "software.2040@pgel.in"];
+    DAILY_OVERDUE_PLANTS = [
+      { code: "4010", name: "NGM", to: ["anil.more4@pgel.in"] },
+      { code: "2020", name: "PGTL", to: ["sandeep.auti@pgel.in", "sandeep.auti4@pgel.in"] },
+      { code: "1040", name: "PGEL", to: ["sandeep.auti@pgel.in", "sandeep.auti4@pgel.in"] }
+    ];
+    DAILY_OVERDUE_PLANT_CODES = new Set(DAILY_OVERDUE_PLANTS.map((p) => p.code));
+  }
+});
+
 // server/dataSheets.ts
 var dataSheets_exports = {};
 __export(dataSheets_exports, {
@@ -6094,6 +8174,9 @@ function reserveAssetId(id) {
 function releaseAssetId(id) {
   activeReservingIds.delete(id);
 }
+function isAssetIdReserved(id) {
+  return activeReservingIds.has(id);
+}
 function generateNextAssetId(assets) {
   let maxId = 0;
   for (const a of assets) {
@@ -6243,975 +8326,17 @@ function logAssetMappingAudit(stage, assetData, headers2, row) {
   console.log(`[AMS Mapping] ${stage}`, JSON.stringify(audit, null, 2));
 }
 
-// server/maintenanceStore.ts
-init_sqlConfig();
-init_supabaseClient();
-import fs6 from "fs";
-import path6 from "path";
-
-// src/types/maintenance.ts
-var CUSTOM_TREND_MONTHS = 0;
-var TREND_MONTH_OPTIONS = [1, 2, 3, 4, 5, 6, 12];
-var DEFAULT_TREND_MONTHS = 2;
-var TREND_SELECT_OPTIONS = [CUSTOM_TREND_MONTHS, ...TREND_MONTH_OPTIONS];
-function isCustomTrend(months) {
-  return Number(months) === CUSTOM_TREND_MONTHS;
-}
-function trendMonthsLabel(months) {
-  switch (months) {
-    case CUSTOM_TREND_MONTHS:
-      return "Custom (manual dates)";
-    case 1:
-      return "Monthly (1 month)";
-    case 2:
-      return "Every 2 months";
-    case 3:
-      return "Quarterly (3 months)";
-    case 4:
-      return "Every 4 months";
-    case 5:
-      return "Every 5 months";
-    case 6:
-      return "Half-yearly (6 months)";
-    case 12:
-      return "Yearly (12 months)";
-    default:
-      return `Every ${months} months`;
-  }
-}
-var DEFAULT_MACHINE_TYPES = [
-  "Injection Molding Machine",
-  "CNC Machine",
-  "Press Machine",
-  "Compressor",
-  "Generator",
-  "Conveyor",
-  "Packaging Machine",
-  "Extruder",
-  "Chiller",
-  "Boiler"
-];
-
-// server/maintenanceStore.ts
-init_postgresMirror();
-var MACHINES_FILE = "maintenance_machines";
-var META_FILE = "maintenance_meta";
-var COMPLAINTS_FILE = "maintenance_complaints";
-var locks2 = /* @__PURE__ */ new Map();
-async function withLock2(name, fn) {
-  const previous = locks2.get(name) || Promise.resolve();
-  let release = () => void 0;
-  const current = new Promise((resolve) => {
-    release = resolve;
-  });
-  locks2.set(
-    name,
-    previous.then(() => current)
-  );
-  await previous;
-  try {
-    return await fn();
-  } finally {
-    release();
-  }
-}
-function localPath(name) {
-  return path6.join(process.cwd(), "data", `${name}.json`);
-}
-async function loadJson(name, fallback) {
-  if (isSupabaseMode()) {
-    const remote = await downloadFromStorage(`tables/${name}.json`, DATA_BUCKET);
-    if (!remote) return fallback;
-    try {
-      return JSON.parse(new TextDecoder().decode(remote.bytes));
-    } catch {
-      return fallback;
-    }
-  }
-  try {
-    const file = localPath(name);
-    if (!fs6.existsSync(file)) return fallback;
-    return JSON.parse(fs6.readFileSync(file, "utf-8"));
-  } catch {
-    return fallback;
-  }
-}
-async function saveJson(name, data) {
-  if (isSupabaseMode()) {
-    await uploadToStorage(
-      `tables/${name}.json`,
-      Buffer.from(JSON.stringify(data, null, 2)),
-      "application/json",
-      DATA_BUCKET
-    );
-    return;
-  }
-  const file = localPath(name);
-  fs6.mkdirSync(path6.dirname(file), { recursive: true });
-  fs6.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-}
-function defaultMeta() {
-  return {
-    machineTypes: [...DEFAULT_MACHINE_TYPES],
-    plantContacts: {},
-    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
-async function listMaintenanceMachines() {
-  const rows = await loadJson(MACHINES_FILE, []);
-  return Array.isArray(rows) ? rows : [];
-}
-async function getMaintenanceMachine(id) {
-  const rows = await listMaintenanceMachines();
-  return rows.find((r) => r.id === id) || null;
-}
-async function getMaintenanceMachineByAssetCode(assetCode) {
-  const code = String(assetCode || "").trim().toUpperCase();
-  if (!code) return null;
-  const rows = await listMaintenanceMachines();
-  return rows.find((r) => String(r.assetCode || "").trim().toUpperCase() === code) || null;
-}
-async function upsertMaintenanceMachine(machine) {
-  return withLock2(MACHINES_FILE, async () => {
-    const rows = await listMaintenanceMachines();
-    const idx = rows.findIndex((r) => r.id === machine.id);
-    if (idx >= 0) rows[idx] = machine;
-    else rows.push(machine);
-    await saveJson(MACHINES_FILE, rows);
-    if (isSupabaseMode()) {
-      mirrorMachineToPostgres(machine).catch(() => void 0);
-    }
-    return machine;
-  });
-}
-async function deleteMaintenanceMachine(id) {
-  return withLock2(MACHINES_FILE, async () => {
-    const rows = await listMaintenanceMachines();
-    const next = rows.filter((r) => r.id !== id);
-    if (next.length === rows.length) return false;
-    await saveJson(MACHINES_FILE, next);
-    if (isSupabaseMode()) {
-      deleteMirroredMachine(id).catch(() => void 0);
-    }
-    return true;
-  });
-}
-async function listMaintenanceComplaints() {
-  const rows = await loadJson(COMPLAINTS_FILE, []);
-  return Array.isArray(rows) ? rows : [];
-}
-async function getMaintenanceComplaint(id) {
-  const rows = await listMaintenanceComplaints();
-  return rows.find((r) => r.id === id) || null;
-}
-async function upsertMaintenanceComplaint(complaint) {
-  return withLock2(COMPLAINTS_FILE, async () => {
-    const rows = await listMaintenanceComplaints();
-    const idx = rows.findIndex((r) => r.id === complaint.id);
-    if (idx >= 0) rows[idx] = complaint;
-    else rows.push(complaint);
-    await saveJson(COMPLAINTS_FILE, rows);
-    return complaint;
-  });
-}
-async function getMaintenanceMeta() {
-  const meta = await loadJson(META_FILE, null);
-  if (!meta || !Array.isArray(meta.machineTypes)) return defaultMeta();
-  const merged = Array.from(
-    new Set([...DEFAULT_MACHINE_TYPES, ...meta.machineTypes].map((t) => String(t).trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
-  return {
-    ...meta,
-    machineTypes: merged,
-    plantContacts: meta.plantContacts || {}
-  };
-}
-async function saveMaintenanceMeta(meta) {
-  return withLock2(META_FILE, async () => {
-    const next = {
-      ...meta,
-      machineTypes: Array.from(
-        new Set((meta.machineTypes || []).map((t) => String(t).trim()).filter(Boolean))
-      ).sort((a, b) => a.localeCompare(b)),
-      plantContacts: meta.plantContacts || {},
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    await saveJson(META_FILE, next);
-    return next;
-  });
-}
-async function addMachineType(typeName) {
-  const name = String(typeName || "").trim();
-  if (!name) throw new Error("Machine type is required");
-  const meta = await getMaintenanceMeta();
-  if (!meta.machineTypes.some((t) => t.toLowerCase() === name.toLowerCase())) {
-    meta.machineTypes.push(name);
-  }
-  return saveMaintenanceMeta(meta);
-}
-async function removeMachineType(typeName) {
-  const name = String(typeName || "").trim().toLowerCase();
-  if (!name) throw new Error("Machine type is required");
-  const meta = await getMaintenanceMeta();
-  meta.machineTypes = (meta.machineTypes || []).filter((t) => t.trim().toLowerCase() !== name);
-  return saveMaintenanceMeta(meta);
-}
-
-// src/lib/maintenanceCodes.ts
-var COMPLAINT_RESOLVE_SLA_DAYS = 7;
-function nextMaintenanceAssetCode(machines) {
-  let max = 0;
-  for (const m of machines) {
-    const match = String(m.assetCode || "").trim().toUpperCase().match(/^PM-(\d+)$/);
-    if (match) {
-      const n = parseInt(match[1], 10);
-      if (Number.isFinite(n)) max = Math.max(max, n);
-    }
-  }
-  return `PM-${String(max + 1).padStart(5, "0")}`;
-}
-function normalizeMachineNumber(raw) {
-  return String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
-}
-function istTodayKey(d = /* @__PURE__ */ new Date()) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(d);
-}
-function istHour(d = /* @__PURE__ */ new Date()) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    hour12: false
-  }).formatToParts(d);
-  return parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
-}
-function istMailSlot(d = /* @__PURE__ */ new Date()) {
-  const h = istHour(d);
-  if (h >= 16) return "pm";
-  if (h >= 8) return "am";
-  return null;
-}
-function istMailSlotKey(d = /* @__PURE__ */ new Date()) {
-  const slot = istMailSlot(d);
-  if (!slot) return null;
-  return `${istTodayKey(d)}-${slot}`;
-}
-function daysUntilDate(dateStr, now = /* @__PURE__ */ new Date()) {
-  const raw = String(dateStr || "").trim();
-  if (!raw) return null;
-  const d = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  return Math.round((target.getTime() - start.getTime()) / (24 * 60 * 60 * 1e3));
-}
-function daysUntilDateIst(dateStr, now = /* @__PURE__ */ new Date()) {
-  const raw = String(dateStr || "").trim().slice(0, 10);
-  if (!raw) return null;
-  const today = istTodayKey(now);
-  const t = Date.parse(`${today}T00:00:00`);
-  const d = Date.parse(`${raw}T00:00:00`);
-  if (Number.isNaN(t) || Number.isNaN(d)) return null;
-  return Math.round((d - t) / (24 * 60 * 60 * 1e3));
-}
-function istCalendarDaysSince(iso, now = /* @__PURE__ */ new Date()) {
-  const reported = new Date(iso);
-  if (Number.isNaN(reported.getTime())) return 0;
-  const a = Date.parse(`${istTodayKey(reported)}T00:00:00`);
-  const b = Date.parse(`${istTodayKey(now)}T00:00:00`);
-  return Math.max(0, Math.round((b - a) / (24 * 60 * 60 * 1e3)));
-}
-function dateKey(value) {
-  if (!value) return "";
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : formatDateOnly(value);
-  const d = parseDateOnly(value);
-  return d ? formatDateOnly(d) : "";
-}
-function completedPlanDateKeys(machine) {
-  const keys = /* @__PURE__ */ new Set();
-  for (const log of machine.pmLogs || []) {
-    const planned = dateKey(log.plannedDate);
-    const done = dateKey(log.doneOn);
-    if (planned) keys.add(planned);
-    if (done) keys.add(done);
-  }
-  const last = dateKey(machine.lastMaintenanceDate);
-  if (last) keys.add(last);
-  return keys;
-}
-function manualPlanDates(machine) {
-  const sorted = uniqueDates([machine.nextMaintenanceDate, ...machine.customPlanDates || []]);
-  return sorted.sort((a, b) => a.getTime() - b.getTime());
-}
-function isPlanDateCompleted(machine, planned) {
-  const k = formatDateOnly(planned);
-  if (completedPlanDateKeys(machine).has(k)) return true;
-  const last = parseDateOnly(machine.lastMaintenanceDate);
-  if (last && planned.getTime() <= last.getTime()) return true;
-  return false;
-}
-function pendingPlanDates(machine) {
-  if (isCustomTrend(machineTrendMonths(machine))) {
-    return manualPlanDates(machine).filter((d) => !isPlanDateCompleted(machine, d)).sort((a, b) => a.getTime() - b.getTime());
-  }
-  const next = parseDateOnly(machine.nextMaintenanceDate);
-  if (!next) return [];
-  return isPlanDateCompleted(machine, next) ? [] : [next];
-}
-function effectiveNextMaintenanceDate(machine) {
-  const pending = pendingPlanDates(machine);
-  if (pending[0]) return formatDateOnly(pending[0]);
-  return String(machine.nextMaintenanceDate || "").trim();
-}
-function mergeCustomPlan(next, extras) {
-  const all = normalizeCustomPlanDates([next, ...extras || []]);
-  if (!all.length) return { nextMaintenanceDate: String(next || "").trim(), customPlanDates: [] };
-  return {
-    nextMaintenanceDate: all[0],
-    customPlanDates: all.slice(1)
-  };
-}
-function maintenancePendingDays(machine, now = /* @__PURE__ */ new Date()) {
-  const days = daysUntilDate(effectiveNextMaintenanceDate(machine), now);
-  if (days == null) return 0;
-  if (days >= 0) return 0;
-  return Math.abs(days);
-}
-function normalizeTrendMonths(raw, fallback = DEFAULT_TREND_MONTHS) {
-  const n = typeof raw === "number" ? raw : parseInt(String(raw || ""), 10);
-  if (n === CUSTOM_TREND_MONTHS) return CUSTOM_TREND_MONTHS;
-  if (Number.isFinite(n) && n >= 1 && n <= 24) return Math.round(n);
-  return fallback;
-}
-function machineTrendMonths(machine) {
-  const n = typeof machine.trendMonths === "number" ? machine.trendMonths : parseInt(String(machine.trendMonths || ""), 10);
-  if (n === CUSTOM_TREND_MONTHS) return CUSTOM_TREND_MONTHS;
-  return normalizeTrendMonths(machine.trendMonths);
-}
-function normalizeCustomPlanDates(raw) {
-  const arr = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,;\s]+/) : [];
-  const seen = /* @__PURE__ */ new Set();
-  const out = [];
-  for (const v of arr) {
-    const d = parseDateOnly(String(v || "").trim());
-    if (!d) continue;
-    const k = formatDateOnly(d);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(k);
-  }
-  return out.sort();
-}
-function addMonthsToDate(from, months) {
-  const base = typeof from === "string" ? new Date(from.includes("T") ? from : `${from}T00:00:00`) : new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-  d.setMonth(d.getMonth() + months);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-function suggestNextMaintenanceDate(from = /* @__PURE__ */ new Date(), trendMonths = DEFAULT_TREND_MONTHS) {
-  const trend = normalizeTrendMonths(trendMonths);
-  if (isCustomTrend(trend)) return "";
-  return addMonthsToDate(from, trend);
-}
-function nextDateForTrend(machine, trendMonths, now = /* @__PURE__ */ new Date()) {
-  const trend = normalizeTrendMonths(trendMonths);
-  if (isCustomTrend(trend)) {
-    return String(machine.nextMaintenanceDate || "").trim() || todayIso(now);
-  }
-  const base = machine.lastMaintenanceDate?.trim() || todayIso(now);
-  return addMonthsToDate(base, trend);
-}
-function todayIso(now = /* @__PURE__ */ new Date()) {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-function formatDowntimeLabel(minutes) {
-  const n = Math.round(Number(minutes) || 0);
-  if (n <= 0) return "";
-  const h = Math.floor(n / 60);
-  const m = n % 60;
-  if (h && m) return `${h}h ${m}m`;
-  if (h) return `${h}h`;
-  return `${m}m`;
-}
-function parseDateOnly(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-  const d = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-function formatDateOnly(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-function uniqueDates(values) {
-  const seen = /* @__PURE__ */ new Set();
-  const out = [];
-  for (const v of values) {
-    const d = parseDateOnly(v);
-    if (!d) continue;
-    const k = formatDateOnly(d);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(d);
-  }
-  return out;
-}
-
-// src/lib/plantDisplay.ts
-var PLANT_SHORT_NAMES = {
-  "4020": "NGM",
-  "2040": "PGTL"
-};
-function samePlant(a, b) {
-  const l = String(a || "").trim().toLowerCase();
-  const r = String(b || "").trim().toLowerCase();
-  if (!l || !r) return false;
-  if (l === r) return true;
-  if (l.includes(r) || r.includes(l)) return true;
-  return false;
-}
-function plantShortName(code, plants) {
-  const c = String(code || "").trim();
-  if (!c) return "\u2014";
-  const mapped = PLANT_SHORT_NAMES[c] || PLANT_SHORT_NAMES[c.toUpperCase()];
-  const found = plants?.find((p) => samePlant(p.code, c) || samePlant(p.name, c));
-  const name = String(found?.name || "").trim();
-  if (name && !/^\d+$/.test(name)) return name;
-  if (mapped) return mapped;
-  if (found?.code && !/^\d+$/.test(String(found.code))) return String(found.code).trim();
-  return c;
-}
-
-// server/maintenanceMail.ts
-init_env();
-init_constants();
-import nodemailer3 from "nodemailer";
-
-// server/maintenanceTechnicians.ts
-var MAX_MAINTENANCE_TECHNICIANS = 20;
-function normalizeTechnicianNames(names) {
-  if (!Array.isArray(names)) return [];
-  return names.map((n) => String(n || "").trim()).filter(Boolean);
-}
-function parseTechnicianPayload(body) {
-  const technicianCount = Math.floor(Number(body.technicianCount));
-  const technicianNames = normalizeTechnicianNames(body.technicianNames);
-  if (!Number.isFinite(technicianCount) || technicianCount < 1) {
-    return { error: "Select how many people worked on this job (minimum 1)" };
-  }
-  if (technicianCount > MAX_MAINTENANCE_TECHNICIANS) {
-    return { error: `Maximum ${MAX_MAINTENANCE_TECHNICIANS} people allowed` };
-  }
-  if (technicianNames.length !== technicianCount) {
-    return {
-      error: `Enter all ${technicianCount} name${technicianCount === 1 ? "" : "s"}`
-    };
-  }
-  const seen = /* @__PURE__ */ new Set();
-  for (const name of technicianNames) {
-    if (name.length < 2) {
-      return { error: "Each name must be at least 2 characters" };
-    }
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      return { error: "Duplicate names are not allowed" };
-    }
-    seen.add(key);
-  }
-  return { technicianCount, technicianNames };
-}
-function formatTechnicianNames(names) {
-  const list = normalizeTechnicianNames(names);
-  return list.length ? list.join(", ") : "-";
-}
-
-// server/maintenanceMail.ts
-function pickMailIdentity(m) {
-  return {
-    assetCode: m.assetCode,
-    machineType: m.machineType,
-    machineNumber: m.machineNumber,
-    equipmentName: m.equipmentName,
-    department: m.department,
-    responsibility: m.responsibility,
-    location: m.location,
-    plantCode: m.plantCode
-  };
-}
-function getPlantMaintenanceEmails(plantContacts, plantCode) {
-  const c = plantContacts?.[plantCode] || plantContacts?.[plantCode.toUpperCase()] || plantContacts?.[plantCode.toLowerCase()] || {};
-  return Array.from(
-    new Set(
-      [c.hodEmail, c.fhEmail, c.phEmail].map((e) => String(e || "").trim().toLowerCase()).filter(Boolean)
-    )
-  );
-}
-function professionalShell(title, bodyHtml) {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8" /><title>${title}</title></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:28px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-        <tr><td style="background:#113355;padding:20px 28px;">
-          <h1 style="margin:0;color:#fff;font-size:18px;font-weight:800;">${APP_NAME}</h1>
-          <p style="margin:6px 0 0;color:#93c5fd;font-size:12px;font-weight:600;">Maintenance Notification</p>
-        </td></tr>
-        <tr><td style="padding:28px;color:#334155;font-size:14px;line-height:1.65;">${bodyHtml}</td></tr>
-        <tr><td style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-          <p style="margin:0;color:#94a3b8;font-size:11px;">This is an automated notification from ${APP_NAME}. Please do not reply to this email.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-}
-function escapeHtml(s) {
-  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function kvRow(label, value, valueStyle = "") {
-  return `<tr><td style="padding:6px 0;color:#64748b;width:42%;">${label}</td><td style="padding:6px 0;font-weight:700;${valueStyle}">${escapeHtml(value)}</td></tr>`;
-}
-function identityHtml(m) {
-  return [
-    kvRow("Machine / Equipment", String(m.equipmentName || "").trim() || m.machineType),
-    kvRow("Asset Code", m.assetCode),
-    kvRow("Machine Type", m.machineType),
-    kvRow("Machine Number", m.machineNumber),
-    kvRow("Department", String(m.department || "").trim() || "\u2014"),
-    kvRow("Responsibility", String(m.responsibility || "").trim() || "Not assigned"),
-    kvRow("Location", m.location),
-    kvRow("Plant", plantShortName(m.plantCode))
-  ].join("");
-}
-function identityText(m) {
-  return [
-    `Machine / Equipment: ${String(m.equipmentName || "").trim() || m.machineType}`,
-    `Asset Code: ${m.assetCode}`,
-    `Machine Type: ${m.machineType}`,
-    `Machine Number: ${m.machineNumber}`,
-    `Department: ${String(m.department || "").trim() || "\u2014"}`,
-    `Responsibility: ${String(m.responsibility || "").trim() || "Not assigned"}`,
-    `Location: ${m.location}`,
-    `Plant: ${plantShortName(m.plantCode)}`
-  ].join("\n");
-}
-function reminderHtml(count) {
-  if (!count || count < 1) return "";
-  return kvRow("Reminder Count", String(count), "color:#b91c1c;");
-}
-function reminderText(count) {
-  if (!count || count < 1) return "";
-  return `Reminder Count: ${count}`;
-}
-function daysRemainingLabel(days) {
-  if (days === 0) return "Due today";
-  if (days === 1) return "1 day remaining";
-  return `${days} days remaining`;
-}
-function buildPreventiveReminderEmail(m) {
-  const remaining = m.daysRemaining ?? 0;
-  const countBit = m.reminderCount ? ` | Reminder ${m.reminderCount}` : "";
-  const subject = `Preventive Maintenance Reminder${countBit} \u2014 ${m.assetCode} (${daysRemainingLabel(remaining)})`;
-  const intro = remaining === 0 ? "This is a reminder that preventive maintenance for the machine below is due today." : `This is a reminder that preventive maintenance for the machine below is due in ${remaining} day${remaining === 1 ? "" : "s"}. Daily reminders will continue until the work is marked as Done.`;
-  const extra = [
-    identityText(m),
-    `Scheduled Maintenance Date: ${m.nextMaintenanceDate}`,
-    `Days Remaining: ${remaining === 0 ? "Due today" : String(remaining)}`,
-    reminderText(m.reminderCount)
-  ].filter(Boolean).join("\n");
-  const text = `Dear Sir / Madam,
-
-${intro}
-
-${extra}
-
-Please complete the maintenance on or before the scheduled date and mark it as Done in the AEMS Maintenance module.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>${intro}</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(m)}
-      ${kvRow("Scheduled Date", m.nextMaintenanceDate)}
-      ${kvRow("Days Remaining", remaining === 0 ? "Due today" : String(remaining))}
-      ${reminderHtml(m.reminderCount)}
-    </table>
-    <p>Please complete the maintenance on or before the scheduled date and mark it as <strong>Done</strong> in the AEMS Maintenance module.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildPreventiveOverdueEmail(m) {
-  const countBit = m.reminderCount ? ` | Reminder ${m.reminderCount}` : "";
-  const overdueLabel = m.pendingDays === 1 ? "1 day overdue" : `${m.pendingDays} days overdue`;
-  const subject = `Overdue Maintenance Reminder${countBit} \u2014 ${m.assetCode} (${overdueLabel})`;
-  const extra = [
-    identityText(m),
-    `Scheduled Maintenance Date: ${m.nextMaintenanceDate}`,
-    `Days Overdue: ${m.pendingDays}`,
-    reminderText(m.reminderCount)
-  ].filter(Boolean).join("\n");
-  const text = `Dear Sir / Madam,
-
-This is an overdue reminder. Preventive maintenance for the machine below was not completed on the scheduled date and has not been marked as Done.
-
-${extra}
-
-Please complete the maintenance without further delay and update the status as Done in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the work is closed.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>This is an <strong>overdue reminder</strong>. Preventive maintenance for the machine below was not completed on the scheduled date and has not been marked as Done.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(m)}
-      ${kvRow("Scheduled Date", m.nextMaintenanceDate)}
-      ${kvRow("Days Overdue", String(m.pendingDays), "color:#b91c1c;")}
-      ${reminderHtml(m.reminderCount)}
-    </table>
-    <p>Please complete the maintenance without further delay and update the status as <strong>Done</strong> in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the work is closed.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildPreventiveSolvedEmail(m) {
-  const peopleWorked = formatTechnicianNames(m.technicianNames);
-  const subject = `Maintenance Completed \u2014 ${m.assetCode} (${m.machineNumber})`;
-  const extra = [
-    identityText(m),
-    `Planned Date: ${m.plannedDate}`,
-    `Completed On: ${m.completedOn}`,
-    `Closed By: ${m.resolvedBy}`,
-    m.technicianCount ? `People Worked: ${m.technicianCount}` : "",
-    peopleWorked !== "-" ? `Names: ${peopleWorked}` : "",
-    reminderText(m.reminderCount)
-  ].filter(Boolean).join("\n");
-  const text = `Dear Sir / Madam,
-
-Preventive maintenance for the machine below has been completed and marked as Done.
-
-${extra}
-
-${m.remarks ? `Close-out remark:
-${m.remarks}
-` : ""}
-No further reminders will be issued for this maintenance cycle.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>Preventive maintenance for the machine below has been completed and marked as <strong>Done</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(m)}
-      ${kvRow("Planned Date", m.plannedDate)}
-      ${kvRow("Completed On", m.completedOn)}
-      ${kvRow("Closed By", m.resolvedBy)}
-      ${m.technicianCount ? kvRow("People Worked", String(m.technicianCount)) : ""}
-      ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
-      ${reminderHtml(m.reminderCount)}
-    </table>
-    ${m.remarks ? `<p style="margin:0 0 8px;font-weight:700;">Close-out remark</p><div style="padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(m.remarks)}</div>` : ""}
-    <p style="margin-top:16px;">No further reminders will be issued for this maintenance cycle.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildComplaintNotifyEmail(c) {
-  const extraText = [
-    identityText(c),
-    `Reported At: ${c.reportedAt}`,
-    c.reporterName ? `Reported By: ${c.reporterName}` : "",
-    c.reporterEmployeeCode ? `Employee Code: ${c.reporterEmployeeCode}` : "",
-    c.reporterPhone ? `Reporter Phone: ${c.reporterPhone}` : "",
-    c.downtimeLabel ? `Downtime: ${c.downtimeLabel}` : "",
-    c.remark ? `Remark:
-${c.remark}` : "",
-    c.photoUrl ? `Photo: ${c.photoUrl}` : ""
-  ].filter(Boolean).join("\n");
-  const subject = `Breakdown Complaint Registered \u2014 ${c.assetCode} (${c.machineNumber})`;
-  const text = `Dear Sir / Madam,
-
-A breakdown complaint has been registered for the machine below. Please review the details and arrange for resolution.
-
-${extraText}
-
-Breakdown Details:
-${c.complaintText}
-
-Please mark the complaint as Done in the AEMS Maintenance module once the issue has been resolved. Daily reminders will continue until then.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>A <strong>breakdown complaint</strong> has been registered for the machine below. Please review the details and arrange for resolution.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(c)}
-      ${kvRow("Reported At", c.reportedAt)}
-      ${c.reporterName ? kvRow("Reported By", c.reporterName) : ""}
-      ${c.reporterEmployeeCode ? kvRow("Employee Code", c.reporterEmployeeCode) : ""}
-      ${c.reporterPhone ? kvRow("Reporter Phone", c.reporterPhone) : ""}
-      ${c.downtimeLabel ? kvRow("Downtime", c.downtimeLabel) : ""}
-    </table>
-    <p style="margin:0 0 8px;font-weight:700;">Breakdown Details</p>
-    <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
-    ${c.remark ? `<p style="margin:16px 0 8px;font-weight:700;">Remark</p><div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.remark)}</div>` : ""}
-    ${c.photoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Photo</p><p><a href="${escapeHtml(c.photoUrl)}">View photo</a></p><p><img src="${escapeHtml(c.photoUrl)}" alt="Breakdown photo" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
-    <p style="margin-top:16px;">Please mark the complaint as <strong>Done</strong> in the AEMS Maintenance module once the issue has been resolved. Daily reminders will continue until then.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildComplaintPendingEmail(c) {
-  const countBit = c.reminderCount ? ` | Reminder ${c.reminderCount}` : "";
-  const subject = `Downtime Complaint Reminder${countBit} \u2014 ${c.assetCode} (${c.pendingDays} day${c.pendingDays === 1 ? "" : "s"} pending)`;
-  const extra = [identityText(c), `Days Pending: ${c.pendingDays}`, reminderText(c.reminderCount)].filter(Boolean).join("\n");
-  const text = `Dear Sir / Madam,
-
-This is a reminder that the downtime complaint below remains unresolved.
-
-${extra}
-
-Complaint:
-${c.complaintText}
-
-Please complete the resolution and mark the complaint as Done in the AEMS Maintenance module. Reminders will continue until the complaint is closed.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>This is a reminder that the downtime complaint below remains <strong>unresolved</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(c)}
-      ${kvRow("Days Pending", String(c.pendingDays), "color:#b91c1c;")}
-      ${reminderHtml(c.reminderCount)}
-    </table>
-    <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
-    <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
-    <p style="margin-top:16px;">Please complete the resolution and mark the complaint as <strong>Done</strong> in the AEMS Maintenance module. Reminders will continue until the complaint is closed.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildComplaintOverOneWeekEmail(c) {
-  const countBit = c.reminderCount ? ` | Reminder ${c.reminderCount}` : "";
-  const subject = `Overdue Downtime Complaint${countBit} \u2014 ${c.assetCode} (${c.pendingDays} days pending)`;
-  const extra = [
-    identityText(c),
-    `Reported At: ${c.reportedAt}`,
-    `Days Pending: ${c.pendingDays}`,
-    reminderText(c.reminderCount)
-  ].filter(Boolean).join("\n");
-  const text = `Dear Sir / Madam,
-
-This is an overdue reminder. The downtime complaint below has remained unresolved for more than seven days and requires immediate attention.
-
-${extra}
-
-Complaint:
-${c.complaintText}
-
-Please resolve the issue and mark the complaint as Done in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the complaint is closed.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>This is an <strong>overdue reminder</strong>. The downtime complaint below has remained unresolved for more than seven days and requires immediate attention.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(c)}
-      ${kvRow("Reported At", c.reportedAt)}
-      ${kvRow("Days Pending", String(c.pendingDays), "color:#b91c1c;")}
-      ${reminderHtml(c.reminderCount)}
-    </table>
-    <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
-    <div style="padding:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
-    <p style="margin-top:16px;">Please resolve the issue and mark the complaint as <strong>Done</strong> in the AEMS Maintenance module. Overdue reminders will continue twice daily at 9:00 AM and 4:00 PM IST until the complaint is closed.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildComplaintSolvedEmail(c) {
-  const peopleWorked = formatTechnicianNames(c.technicianNames);
-  const subject = `Complaint Resolved \u2014 ${c.assetCode} (${c.machineNumber})`;
-  const extra = [
-    identityText(c),
-    `Reported At: ${c.reportedAt}`,
-    `Resolved At: ${c.resolvedAt}`,
-    `Resolved By: ${c.resolvedBy}`,
-    c.technicianCount ? `People Worked: ${c.technicianCount}` : "",
-    peopleWorked !== "-" ? `Names: ${peopleWorked}` : "",
-    reminderText(c.reminderCount)
-  ].filter(Boolean).join("\n");
-  const text = `Dear Sir / Madam,
-
-The downtime complaint below has been resolved and marked as Done.
-
-${extra}
-
-Complaint:
-${c.complaintText}
-
-Resolution remarks:
-${c.remarks || "-"}
-
-${c.resolutionPhotoUrl ? `Evidence photo: ${c.resolutionPhotoUrl}` : ""}
-
-No further reminders will be issued for this complaint.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>The downtime complaint below has been resolved and marked as <strong>Done</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(c)}
-      ${kvRow("Reported At", c.reportedAt)}
-      ${kvRow("Resolved At", c.resolvedAt)}
-      ${kvRow("Resolved By", c.resolvedBy)}
-      ${c.technicianCount ? kvRow("People Worked", String(c.technicianCount)) : ""}
-      ${peopleWorked !== "-" ? kvRow("Names", peopleWorked) : ""}
-      ${reminderHtml(c.reminderCount)}
-    </table>
-    <p style="margin:0 0 8px;font-weight:700;">Complaint</p>
-    <div style="padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.complaintText)}</div>
-    ${c.remarks ? `<p style="margin:16px 0 8px;font-weight:700;">Resolution remarks</p><div style="padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;white-space:pre-wrap;">${escapeHtml(c.remarks)}</div>` : ""}
-    ${c.resolutionPhotoUrl ? `<p style="margin:16px 0 8px;font-weight:700;">Close-out evidence</p><p><a href="${escapeHtml(c.resolutionPhotoUrl)}">View evidence photo</a></p><p><img src="${escapeHtml(c.resolutionPhotoUrl)}" alt="Resolution evidence" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" /></p>` : ""}
-    <p style="margin-top:16px;">No further reminders will be issued for this complaint.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function buildTrendChangeEmail(m) {
-  const subject = `Maintenance Trend Updated \u2014 ${m.assetCode} (${m.machineNumber})`;
-  const extra = [
-    identityText(m),
-    `Previous Trend: ${trendMonthsLabel(m.previousTrendMonths)}`,
-    `New Trend: ${trendMonthsLabel(m.newTrendMonths)}`,
-    `Updated Next Maintenance Date: ${m.nextMaintenanceDate}`,
-    `Changed By: ${m.changedBy}`
-  ].join("\n");
-  const text = `Dear Sir / Madam,
-
-The preventive maintenance interval for the machine below has been updated.
-
-${extra}
-
-Future reminders will follow the revised schedule. Please review and ensure the new cycle is followed in the AEMS Maintenance module.
-
-Yours sincerely,
-${APP_NAME}`;
-  const html = professionalShell(
-    subject,
-    `<p>Dear Sir / Madam,</p>
-    <p>The preventive maintenance interval for the machine below has been updated.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-      ${identityHtml(m)}
-      ${kvRow("Previous Trend", trendMonthsLabel(m.previousTrendMonths))}
-      ${kvRow("New Trend", trendMonthsLabel(m.newTrendMonths), "color:#1d4ed8;")}
-      ${kvRow("Next Maintenance Date", m.nextMaintenanceDate)}
-      ${kvRow("Changed By", m.changedBy)}
-    </table>
-    <p>Future reminders will follow the revised schedule. Please review and ensure the new cycle is followed in the AEMS Maintenance module.</p>
-    <p>Yours sincerely,<br/>${APP_NAME}</p>`
-  );
-  return { subject, html, text };
-}
-function todayKey(d = /* @__PURE__ */ new Date()) {
-  return istTodayKey(d);
-}
-async function sendViaSmtp(to, subject, html, text, cc, bcc, attachments) {
-  const user = (getEnv("SMTP_EMAIL") || "verify.software2040@pgel.in").trim();
-  const envPass = (getEnv("SMTP_PASSWORD") || "").replace(/\s+/g, "").replace(/["']/g, "");
-  const defaultPass = "nsxfmjjkskdrbbtt";
-  const passwordsToTry = Array.from(new Set([envPass, defaultPass].filter(Boolean)));
-  if (to.length === 0) throw new Error("No recipients");
-  const host = getEnv("SMTP_HOST") || "smtp.office365.com";
-  const port = parseInt(getEnv("SMTP_PORT") || "587", 10);
-  const secure = getEnv("SMTP_SECURE") === "true";
-  const from = (getEnv("OTP_FROM_EMAIL") || user).trim();
-  const mailOptions = {
-    from: `"${APP_NAME}" <${from}>`,
-    to: to.join(", "),
-    subject,
-    html,
-    text
-  };
-  if (cc && cc.length > 0) {
-    mailOptions.cc = cc.join(", ");
-  }
-  if (bcc && bcc.length > 0) {
-    mailOptions.bcc = bcc.join(", ");
-  }
-  if (attachments && attachments.length > 0) {
-    mailOptions.attachments = attachments;
-  }
-  let lastError = null;
-  for (const pass of passwordsToTry) {
-    try {
-      const transporter = nodemailer3.createTransport({
-        host,
-        port,
-        secure: false,
-        auth: { user, pass },
-        tls: {
-          minVersion: "TLSv1.2",
-          rejectUnauthorized: false
-        }
-      });
-      await transporter.sendMail(mailOptions);
-      return;
-    } catch (err) {
-      lastError = err;
-      console.warn("[MaintenanceMail] Send failed with candidate pass:", err instanceof Error ? err.message : err);
-    }
-  }
-  throw lastError || new Error("Failed to send maintenance email via SMTP");
-}
-async function sendMaintenanceMail(opts) {
-  const recipients = Array.from(
-    new Set(opts.to.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))
-  );
-  if (recipients.length === 0) return { ok: false, error: "No recipients" };
-  const cc = opts.cc ? Array.from(new Set(opts.cc.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))) : void 0;
-  const bcc = opts.bcc ? Array.from(new Set(opts.bcc.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))) : void 0;
-  try {
-    await sendViaSmtp(recipients, opts.subject, opts.html, opts.text, cc, bcc, opts.attachments);
-    return { ok: true, via: "smtp" };
-  } catch (e) {
-    const error = e instanceof Error ? e.message : String(e);
-    console.warn("[MaintenanceMail] SMTP failed:", error);
-    return { ok: false, error };
-  }
-}
+// server.ts
+init_maintenanceStore();
+init_maintenanceCodes();
+init_maintenance();
+init_plantDisplay();
 
 // server/maintenanceCron.ts
+init_maintenanceStore();
+init_maintenanceMail();
+init_maintenanceCodes();
+init_dailyOverdueMail();
 function alreadySentSlot(lastMailSlot, slotKey, date, lastDaily) {
   if (slotKey) return lastMailSlot === slotKey;
   return lastDaily === date;
@@ -7233,6 +8358,11 @@ async function runMaintenanceCron() {
     complaintOverdueSent: 0,
     errors: []
   };
+  if (istHour() >= DAILY_OVERDUE_MAIL_HOUR_IST) {
+    const digest = await sendDailyOverduePlantMails();
+    result.overdueSent += digest.sent;
+    result.errors.push(...digest.errors);
+  }
   const meta = await getMaintenanceMeta();
   const plantContacts = meta.plantContacts || {};
   const machines = await listMaintenanceMachines();
@@ -7274,6 +8404,7 @@ async function runMaintenanceCron() {
       }
       continue;
     }
+    if (days < 0 && isDailyOverduePlant(machine.plantCode)) continue;
     if (days < 0) {
       if (alreadySentSlot(machine.lastMailSlot, slotKey, date, machine.lastDailyEmailOn)) continue;
       const mail = buildPreventiveOverdueEmail({
@@ -7343,924 +8474,11 @@ async function runMaintenanceCron() {
   return result;
 }
 
-// server/emailStore.ts
-init_sqlConfig();
-init_supabaseClient();
-import fs7 from "fs";
-import path7 from "path";
-var TEMPLATES_FILE = "email_templates";
-var AUTOMATIONS_FILE = "email_automations";
-var DRAFTS_FILE = "email_drafts";
-var LOGS_FILE = "email_execution_logs";
-function localPath2(name) {
-  return path7.join(process.cwd(), "data", `${name}.json`);
-}
-async function loadJson2(name, fallback) {
-  if (isSupabaseMode()) {
-    const remote = await downloadFromStorage(`tables/${name}.json`, DATA_BUCKET);
-    if (!remote) return fallback;
-    try {
-      return JSON.parse(new TextDecoder().decode(remote.bytes));
-    } catch {
-      return fallback;
-    }
-  }
-  try {
-    const file = localPath2(name);
-    if (!fs7.existsSync(file)) return fallback;
-    return JSON.parse(fs7.readFileSync(file, "utf-8"));
-  } catch {
-    return fallback;
-  }
-}
-async function saveJson2(name, data) {
-  if (isSupabaseMode()) {
-    await uploadToStorage(
-      `tables/${name}.json`,
-      Buffer.from(JSON.stringify(data, null, 2)),
-      "application/json",
-      DATA_BUCKET
-    );
-    return;
-  }
-  const file = localPath2(name);
-  fs7.mkdirSync(path7.dirname(file), { recursive: true });
-  fs7.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-}
-function defaultTemplates() {
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  return [
-    {
-      id: "tpl_overdue_pm",
-      name: "Overdue Preventive Maintenance Alert",
-      category: "overdue_pm",
-      subject: "URGENT: Preventive Maintenance Overdue Machines - {{PlantName}}",
-      bodyHtml: `<p>Dear Maintenance & Plant Leadership,</p>
-<p>The following machine(s) in <strong>{{PlantName}}</strong> have exceeded their scheduled preventive maintenance date and are currently <strong>OVERDUE</strong>.</p>
-<p>Immediate action is required to avoid unplanned machine breakdown and ensure equipment reliability.</p>
-{{ConsolidatedTable}}
-<p style="margin-top:16px;">Please assign maintenance technicians immediately and complete the maintenance in the AEMS portal.</p>`,
-      variables: [
-        "{{PlantName}}",
-        "{{LocationName}}",
-        "{{CurrentDate}}",
-        "{{TotalCount}}",
-        "{{ConsolidatedTable}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "tpl_upcoming_pm",
-      name: "Upcoming Preventive Maintenance Notice",
-      category: "upcoming_pm",
-      subject: "Upcoming Preventive Maintenance Schedule (Next {{ReminderDays}} Days) - {{PlantName}}",
-      bodyHtml: `<p>Dear Sir / Madam,</p>
-<p>This is an automated advance notification of machines due for preventive maintenance within the next <strong>{{ReminderDays}} days</strong> in <strong>{{PlantName}}</strong>.</p>
-{{ConsolidatedTable}}
-<p style="margin-top:16px;">Please plan necessary spare parts, tooling, and line clearance accordingly.</p>`,
-      variables: [
-        "{{PlantName}}",
-        "{{LocationName}}",
-        "{{ReminderDays}}",
-        "{{TotalCount}}",
-        "{{ConsolidatedTable}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "tpl_complaint_created",
-      name: "Breakdown Complaint Registered",
-      category: "complaint_created",
-      subject: "BREAKDOWN ALERT: Machine {{MachineNumber}} ({{MachineType}}) - {{PlantName}}",
-      bodyHtml: `<p>A machine breakdown complaint has been registered in AEMS.</p>
-<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;">
-  <tr><td style="padding:6px 0;color:#64748b;width:35%;">Machine Name</td><td style="padding:6px 0;font-weight:700;">{{MachineName}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Asset Code</td><td style="padding:6px 0;font-weight:700;">{{MachineCode}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Serial Number</td><td style="padding:6px 0;font-weight:700;">{{SerialNumber}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Model Number</td><td style="padding:6px 0;font-weight:700;">{{ModelNumber}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Plant / Location</td><td style="padding:6px 0;font-weight:700;">{{PlantName}} ({{LocationName}})</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Issue Description</td><td style="padding:6px 0;font-weight:700;color:#b91c1c;">{{IssueDescription}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Reported By</td><td style="padding:6px 0;font-weight:700;">{{ReportedBy}}</td></tr>
-</table>
-<p>Technicians have been notified. Please address promptly to minimize line stoppage.</p>`,
-      variables: [
-        "{{MachineName}}",
-        "{{MachineCode}}",
-        "{{MachineNumber}}",
-        "{{MachineType}}",
-        "{{SerialNumber}}",
-        "{{ModelNumber}}",
-        "{{PlantName}}",
-        "{{LocationName}}",
-        "{{IssueDescription}}",
-        "{{ReportedBy}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "tpl_complaint_resolved",
-      name: "Machine Breakdown Resolved",
-      category: "complaint_resolved",
-      subject: "RESOLVED: Breakdown Complaint on Machine {{MachineNumber}} - {{PlantName}}",
-      bodyHtml: `<p>The breakdown complaint on machine <strong>{{MachineNumber}}</strong> has been marked <strong>RESOLVED</strong>.</p>
-<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;">
-  <tr><td style="padding:6px 0;color:#64748b;width:35%;">Machine Name</td><td style="padding:6px 0;font-weight:700;">{{MachineName}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Asset Code</td><td style="padding:6px 0;font-weight:700;">{{MachineCode}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Action Taken</td><td style="padding:6px 0;font-weight:700;color:#15803d;">{{ActionTaken}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Root Cause</td><td style="padding:6px 0;font-weight:700;">{{RootCause}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Downtime</td><td style="padding:6px 0;font-weight:700;">{{Downtime}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Resolved By</td><td style="padding:6px 0;font-weight:700;">{{ResolvedBy}}</td></tr>
-</table>
-<p>Machine is now back in production.</p>`,
-      variables: [
-        "{{MachineName}}",
-        "{{MachineCode}}",
-        "{{MachineNumber}}",
-        "{{PlantName}}",
-        "{{ActionTaken}}",
-        "{{RootCause}}",
-        "{{Downtime}}",
-        "{{ResolvedBy}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "tpl_sla_breach",
-      name: "Complaint SLA Breach Alert",
-      category: "sla_breached",
-      subject: "ESCALATION: Complaint SLA Breached for Machine {{MachineNumber}} ({{DaysOpen}} Days Open)",
-      bodyHtml: `<p><strong>ATTENTION:</strong> A maintenance complaint has remained open beyond the resolution SLA window.</p>
-<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;">
-  <tr><td style="padding:6px 0;color:#64748b;width:35%;">Machine</td><td style="padding:6px 0;font-weight:700;">{{MachineName}} ({{MachineCode}})</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Plant</td><td style="padding:6px 0;font-weight:700;">{{PlantName}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Days Open</td><td style="padding:6px 0;font-weight:700;color:#b91c1c;">{{DaysOpen}} days</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Complaint Date</td><td style="padding:6px 0;font-weight:700;">{{ComplaintDate}}</td></tr>
-  <tr><td style="padding:6px 0;color:#64748b;">Issue</td><td style="padding:6px 0;font-weight:700;">{{IssueDescription}}</td></tr>
-</table>
-<p>Please escalate to the department and plant head for urgent closure.</p>`,
-      variables: [
-        "{{MachineName}}",
-        "{{MachineCode}}",
-        "{{MachineNumber}}",
-        "{{PlantName}}",
-        "{{DaysOpen}}",
-        "{{ComplaintDate}}",
-        "{{IssueDescription}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "tpl_monthly_pm",
-      name: "Monthly PM Summary Report",
-      category: "monthly_pm",
-      subject: "Monthly Preventive Maintenance Summary - {{CurrentMonth}} - {{PlantName}}",
-      bodyHtml: `<p>Dear Management,</p>
-<p>Here is the monthly preventive maintenance status report for <strong>{{CurrentMonth}}</strong> for <strong>{{PlantName}}</strong>.</p>
-{{ConsolidatedTable}}
-<p style="margin-top:16px;">This summary is automatically generated by AEMS.</p>`,
-      variables: [
-        "{{PlantName}}",
-        "{{LocationName}}",
-        "{{CurrentMonth}}",
-        "{{TotalCount}}",
-        "{{ConsolidatedTable}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "tpl_zero_machine_entry",
-      name: "Daily Machine Entry Missing Alert",
-      category: "zero_machine_entry",
-      subject: "ACTION REQUIRED: No Machine Entry Logged Today ({{CurrentDate}}) - {{PlantName}}",
-      bodyHtml: `<p>Dear Maintenance & Plant Leadership,</p>
-<p>This is an automated alert from AEMS to inform you that <strong>NO machine entries, maintenance logs, or status updates</strong> have been recorded today (<strong>{{CurrentDate}}</strong>) for <strong>{{PlantName}}</strong>.</p>
-<div style="background-color:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin:16px 0;">
-  <p style="margin:0;color:#9f1239;font-weight:bold;font-size:14px;">\u26A0\uFE0F Compliance Warning: Daily Machine Log Pending</p>
-  <p style="margin:6px 0 0 0;color:#881337;font-size:12px;">Total Registered Machines in Plant: <strong>{{TotalCount}}</strong></p>
-</div>
-<p>Daily recording of machine health, PM activities, and status is critical to maintain equipment uptime and prevent untracked breakdowns.</p>
-<p style="margin-top:16px;">Please instruct the plant maintenance team / supervisor to log in to AEMS portal and update today's machine records immediately.</p>`,
-      variables: [
-        "{{PlantName}}",
-        "{{LocationName}}",
-        "{{CurrentDate}}",
-        "{{TotalCount}}"
-      ],
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    }
-  ];
-}
-function defaultAutomations() {
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  return [
-    {
-      id: "auto_overdue_pm",
-      name: "Overdue PM Automated Alert",
-      triggerType: "overdue_pm",
-      status: "active",
-      frequency: "daily",
-      scheduleTimes: ["09:00", "16:00"],
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
-        { type: "role", value: "Maintenance Head", target: "cc" }
-      ],
-      templateId: "tpl_overdue_pm",
-      consolidationMode: "consolidated",
-      retryCount: 3,
-      retryIntervalMinutes: 15,
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "auto_upcoming_pm",
-      name: "Upcoming PM 7-Day Alert",
-      triggerType: "upcoming_pm",
-      status: "active",
-      frequency: "daily",
-      scheduleTimes: ["08:30"],
-      reminderDays: 7,
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" }
-      ],
-      templateId: "tpl_upcoming_pm",
-      consolidationMode: "consolidated",
-      retryCount: 3,
-      retryIntervalMinutes: 15,
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "auto_complaint_created",
-      name: "Breakdown Complaint Notification",
-      triggerType: "complaint_created",
-      status: "active",
-      frequency: "instant",
-      scheduleTimes: [],
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,PH", target: "to" }
-      ],
-      templateId: "tpl_complaint_created",
-      consolidationMode: "individual",
-      retryCount: 3,
-      retryIntervalMinutes: 10,
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "auto_complaint_resolved",
-      name: "Complaint Resolved Notification",
-      triggerType: "complaint_resolved",
-      status: "active",
-      frequency: "instant",
-      scheduleTimes: [],
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,PH", target: "to" }
-      ],
-      templateId: "tpl_complaint_resolved",
-      consolidationMode: "individual",
-      retryCount: 3,
-      retryIntervalMinutes: 10,
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "auto_sla_breach",
-      name: "Complaint SLA Breach Alert",
-      triggerType: "sla_breached",
-      status: "active",
-      frequency: "daily",
-      scheduleTimes: ["10:00"],
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
-        { type: "role", value: "IT Admin", target: "cc" }
-      ],
-      templateId: "tpl_sla_breach",
-      consolidationMode: "individual",
-      retryCount: 3,
-      retryIntervalMinutes: 15,
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "auto_monthly_pm",
-      name: "Monthly PM Summary Report",
-      triggerType: "monthly_pm",
-      status: "active",
-      frequency: "monthly",
-      scheduleTimes: ["10:00"],
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" }
-      ],
-      templateId: "tpl_monthly_pm",
-      consolidationMode: "consolidated",
-      retryCount: 3,
-      retryIntervalMinutes: 30,
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: "auto_zero_machine_entry",
-      name: "Daily Machine Entry Missing Alert",
-      triggerType: "zero_machine_entry",
-      status: "active",
-      frequency: "daily",
-      scheduleTimes: ["18:00"],
-      recipientRules: [
-        { type: "plant_contacts", value: "HOD,FH,PH", target: "to" },
-        { type: "role", value: "Maintenance Head", target: "cc" }
-      ],
-      templateId: "tpl_zero_machine_entry",
-      consolidationMode: "consolidated",
-      retryCount: 3,
-      retryIntervalMinutes: 15,
-      createdAt: now,
-      updatedAt: now
-    }
-  ];
-}
-async function listEmailTemplates() {
-  const rows = await loadJson2(TEMPLATES_FILE, []);
-  if (!Array.isArray(rows) || rows.length === 0) {
-    const defaults2 = defaultTemplates();
-    await saveJson2(TEMPLATES_FILE, defaults2);
-    return defaults2;
-  }
-  const defaults = defaultTemplates();
-  let changed = false;
-  for (const def of defaults) {
-    if (!rows.some((r) => r.id === def.id)) {
-      rows.push(def);
-      changed = true;
-    }
-  }
-  if (changed) {
-    await saveJson2(TEMPLATES_FILE, rows);
-  }
-  return rows;
-}
-async function getEmailTemplate(id) {
-  const list = await listEmailTemplates();
-  return list.find((t) => t.id === id) || null;
-}
-async function upsertEmailTemplate(template) {
-  const list = await listEmailTemplates();
-  const idx = list.findIndex((t) => t.id === template.id);
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  const item = {
-    ...template,
-    updatedAt: now,
-    createdAt: template.createdAt || now
-  };
-  if (idx >= 0) list[idx] = item;
-  else list.push(item);
-  await saveJson2(TEMPLATES_FILE, list);
-  return item;
-}
-async function deleteEmailTemplate(id) {
-  const list = await listEmailTemplates();
-  const next = list.filter((t) => t.id !== id);
-  if (next.length === list.length) return false;
-  await saveJson2(TEMPLATES_FILE, next);
-  return true;
-}
-async function listEmailAutomations() {
-  const rows = await loadJson2(AUTOMATIONS_FILE, []);
-  if (!Array.isArray(rows) || rows.length === 0) {
-    const defaults2 = defaultAutomations();
-    await saveJson2(AUTOMATIONS_FILE, defaults2);
-    return defaults2;
-  }
-  const defaults = defaultAutomations();
-  let changed = false;
-  for (const def of defaults) {
-    if (!rows.some((r) => r.id === def.id)) {
-      rows.push(def);
-      changed = true;
-    }
-  }
-  if (changed) {
-    await saveJson2(AUTOMATIONS_FILE, rows);
-  }
-  return rows;
-}
-async function upsertEmailAutomation(automation) {
-  const list = await listEmailAutomations();
-  const idx = list.findIndex((a) => a.id === automation.id);
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  const item = {
-    ...automation,
-    updatedAt: now,
-    createdAt: automation.createdAt || now
-  };
-  if (idx >= 0) list[idx] = item;
-  else list.push(item);
-  await saveJson2(AUTOMATIONS_FILE, list);
-  return item;
-}
-async function deleteEmailAutomation(id) {
-  const list = await listEmailAutomations();
-  const next = list.filter((a) => a.id !== id);
-  if (next.length === list.length) return false;
-  await saveJson2(AUTOMATIONS_FILE, next);
-  return true;
-}
-async function listEmailDrafts(userEmail) {
-  const rows = await loadJson2(DRAFTS_FILE, []);
-  if (!Array.isArray(rows)) return [];
-  if (userEmail) {
-    return rows.filter((d) => d.createdBy.toLowerCase() === userEmail.toLowerCase());
-  }
-  return rows;
-}
-async function upsertEmailDraft(draft) {
-  const list = await listEmailDrafts();
-  const idx = list.findIndex((d) => d.id === draft.id);
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  const item = {
-    ...draft,
-    updatedAt: now,
-    createdAt: draft.createdAt || now
-  };
-  if (idx >= 0) list[idx] = item;
-  else list.push(item);
-  await saveJson2(DRAFTS_FILE, list);
-  return item;
-}
-async function deleteEmailDraft(id) {
-  const list = await listEmailDrafts();
-  const next = list.filter((d) => d.id !== id);
-  if (next.length === list.length) return false;
-  await saveJson2(DRAFTS_FILE, next);
-  return true;
-}
-async function listEmailLogs(limit = 200) {
-  const rows = await loadJson2(LOGS_FILE, []);
-  if (!Array.isArray(rows)) return [];
-  return rows.slice(-limit).reverse();
-}
-async function appendEmailLog(log) {
-  const rows = await loadJson2(LOGS_FILE, []);
-  const item = {
-    ...log,
-    id: `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
-  };
-  rows.push(item);
-  if (rows.length > 2e3) rows.splice(0, rows.length - 2e3);
-  await saveJson2(LOGS_FILE, rows);
-  return item;
-}
-async function isIdempotentAlreadySent(idempotencyKey) {
-  if (!idempotencyKey) return false;
-  const rows = await loadJson2(LOGS_FILE, []);
-  return rows.some((r) => r.idempotencyKey === idempotencyKey && r.status === "sent");
-}
-async function getEmailAnalytics() {
-  const logs = await loadJson2(LOGS_FILE, []);
-  const automations = await listEmailAutomations();
-  const drafts = await listEmailDrafts();
-  let sent = 0;
-  let failed = 0;
-  let retrying = 0;
-  const byCategory = {};
-  const trendMap = {};
-  for (const log of logs) {
-    if (log.status === "sent") sent++;
-    else if (log.status === "failed") failed++;
-    else if (log.status === "retrying") retrying++;
-    const cat = log.triggerType || "other";
-    byCategory[cat] = (byCategory[cat] || 0) + 1;
-    const d = log.date || "Unknown";
-    if (!trendMap[d]) trendMap[d] = { sent: 0, failed: 0 };
-    if (log.status === "sent") trendMap[d].sent++;
-    if (log.status === "failed") trendMap[d].failed++;
-  }
-  const sortedDates = Object.keys(trendMap).sort().slice(-14);
-  const trend = sortedDates.map((date) => ({
-    date,
-    sent: trendMap[date].sent,
-    failed: trendMap[date].failed
-  }));
-  return {
-    totalEmails: logs.length,
-    sent,
-    failed,
-    retrying,
-    scheduledAutomations: automations.filter((a) => a.status === "active").length,
-    drafts: drafts.length,
-    byCategory,
-    trend
-  };
-}
-
-// server/emailScheduler.ts
-init_constants();
-function currentIstTime() {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(/* @__PURE__ */ new Date());
-  return parts;
-}
-function currentIstDate() {
-  return istTodayKey();
-}
-function escapeHtml2(s) {
-  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function professionalShell2(title, bodyHtml) {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8" /><title>${escapeHtml2(title)}</title></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:24px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:700px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);border:1px solid #e2e8f0;">
-        <tr><td style="background:#113355;padding:20px 28px;">
-          <h1 style="margin:0;color:#fff;font-size:18px;font-weight:800;">${APP_NAME}</h1>
-          <p style="margin:6px 0 0;color:#93c5fd;font-size:12px;font-weight:600;">Preventive Maintenance & Equipment Notification</p>
-        </td></tr>
-        <tr><td style="padding:28px;color:#334155;font-size:14px;line-height:1.65;">${bodyHtml}</td></tr>
-        <tr><td style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-          <p style="margin:0;color:#94a3b8;font-size:11px;">This is an automated consolidated notification from ${APP_NAME}. Please do not reply directly to this email.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-}
-function renderMachineConsolidatedTable(machines, type) {
-  if (machines.length === 0) {
-    return `<p style="font-style:italic;color:#64748b;">No machines found in this category.</p>`;
-  }
-  const isOverdue = type === "overdue";
-  const headerCol = isOverdue ? "Days Overdue" : type === "upcoming" ? "Days Left" : "Status";
-  const rowsHtml = machines.map((m, idx) => {
-    const dueDate = effectiveNextMaintenanceDate(m);
-    const days = daysUntilDateIst(dueDate);
-    const daysLabel = isOverdue ? `<span style="color:#b91c1c;font-weight:700;">${Math.abs(days || 0)}d late</span>` : type === "upcoming" ? `<span style="color:#2563eb;font-weight:700;">${days ?? 0}d left</span>` : `<span style="color:#15803d;font-weight:700;">${m.status || "Active"}</span>`;
-    const machineName = m.equipmentName?.trim() || `${m.machineType} ${m.machineNumber}`.trim();
-    const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
-    return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
-        <td style="padding:10px 8px;font-weight:700;color:#0f172a;">${escapeHtml2(machineName)}</td>
-        <td style="padding:10px 8px;font-family:monospace;font-size:12px;font-weight:700;color:#1d4ed8;">${escapeHtml2(m.assetCode || "")}</td>
-        <td style="padding:10px 8px;font-family:monospace;font-size:11px;font-weight:600;color:#475569;">${escapeHtml2(m.serialNumber || "\u2014")}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#475569;">${escapeHtml2(m.modelNumber || "\u2014")}</td>
-        <td style="padding:10px 8px;font-size:12px;font-weight:600;color:#334155;">${escapeHtml2(plantShortName(m.plantCode))}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#64748b;">${escapeHtml2(m.department || "\u2014")}</td>
-        <td style="padding:10px 8px;font-size:12px;font-weight:600;color:#0f172a;">${escapeHtml2(dueDate || "\u2014")}</td>
-        <td style="padding:10px 8px;font-size:12px;text-align:center;">${daysLabel}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#475569;">${escapeHtml2(m.responsibility || "Unassigned")}</td>
-      </tr>`;
-  }).join("");
-  return `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;">
-    <thead>
-      <tr style="background:#0f172a;color:#ffffff;text-align:left;">
-        <th style="padding:10px 8px;font-weight:700;">Machine</th>
-        <th style="padding:10px 8px;font-weight:700;">Code</th>
-        <th style="padding:10px 8px;font-weight:700;">Serial No.</th>
-        <th style="padding:10px 8px;font-weight:700;">Model No.</th>
-        <th style="padding:10px 8px;font-weight:700;">Plant</th>
-        <th style="padding:10px 8px;font-weight:700;">Department</th>
-        <th style="padding:10px 8px;font-weight:700;">Due Date</th>
-        <th style="padding:10px 8px;font-weight:700;text-align:center;">${headerCol}</th>
-        <th style="padding:10px 8px;font-weight:700;">Responsible</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rowsHtml}
-    </tbody>
-  </table>`;
-}
-function renderPlainTextTable(machines, type) {
-  const isOverdue = type === "overdue";
-  return machines.map((m, i) => {
-    const dueDate = effectiveNextMaintenanceDate(m);
-    const days = daysUntilDateIst(dueDate);
-    const statusStr = isOverdue ? `${Math.abs(days || 0)}d overdue` : `${days ?? 0}d remaining`;
-    return `${i + 1}. ${m.equipmentName || m.machineType} (${m.assetCode}) | SN: ${m.serialNumber || "\u2014"} | Model: ${m.modelNumber || "\u2014"} | Plant: ${m.plantCode} | Due: ${dueDate} | ${statusStr} | Resp: ${m.responsibility || "Unassigned"}`;
-  }).join("\n");
-}
-function resolveRecipients(automation, plantContacts, plants) {
-  const toSet = /* @__PURE__ */ new Set();
-  const ccSet = /* @__PURE__ */ new Set();
-  const bccSet = /* @__PURE__ */ new Set();
-  for (const rule of automation.recipientRules || []) {
-    const target = rule.target || "to";
-    const targetSet = target === "cc" ? ccSet : target === "bcc" ? bccSet : toSet;
-    if (rule.type === "plant_contacts") {
-      const roles = (rule.value || "HOD,FH,PH").toUpperCase().split(",").map((s) => s.trim());
-      for (const p of plants) {
-        let contact = plantContacts[p] || plantContacts[p.toUpperCase()] || plantContacts[p.toLowerCase()];
-        if (!contact) {
-          const normP = p.trim().toLowerCase();
-          for (const [k, v] of Object.entries(plantContacts)) {
-            const normK = k.trim().toLowerCase();
-            if (normK === normP || normP.includes(normK) || normK.includes(normP)) {
-              contact = v;
-              break;
-            }
-          }
-        }
-        if (contact) {
-          if (roles.includes("HOD") && contact.hodEmail) targetSet.add(contact.hodEmail.trim().toLowerCase());
-          if (roles.includes("FH") && contact.fhEmail) targetSet.add(contact.fhEmail.trim().toLowerCase());
-          if (roles.includes("PH") && contact.phEmail) targetSet.add(contact.phEmail.trim().toLowerCase());
-        }
-      }
-    } else if (rule.type === "manual_email" || rule.value.includes("@")) {
-      const emails = rule.value.split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes("@"));
-      for (const e of emails) targetSet.add(e);
-    }
-  }
-  return {
-    to: Array.from(toSet).filter(Boolean),
-    cc: Array.from(ccSet).filter(Boolean),
-    bcc: Array.from(bccSet).filter(Boolean)
-  };
-}
-function isTimeMatch(scheduledTimes, currentIst) {
-  if (!scheduledTimes || scheduledTimes.length === 0) return true;
-  const [currH, currM] = currentIst.split(":").map((n) => parseInt(n, 10));
-  return scheduledTimes.some((timeStr) => {
-    const [h, m] = timeStr.split(":").map((n) => parseInt(n, 10));
-    const diff = Math.abs(currH * 60 + currM - (h * 60 + m));
-    return diff <= 5;
-  });
-}
-async function runEmailAutomationScheduler(force = false) {
-  const date = currentIstDate();
-  const time = currentIstTime();
-  const automations = await listEmailAutomations();
-  const activeAutomations = automations.filter((a) => a.status === "active");
-  const meta = await getMaintenanceMeta();
-  const plantContacts = meta.plantContacts || {};
-  const allMachines = await listMaintenanceMachines();
-  const activeMachines = allMachines.filter((m) => m.status !== "Decommissioned");
-  let processed = 0;
-  let sent = 0;
-  let skipped = 0;
-  const errors = [];
-  for (const auto of activeAutomations) {
-    if (!force && !isTimeMatch(auto.scheduleTimes, time)) {
-      continue;
-    }
-    processed++;
-    try {
-      const template = await getEmailTemplate(auto.templateId) || {
-        id: auto.templateId,
-        name: auto.name,
-        category: auto.triggerType,
-        subject: `${auto.name} - {{PlantName}}`,
-        bodyHtml: `<p>Notification for {{PlantName}}</p>{{ConsolidatedTable}}`,
-        variables: [],
-        status: "active",
-        createdAt: "",
-        updatedAt: ""
-      };
-      if (auto.triggerType === "overdue_pm") {
-        const overdueMachines = activeMachines.filter((m) => {
-          const due = effectiveNextMaintenanceDate(m);
-          const days = daysUntilDateIst(due);
-          return days != null && days < 0;
-        });
-        if (overdueMachines.length === 0) {
-          skipped++;
-          continue;
-        }
-        const plantGroups = {};
-        for (const m of overdueMachines) {
-          const p = m.plantCode || "General";
-          if (!plantGroups[p]) plantGroups[p] = [];
-          plantGroups[p].push(m);
-        }
-        for (const [plantCode, machines] of Object.entries(plantGroups)) {
-          const idempotencyKey = `${auto.id}_${date}_${time.slice(0, 2)}_${plantCode}`;
-          if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
-            skipped++;
-            continue;
-          }
-          const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
-          if (recipients.to.length === 0) {
-            skipped++;
-            continue;
-          }
-          const tableHtml = renderMachineConsolidatedTable(machines, "overdue");
-          const tableText = renderPlainTextTable(machines, "overdue");
-          const plantName = plantShortName(plantCode);
-          let subject = template.subject.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{TotalCount\}\}/g, String(machines.length)).replace(/\{\{CurrentDate\}\}/g, date);
-          let bodyHtml = template.bodyHtml.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{TotalCount\}\}/g, String(machines.length)).replace(/\{\{CurrentDate\}\}/g, date).replace(/\{\{ConsolidatedTable\}\}/g, tableHtml);
-          const fullHtml = professionalShell2(subject, bodyHtml);
-          const fullText = `Preventive Maintenance Overdue Machines - ${plantName}
-
-Total Overdue: ${machines.length}
-
-${tableText}
-
-${APP_NAME}`;
-          const sendResult = await sendMaintenanceMail({
-            to: recipients.to,
-            cc: recipients.cc,
-            bcc: recipients.bcc,
-            subject,
-            html: fullHtml,
-            text: fullText
-          });
-          await appendEmailLog({
-            automationId: auto.id,
-            automationName: auto.name,
-            triggerType: auto.triggerType,
-            idempotencyKey,
-            date,
-            time,
-            sender: APP_NAME,
-            to: recipients.to,
-            cc: recipients.cc,
-            bcc: recipients.bcc,
-            subject,
-            plantCode,
-            status: sendResult.ok ? "sent" : "failed",
-            sentAt: sendResult.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
-            failureReason: sendResult.error,
-            retryCount: sendResult.ok ? 0 : 1,
-            machineCount: machines.length
-          });
-          if (sendResult.ok) sent++;
-          else errors.push(`[${plantCode}] ${sendResult.error}`);
-        }
-      } else if (auto.triggerType === "upcoming_pm") {
-        const reminderDays = auto.reminderDays || 7;
-        const upcomingMachines = activeMachines.filter((m) => {
-          const due = effectiveNextMaintenanceDate(m);
-          const days = daysUntilDateIst(due);
-          return days != null && days >= 0 && days <= reminderDays;
-        });
-        if (upcomingMachines.length === 0) {
-          skipped++;
-          continue;
-        }
-        const plantGroups = {};
-        for (const m of upcomingMachines) {
-          const p = m.plantCode || "General";
-          if (!plantGroups[p]) plantGroups[p] = [];
-          plantGroups[p].push(m);
-        }
-        for (const [plantCode, machines] of Object.entries(plantGroups)) {
-          const idempotencyKey = `${auto.id}_${date}_upcoming_${plantCode}`;
-          if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
-            skipped++;
-            continue;
-          }
-          const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
-          if (recipients.to.length === 0) {
-            skipped++;
-            continue;
-          }
-          const tableHtml = renderMachineConsolidatedTable(machines, "upcoming");
-          const tableText = renderPlainTextTable(machines, "upcoming");
-          const plantName = plantShortName(plantCode);
-          let subject = template.subject.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{ReminderDays\}\}/g, String(reminderDays)).replace(/\{\{TotalCount\}\}/g, String(machines.length));
-          let bodyHtml = template.bodyHtml.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{ReminderDays\}\}/g, String(reminderDays)).replace(/\{\{TotalCount\}\}/g, String(machines.length)).replace(/\{\{ConsolidatedTable\}\}/g, tableHtml);
-          const fullHtml = professionalShell2(subject, bodyHtml);
-          const fullText = `Upcoming PM Schedule (${reminderDays} Days) - ${plantName}
-
-Total Due: ${machines.length}
-
-${tableText}
-
-${APP_NAME}`;
-          const sendResult = await sendMaintenanceMail({
-            to: recipients.to,
-            cc: recipients.cc,
-            bcc: recipients.bcc,
-            subject,
-            html: fullHtml,
-            text: fullText
-          });
-          await appendEmailLog({
-            automationId: auto.id,
-            automationName: auto.name,
-            triggerType: auto.triggerType,
-            idempotencyKey,
-            date,
-            time,
-            sender: APP_NAME,
-            to: recipients.to,
-            cc: recipients.cc,
-            bcc: recipients.bcc,
-            subject,
-            plantCode,
-            status: sendResult.ok ? "sent" : "failed",
-            sentAt: sendResult.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
-            failureReason: sendResult.error,
-            retryCount: sendResult.ok ? 0 : 1,
-            machineCount: machines.length
-          });
-          if (sendResult.ok) sent++;
-          else errors.push(`[${plantCode}] ${sendResult.error}`);
-        }
-      } else if (auto.triggerType === "zero_machine_entry") {
-        const plantGroups = {};
-        for (const m of activeMachines) {
-          const p = m.plantCode || "General";
-          if (!plantGroups[p]) plantGroups[p] = [];
-          plantGroups[p].push(m);
-        }
-        for (const [plantCode, machines] of Object.entries(plantGroups)) {
-          const hasEntryToday = machines.some((m) => {
-            const createdToday = m.createdAt && m.createdAt.startsWith(date);
-            const updatedToday = m.updatedAt && m.updatedAt.startsWith(date);
-            const pmLoggedToday = Array.isArray(m.pmLogs) && m.pmLogs.some((l) => l.doneOn && l.doneOn.startsWith(date));
-            return createdToday || updatedToday || pmLoggedToday;
-          });
-          if (!hasEntryToday && machines.length > 0) {
-            const idempotencyKey = `${auto.id}_${date}_zero_entry_${plantCode}`;
-            if (!force && await isIdempotentAlreadySent(idempotencyKey)) {
-              skipped++;
-              continue;
-            }
-            const recipients = resolveRecipients(auto, plantContacts, [plantCode]);
-            if (recipients.to.length === 0) {
-              skipped++;
-              continue;
-            }
-            const plantName = plantShortName(plantCode);
-            const locationName = machines[0]?.location || "";
-            let subject = template.subject.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{LocationName\}\}/g, locationName).replace(/\{\{CurrentDate\}\}/g, date).replace(/\{\{TotalCount\}\}/g, String(machines.length));
-            let bodyHtml = template.bodyHtml.replace(/\{\{PlantName\}\}/g, plantName).replace(/\{\{LocationName\}\}/g, locationName).replace(/\{\{CurrentDate\}\}/g, date).replace(/\{\{TotalCount\}\}/g, String(machines.length));
-            const fullHtml = professionalShell2(subject, bodyHtml);
-            const fullText = `ACTION REQUIRED: No Machine Entry Logged Today (${date}) - ${plantName}
-
-Total Registered Machines: ${machines.length}
-Location: ${locationName}
-Please log machine records in AEMS portal immediately.
-
-${APP_NAME}`;
-            const sendResult = await sendMaintenanceMail({
-              to: recipients.to,
-              cc: recipients.cc,
-              bcc: recipients.bcc,
-              subject,
-              html: fullHtml,
-              text: fullText
-            });
-            await appendEmailLog({
-              automationId: auto.id,
-              automationName: auto.name,
-              triggerType: auto.triggerType,
-              idempotencyKey,
-              date,
-              time,
-              sender: APP_NAME,
-              to: recipients.to,
-              cc: recipients.cc,
-              bcc: recipients.bcc,
-              subject,
-              plantCode,
-              status: sendResult.ok ? "sent" : "failed",
-              sentAt: sendResult.ok ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
-              failureReason: sendResult.error,
-              retryCount: sendResult.ok ? 0 : 1,
-              machineCount: machines.length
-            });
-            if (sendResult.ok) sent++;
-            else errors.push(`[${plantCode}] ${sendResult.error}`);
-          } else {
-            skipped++;
-          }
-        }
-      }
-    } catch (err) {
-      errors.push(`[${auto.name}] ${err.message || String(err)}`);
-    }
-  }
-  return { processed, sent, skipped, errors };
-}
-var timerRef = null;
-function startEmailSchedulerTimer() {
-  if (timerRef) return;
-  console.log("[EmailScheduler] Background scheduler initialized (runs every 60s in IST)");
-  timerRef = setInterval(() => {
-    runEmailAutomationScheduler(false).catch((err) => {
-      console.warn("[EmailScheduler] Scheduler cycle error:", err);
-    });
-  }, 6e4);
-}
+// server.ts
+init_maintenanceMail();
+init_maintenanceTechnicians();
+init_emailStore();
+init_emailScheduler();
 
 // server/inventoryStore.ts
 init_env();
@@ -12701,7 +12919,9 @@ app.get("/api/users", requireItAdminRole, async (req, res) => {
     const force = req.query.refresh === "1";
     const deps = userSyncDeps();
     if (!GAS_WEBAPP_URL) {
-      return res.json(getCachedUsers());
+      const cached = getCachedUsers();
+      if (cached && cached.length > 0) return res.json(cached);
+      return res.json(readAppData().users);
     }
     const { users, fromCache, syncing } = await getUsersWithCache(deps, force);
     const meta = getUsersSyncMeta();
@@ -12736,7 +12956,9 @@ app.post("/api/users", requireItAdminRole, async (req, res) => {
     }
     upsertLocalUser(user);
     invalidateUsersCache();
-    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [user];
+    const freshUsers = readAppData().users;
+    writeCache("users", freshUsers);
+    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : freshUsers;
     recordAudit(
       req.authUser?.email || getFallbackEmail(req),
       "User Created",
@@ -12767,7 +12989,9 @@ app.put("/api/users/:email", requireItAdminRole, async (req, res) => {
     }
     upsertLocalUser(user);
     invalidateUsersCache();
-    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : data.users;
+    const freshUsers = readAppData().users;
+    writeCache("users", freshUsers);
+    const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : freshUsers;
     recordAudit(
       req.authUser?.email || getFallbackEmail(req),
       "User Updated",
@@ -12800,6 +13024,8 @@ app.delete("/api/users/:email", requireItAdminRole, async (req, res) => {
     }
     deleteLocalUser(email);
     invalidateUsersCache();
+    const freshUsers = readAppData().users;
+    writeCache("users", freshUsers);
     const synced = GAS_WEBAPP_URL ? await syncUsersNow(userSyncDeps()) : [];
     recordAudit(
       req.authUser?.email || getFallbackEmail(req),
@@ -15971,10 +16197,12 @@ app.delete("/api/assets/:id", async (req, res) => {
     const sessionUser = req.authUser;
     const actorEmail = user?.email || sessionUser?.email || "";
     const actorRole = user?.role || sessionUser?.role || "";
+    const allowDelete = Boolean(user?.allowDelete ?? sessionUser?.allowDelete);
     if (!actorEmail) {
       return res.status(403).json({ error: "Authentication required." });
     }
-    if (!isItAdminRole2(actorRole)) {
+    const canDelete = isItAdminRole2(actorRole) || actorRole.trim().toLowerCase() === "admin" && allowDelete;
+    if (!canDelete) {
       return res.status(403).json({ error: "You do not have permission to delete assets." });
     }
     const id = req.params.id;
@@ -15983,6 +16211,17 @@ app.delete("/api/assets/:id", async (req, res) => {
     const assets = await getAssetsForOps();
     const existing = findMappedAssetByAnyId(assets, id);
     const canonicalId = String(existing?.id || id);
+    if (!isItAdminRole2(actorRole) && existing) {
+      const plants = data.settings.plants || [];
+      const hasPlantLocAccess = userCanAccessPlantLocation(user, existing.location, existing.plantCode, plants);
+      const userCats = (user?.categories || []).map((c) => c.trim().toLowerCase());
+      const hasAllCats = userCats.includes("all");
+      const assetCat = String(existing.mainCategory || "").trim().toLowerCase();
+      const hasCatAccess = hasAllCats || userCats.length === 0 || userCats.includes(assetCat);
+      if (!hasPlantLocAccess || !hasCatAccess) {
+        return res.status(403).json({ error: "You do not have permission to delete assets outside your assigned plant or category." });
+      }
+    }
     if (existing) {
       await archiveDeletedAsset(existing, actorEmail).catch(() => {
       });

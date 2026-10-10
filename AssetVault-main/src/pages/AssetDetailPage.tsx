@@ -67,6 +67,7 @@ export default function AssetDetailPage() {
             layout="page"
             asset={asset}
             role={user?.role}
+            allowDelete={user?.allowDelete}
             onEdit={(a) => navigate(`/assets/${assetId}/edit`, { state: { asset: a } })}
             onDelete={() => setDeleteOpen(true)}
           />
