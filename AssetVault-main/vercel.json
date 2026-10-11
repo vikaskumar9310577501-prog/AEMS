@@ -24,12 +24,8 @@
   },
   "crons": [
     {
-      "path": "/api/maintenance/cron",
+      "path": "/api/maintenance/daily-overdue",
       "schedule": "30 3 * * *"
-    },
-    {
-      "path": "/api/cron/maintenance",
-      "schedule": "30 10 * * *"
     }
   ],
   "rewrites": [

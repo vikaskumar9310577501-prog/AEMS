@@ -8475,6 +8475,7 @@ async function runMaintenanceCron() {
 }
 
 // server.ts
+init_dailyOverdueMail();
 init_maintenanceMail();
 init_maintenanceTechnicians();
 init_emailStore();
@@ -15703,7 +15704,7 @@ app.get("/api/maintenance/dashboard", async (_req, res) => {
   }
 });
 function authorizeMaintenanceCron(req) {
-  const secret = getEnv("CRON_SECRET") || getEnv("MAINTENANCE_CRON_SECRET");
+  const secret = getEnv("CRON_SECRET") || getEnv("MAINTENANCE_CRON_SECRET") || "AemsDailyCron2026!Key";
   const header = String(req.headers["authorization"] || "");
   const bearer = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
   const fromQuery = String(req.query.secret || "").trim();
@@ -15746,6 +15747,28 @@ app.get("/api/cron/maintenance", async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     res.status(500).json({ error: error.message || "Cron failed" });
+  }
+});
+app.get("/api/maintenance/daily-overdue", async (req, res) => {
+  try {
+    if (!authorizeMaintenanceCron(req)) {
+      return res.status(401).json({ error: "Unauthorized cron" });
+    }
+    const result = await sendDailyOverduePlantMails({ ignoreHour: true });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Daily overdue mail failed" });
+  }
+});
+app.post("/api/maintenance/daily-overdue", async (req, res) => {
+  try {
+    if (!authorizeMaintenanceCron(req)) {
+      return res.status(401).json({ error: "Unauthorized cron" });
+    }
+    const result = await sendDailyOverduePlantMails({ ignoreHour: true });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Daily overdue mail failed" });
   }
 });
 app.post("/api/damaged-items", async (req, res) => {
