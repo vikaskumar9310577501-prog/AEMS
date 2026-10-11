@@ -43,7 +43,10 @@ export function isPublicApiRoute(req: Request): boolean {
   if (req.method === "POST" && path === "/api/maintenance/complaints/public") return true;
   if (
     (req.method === "GET" || req.method === "POST") &&
-    (path === "/api/maintenance/cron" || path === "/api/cron/maintenance")
+    (path === "/api/maintenance/cron" ||
+      path === "/api/cron/maintenance" ||
+      path === "/api/maintenance/daily-overdue" ||
+      path === "/api/cron/daily-overdue")
   ) {
     return true;
   }

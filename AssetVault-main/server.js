@@ -11062,7 +11062,7 @@ function isPublicApiRoute(req) {
   if (req.method === "GET" && /^\/api\/scan\/[^/]+\/pdf$/.test(path20)) return true;
   if (req.method === "GET" && /^\/api\/maintenance\/scan\/[^/]+$/.test(path20)) return true;
   if (req.method === "POST" && path20 === "/api/maintenance/complaints/public") return true;
-  if ((req.method === "GET" || req.method === "POST") && (path20 === "/api/maintenance/cron" || path20 === "/api/cron/maintenance")) {
+  if ((req.method === "GET" || req.method === "POST") && (path20 === "/api/maintenance/cron" || path20 === "/api/cron/maintenance" || path20 === "/api/maintenance/daily-overdue" || path20 === "/api/cron/daily-overdue")) {
     return true;
   }
   if (req.method === "GET" && path20 === "/api/file/view") return true;
