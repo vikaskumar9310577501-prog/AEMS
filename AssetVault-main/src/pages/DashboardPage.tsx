@@ -50,6 +50,7 @@ import BulkQRPrintModal from '../components/BulkQRPrintModal';
 import DeleteAssetModal from '../components/DeleteAssetModal';
 import AvailableAssetsModal from '../components/AvailableAssetsModal';
 import { DepartmentExportModal } from '../components/DepartmentExportModal';
+import { exportDepartmentToNewAems, isItDepartment } from '../lib/newAemsExport';
 import { AssetTableSkeleton } from '../components/LoadingSkeleton';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
@@ -320,6 +321,33 @@ function DashboardPageContent() {
   const [selectedLocation, setSelectedLocation] = useState(savedFilters.location);
   const [selectedPlant, setSelectedPlant] = useState(savedFilters.plant);
   const [selectedStatus, setSelectedStatus] = useState(savedFilters.status);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('All');
+
+  const departmentOptions = useMemo(() => {
+    const depts = new Set<string>();
+    assets.forEach((a) => {
+      const d = String(a.department || '').trim();
+      if (d && !isItDepartment(d)) depts.add(d);
+    });
+    return Array.from(depts).sort((a, b) => a.localeCompare(b));
+  }, [assets]);
+
+  const itAssetCount = useMemo(() => {
+    return assets.filter(
+      (a) => isItDepartment(a.department || '') || String(a.mainCategory || '').toLowerCase().includes('it')
+    ).length;
+  }, [assets]);
+
+  const departmentCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const a of assets) {
+      const d = String(a.department || '').trim();
+      if (d && !isItDepartment(d)) {
+        map.set(d, (map.get(d) || 0) + 1);
+      }
+    }
+    return map;
+  }, [assets]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -334,7 +362,7 @@ function DashboardPageContent() {
 
   useEffect(() => {
     setSelectedAssetIds([]);
-  }, [selectedCategory, selectedStatus, selectedLocation, selectedPlant, searchQuery]);
+  }, [selectedCategory, selectedStatus, selectedLocation, selectedPlant, selectedDepartment, searchQuery]);
 
   const [missingItemRecords, setMissingItemRecords] = useState<MissingItemRecord[]>([]);
   const [damagedItemRecords, setDamagedItemRecords] = useState<DamagedItemRecord[]>([]);
@@ -471,8 +499,18 @@ function DashboardPageContent() {
       list = list.filter((a) => assetMatchesPlant(a, selectedPlant, plantOptions));
     }
 
+    if (selectedDepartment !== 'All') {
+      const isIt = isItDepartment(selectedDepartment);
+      list = list.filter((a) => {
+        if (isIt) {
+          return isItDepartment(a.department || '') || String(a.mainCategory || '').toLowerCase().includes('it');
+        }
+        return String(a.department || '').trim().toLowerCase() === selectedDepartment.trim().toLowerCase();
+      });
+    }
+
     return list;
-  }, [filteredAssets, plantOptions, selectedLocation, selectedPlant]);
+  }, [filteredAssets, plantOptions, selectedLocation, selectedPlant, selectedDepartment]);
 
   const displayAssets = useMemo(() => {
     let list = locationPlantFilteredAssets;
@@ -745,7 +783,10 @@ function DashboardPageContent() {
   }, [user, plants]);
 
   const hasActiveFilters =
-    selectedLocation !== 'All' || selectedPlant !== 'All' || selectedStatus !== 'All';
+    selectedLocation !== 'All' ||
+    selectedPlant !== 'All' ||
+    selectedStatus !== 'All' ||
+    selectedDepartment !== 'All';
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[#F8FAFC]">
@@ -941,6 +982,22 @@ function DashboardPageContent() {
               </select>
             </div>
             <div className="flex flex-col gap-1 min-w-[140px] flex-1 sm:flex-none sm:min-w-[160px]">
+              <span className="text-[10px] uppercase font-black text-slate-400">Department</span>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              >
+                <option value="All">All Departments</option>
+                <option value="IT">IT Department ({itAssetCount})</option>
+                {departmentOptions.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept} ({departmentCounts.get(dept) || 0})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 min-w-[140px] flex-1 sm:flex-none sm:min-w-[160px]">
               <span className="text-[10px] uppercase font-black text-slate-400">Status</span>
               <select
                 value={selectedStatus}
@@ -971,6 +1028,7 @@ function DashboardPageContent() {
                   setSelectedLocation('All');
                   setSelectedPlant('All');
                   setSelectedStatus('All');
+                  setSelectedDepartment('All');
                 }}
                 className="text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors uppercase tracking-wider shrink-0 pb-1.5 underline"
               >
@@ -1314,6 +1372,97 @@ function DashboardPageContent() {
           </div>
         )}
 
+        {/* Department Selection & New AEMS Batch Exporter Toolbar */}
+        <div className="mb-4 bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-gradient-to-r from-white via-slate-50/50 to-emerald-50/30">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0 border border-emerald-200/70 shadow-xs">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  Department Export for New AEMS
+                </span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  New AEMS v2 Ready
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Select your department to view assets and export the exact template for New AEMS batch import.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            {/* Department Select Dropdown */}
+            <div className="flex items-center gap-2 bg-white border-2 border-emerald-500/30 focus-within:border-emerald-500 rounded-xl px-3 py-1.5 flex-1 md:flex-initial min-w-[210px] shadow-xs">
+              <Building2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="flex flex-col flex-1">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                  Select Department
+                </span>
+                <select
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="All">All Departments ({assets.length} Assets)</option>
+                  <option value="IT">IT Department ({itAssetCount} Assets)</option>
+                  {departmentOptions.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept} ({departmentCounts.get(dept) || 0} Assets)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Instant Download Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedDepartment === 'All') {
+                  setShowExportModal(true);
+                } else {
+                  try {
+                    const res = exportDepartmentToNewAems({
+                      department: selectedDepartment,
+                      assets,
+                      employees,
+                    });
+                    toast.success(`Exported ${res.count} assets for New AEMS! (${res.filename})`, {
+                      duration: 4000,
+                      icon: '📥',
+                    });
+                  } catch (err) {
+                    console.error(err);
+                    toast.error('Failed to export department assets');
+                  }
+                }
+              }}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/25 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
+            >
+              <Download size={15} strokeWidth={2.5} />
+              <span>
+                {selectedDepartment === 'All'
+                  ? 'Export All / Open Batch Center'
+                  : `Export ${selectedDepartment} (.xlsx)`}
+              </span>
+            </button>
+
+            {/* Batch Center Modal */}
+            <button
+              type="button"
+              onClick={() => setShowExportModal(true)}
+              className="px-3 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-xs"
+              title="Open Department Export Center"
+            >
+              <Layers size={14} className="text-blue-600" />
+              <span>All Departments Center</span>
+            </button>
+          </div>
+        </div>
+
         {loading && assets.length === 0 ? (
           <AssetTableSkeleton />
         ) : (
@@ -1435,7 +1584,15 @@ function DashboardPageContent() {
         onClose={() => setShowExportModal(false)}
         assets={assets}
         employees={employees}
-        initialDepartment={selectedCategory === 'IT Assets' ? 'IT' : selectedCategory !== 'All' ? selectedCategory : 'IT'}
+        initialDepartment={
+          selectedDepartment !== 'All'
+            ? selectedDepartment
+            : selectedCategory === 'IT Assets'
+              ? 'IT'
+              : selectedCategory !== 'All'
+                ? selectedCategory
+                : 'IT'
+        }
       />
 
     </div>

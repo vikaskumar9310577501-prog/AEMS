@@ -64,6 +64,16 @@ export function DepartmentExportModal({
     return 'IT';
   });
 
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialDepartment && initialDepartment !== 'All') {
+        setSelectedDept(initialDepartment);
+      } else {
+        setSelectedDept('IT');
+      }
+    }
+  }, [isOpen, initialDepartment]);
+
   if (!isOpen) return null;
 
   const isCurrentIt = isItDepartment(selectedDept);
