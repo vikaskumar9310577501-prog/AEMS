@@ -41,6 +41,7 @@ import {
   QrCode,
   Boxes,
   Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AssetTable, { AssetViewMode } from '../components/AssetTable';
@@ -48,6 +49,7 @@ import QRCodeDisplay from '../components/QRCodeDisplay';
 import BulkQRPrintModal from '../components/BulkQRPrintModal';
 import DeleteAssetModal from '../components/DeleteAssetModal';
 import AvailableAssetsModal from '../components/AvailableAssetsModal';
+import { DepartmentExportModal } from '../components/DepartmentExportModal';
 import { AssetTableSkeleton } from '../components/LoadingSkeleton';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/constants';
 import { MISSING_ITEMS_FEATURE_ENABLED } from '../lib/features';
@@ -277,6 +279,7 @@ function DashboardPageContent() {
   const [viewingQR, setViewingQR] = useState<Asset | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
   const [showAvailableModal, setShowAvailableModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Dashboard view mode
   const [viewMode, setViewMode] = useState<AssetViewMode>(() => {
@@ -863,15 +866,15 @@ function DashboardPageContent() {
               <span className="sr-only">Sync</span>
             </button>
 
-            {/* Export Excel Button */}
+            {/* Export for New AEMS Button */}
             <button
               type="button"
-              onClick={exportToExcel}
-              className="p-2 sm:px-2.5 sm:py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-              title="Export to Excel (.xlsx)"
+              onClick={() => setShowExportModal(true)}
+              className="p-2 sm:px-2.5 sm:py-2 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/60 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Department Export for New AEMS v2 (.xlsx)"
             >
-              <Download size={14} />
-              <span className="sr-only">Export</span>
+              <FileSpreadsheet size={15} className="text-emerald-600" />
+              <span className="hidden sm:inline">Export for New AEMS</span>
             </button>
 
             {/* + New Asset Primary Action Button */}
@@ -1424,6 +1427,15 @@ function DashboardPageContent() {
         onClose={() => setShowAvailableModal(false)}
         assets={locationPlantFilteredAssets}
         onSelectAsset={(asset) => navigate(`/assets/${assetRouteId(asset)}`)}
+      />
+
+      {/* Department-Wise Export Modal for New AEMS v2 */}
+      <DepartmentExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        assets={assets}
+        employees={employees}
+        initialDepartment={selectedCategory === 'IT Assets' ? 'IT' : selectedCategory !== 'All' ? selectedCategory : 'IT'}
       />
 
     </div>
