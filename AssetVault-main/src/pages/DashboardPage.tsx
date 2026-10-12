@@ -1579,21 +1579,23 @@ function DashboardPageContent() {
       />
 
       {/* Department-Wise Export Modal for New AEMS v2 */}
-      <DepartmentExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        assets={assets}
-        employees={employees}
-        initialDepartment={
-          selectedDepartment !== 'All'
-            ? selectedDepartment
-            : selectedCategory === 'IT Assets'
-              ? 'IT'
-              : selectedCategory !== 'All'
-                ? selectedCategory
-                : 'IT'
-        }
-      />
+      {showExportModal && (
+        <DepartmentExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          assets={assets}
+          employees={employees}
+          initialDepartment={
+            selectedDepartment !== 'All'
+              ? selectedDepartment
+              : selectedCategory === 'IT Assets'
+                ? 'IT'
+                : selectedCategory !== 'All'
+                  ? selectedCategory
+                  : 'IT'
+          }
+        />
+      )}
 
     </div>
   );

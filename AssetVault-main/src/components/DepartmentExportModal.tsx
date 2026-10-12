@@ -74,8 +74,6 @@ export function DepartmentExportModal({
     }
   }, [isOpen, initialDepartment]);
 
-  if (!isOpen) return null;
-
   const isCurrentIt = isItDepartment(selectedDept);
   const isAll = selectedDept === 'ALL';
 
@@ -89,6 +87,8 @@ export function DepartmentExportModal({
     }
     return assets.filter((a) => String(a.department || '').trim().toLowerCase() === selectedDept.trim().toLowerCase()).length;
   }, [assets, selectedDept, isAll, isCurrentIt]);
+
+  if (!isOpen) return null;
 
   const handleExport = () => {
     try {
