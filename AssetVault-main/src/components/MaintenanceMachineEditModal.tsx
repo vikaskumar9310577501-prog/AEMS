@@ -151,8 +151,6 @@ export default function MaintenanceMachineEditModal({
     if (!machine) return;
     if (!machineType.trim()) return setError('Machine type is required');
     if (!machineNumber.trim()) return setError('Machine number is required');
-    if (!serialNumber.trim()) return setError('Serial Number is required.');
-    if (!modelNumber.trim()) return setError('Model Number is required.');
     if (!location.trim() || !plantCode.trim()) return setError('Location and plant are required');
     const custom = isCustomTrend(trendMonths);
     const merged = custom ? mergeCustomPlan('', normalizeCustomPlanDates(customPlanDates)) : null;
@@ -339,25 +337,23 @@ export default function MaintenanceMachineEditModal({
               )}
               <div className="space-y-1.5">
                 <label className="label-caps">
-                  Model Number <span className="text-red-500">*</span>
+                  Model Number
                 </label>
                 <input
-                  required
                   value={modelNumber}
                   onChange={(e) => setModelNumber(e.target.value)}
-                  placeholder="e.g. MOD-2024-X"
+                  placeholder="e.g. MOD-2024-X (optional)"
                   className="w-full input-geometric font-semibold"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="label-caps">
-                  Serial Number <span className="text-red-500">*</span>
+                  Serial Number
                 </label>
                 <input
-                  required
                   value={serialNumber}
                   onChange={(e) => setSerialNumber(e.target.value)}
-                  placeholder="e.g. SN-98765432"
+                  placeholder="e.g. SN-98765432 (optional)"
                   className="w-full input-geometric font-mono font-semibold"
                 />
               </div>

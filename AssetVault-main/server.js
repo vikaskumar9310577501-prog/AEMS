@@ -14605,21 +14605,17 @@ app.post("/api/maintenance/machines", async (req, res) => {
     const trendMonths = normalizeTrendMonths(body.trendMonths);
     const merged = isCustomTrend(trendMonths) ? mergeCustomPlan(nextMaintenanceDate, body.customPlanDates) : { nextMaintenanceDate, customPlanDates: [] };
     const equipmentName = String(body.equipmentName || "").trim() || void 0;
-    const modelNumber = String(body.modelNumber || "").trim();
-    const serialNumber = String(body.serialNumber || "").trim();
-    if (!serialNumber) {
-      return res.status(400).json({ error: "Serial Number is required." });
-    }
-    if (!modelNumber) {
-      return res.status(400).json({ error: "Model Number is required." });
-    }
-    const duplicateSerial = existing.find(
-      (m) => String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() && String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
-    );
-    if (duplicateSerial) {
-      return res.status(400).json({
-        error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`
-      });
+    const modelNumber = String(body.modelNumber || "").trim() || void 0;
+    const serialNumber = String(body.serialNumber || "").trim() || void 0;
+    if (serialNumber) {
+      const duplicateSerial = existing.find(
+        (m) => String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() && String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+      );
+      if (duplicateSerial) {
+        return res.status(400).json({
+          error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`
+        });
+      }
     }
     const department = String(body.department || "").trim() || void 0;
     const responsibility = String(body.responsibility || "").trim() || void 0;
@@ -14674,22 +14670,18 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
     if (!machineType || !machineNumber || !location || !plantCode || !nextMaintenanceDate) {
       return res.status(400).json({ error: "Type, number, location, plant and maintenance date are required" });
     }
-    const modelNumber = body.modelNumber !== void 0 ? String(body.modelNumber || "").trim() : String(current.modelNumber || "").trim();
-    const serialNumber = body.serialNumber !== void 0 ? String(body.serialNumber || "").trim() : String(current.serialNumber || "").trim();
-    if (!serialNumber) {
-      return res.status(400).json({ error: "Serial Number is required." });
-    }
-    if (!modelNumber) {
-      return res.status(400).json({ error: "Model Number is required." });
-    }
-    const allMachines = await listMaintenanceMachines();
-    const duplicateSerial = allMachines.find(
-      (m) => m.id !== id && String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() && String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
-    );
-    if (duplicateSerial) {
-      return res.status(400).json({
-        error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`
-      });
+    const modelNumber = body.modelNumber !== void 0 ? String(body.modelNumber || "").trim() || void 0 : current.modelNumber;
+    const serialNumber = body.serialNumber !== void 0 ? String(body.serialNumber || "").trim() || void 0 : current.serialNumber;
+    if (serialNumber) {
+      const allMachines = await listMaintenanceMachines();
+      const duplicateSerial = allMachines.find(
+        (m) => m.id !== id && String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() && String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+      );
+      if (duplicateSerial) {
+        return res.status(400).json({
+          error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`
+        });
+      }
     }
     const user = resolveRequestUser(req);
     const settingsPlants = maintenanceSettingsPlants();

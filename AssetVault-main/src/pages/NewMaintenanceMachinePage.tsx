@@ -108,8 +108,6 @@ export default function NewMaintenanceMachinePage() {
     if (saving) return;
     if (!form.machineType.trim()) return toast.error('Select machine type');
     if (!form.machineNumber.trim()) return toast.error('Enter machine number');
-    if (!form.serialNumber.trim()) return toast.error('Serial Number is required.');
-    if (!form.modelNumber.trim()) return toast.error('Model Number is required.');
     if (!form.location.trim() || !form.plantCode.trim()) return toast.error('Location and plant are required');
     if (!form.warrantyStatus) return toast.error('Select In Warranty or Out of Warranty');
     if (form.warrantyStatus === 'in_warranty' && !form.warrantyExpiryDate.trim()) {
@@ -239,27 +237,25 @@ export default function NewMaintenanceMachinePage() {
           <div className="grid sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="label-caps">
-                Serial Number <span className="text-red-500">*</span>
+                Serial Number
               </label>
               <input
-                required
                 type="text"
                 value={form.serialNumber}
                 onChange={(e) => setForm((prev) => ({ ...prev, serialNumber: e.target.value }))}
-                placeholder="e.g. SN-98765432"
+                placeholder="e.g. SN-98765432 (optional)"
                 className="w-full input-geometric bg-white font-mono font-bold"
               />
             </div>
             <div className="space-y-1.5">
               <label className="label-caps">
-                Model Number <span className="text-red-500">*</span>
+                Model Number
               </label>
               <input
-                required
                 type="text"
                 value={form.modelNumber}
                 onChange={(e) => setForm((prev) => ({ ...prev, modelNumber: e.target.value }))}
-                placeholder="e.g. MOD-2024-X"
+                placeholder="e.g. MOD-2024-X (optional)"
                 className="w-full input-geometric bg-white font-semibold"
               />
             </div>

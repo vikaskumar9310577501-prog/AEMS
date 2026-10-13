@@ -4014,25 +4014,20 @@ app.post("/api/maintenance/machines", async (req, res) => {
       ? mergeCustomPlan(nextMaintenanceDate, body.customPlanDates)
       : { nextMaintenanceDate, customPlanDates: [] as string[] };
     const equipmentName = String(body.equipmentName || "").trim() || undefined;
-    const modelNumber = String(body.modelNumber || "").trim();
-    const serialNumber = String(body.serialNumber || "").trim();
+    const modelNumber = String(body.modelNumber || "").trim() || undefined;
+    const serialNumber = String(body.serialNumber || "").trim() || undefined;
 
-    if (!serialNumber) {
-      return res.status(400).json({ error: "Serial Number is required." });
-    }
-    if (!modelNumber) {
-      return res.status(400).json({ error: "Model Number is required." });
-    }
-
-    const duplicateSerial = existing.find(
-      (m) =>
-        String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
-        String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
-    );
-    if (duplicateSerial) {
-      return res.status(400).json({
-        error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`,
-      });
+    if (serialNumber) {
+      const duplicateSerial = existing.find(
+        (m) =>
+          String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
+          String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+      );
+      if (duplicateSerial) {
+        return res.status(400).json({
+          error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`,
+        });
+      }
     }
 
     const department = String(body.department || "").trim() || undefined;
@@ -4104,31 +4099,26 @@ app.put("/api/maintenance/machines/:id", async (req, res) => {
 
     const modelNumber =
       body.modelNumber !== undefined
-        ? String(body.modelNumber || "").trim()
-        : String(current.modelNumber || "").trim();
+        ? String(body.modelNumber || "").trim() || undefined
+        : current.modelNumber;
     const serialNumber =
       body.serialNumber !== undefined
-        ? String(body.serialNumber || "").trim()
-        : String(current.serialNumber || "").trim();
+        ? String(body.serialNumber || "").trim() || undefined
+        : current.serialNumber;
 
-    if (!serialNumber) {
-      return res.status(400).json({ error: "Serial Number is required." });
-    }
-    if (!modelNumber) {
-      return res.status(400).json({ error: "Model Number is required." });
-    }
-
-    const allMachines = await listMaintenanceMachines();
-    const duplicateSerial = allMachines.find(
-      (m) =>
-        m.id !== id &&
-        String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
-        String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
-    );
-    if (duplicateSerial) {
-      return res.status(400).json({
-        error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`,
-      });
+    if (serialNumber) {
+      const allMachines = await listMaintenanceMachines();
+      const duplicateSerial = allMachines.find(
+        (m) =>
+          m.id !== id &&
+          String(m.serialNumber || "").trim().toLowerCase() === serialNumber.toLowerCase() &&
+          String(m.plantCode || "").trim().toLowerCase() === plantCode.toLowerCase()
+      );
+      if (duplicateSerial) {
+        return res.status(400).json({
+          error: `Serial Number "${serialNumber}" is already registered to machine ${duplicateSerial.assetCode} in plant ${plantCode}.`,
+        });
+      }
     }
 
     const user = resolveRequestUser(req);
