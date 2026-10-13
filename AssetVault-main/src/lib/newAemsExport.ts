@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import type { Asset } from '../types';
 import type { Employee } from '../types/employee';
+import { resolveAssetMainCategory, assetMatchesSidebarCategory } from './dashboardCategories';
 
 export function isItDepartment(deptName: string): boolean {
   const upper = String(deptName || '').trim().toUpperCase();
@@ -10,6 +11,46 @@ export function isItDepartment(deptName: string): boolean {
     upper === 'IT SAP' ||
     upper.includes('INFORMATION TECHNOLOGY') ||
     upper.includes('IT ASSET')
+  );
+}
+
+export function isItAsset(asset: Asset): boolean {
+  if (isItDepartment(asset.department || '')) return true;
+  const main = resolveAssetMainCategory(asset);
+  if (main === 'IT Assets' || isItDepartment(main)) return true;
+  const rawCat = String(asset.mainCategory || '').trim().toLowerCase();
+  return rawCat.includes('it asset') || rawCat === 'it';
+}
+
+export function matchAssetToDepartmentOrCategory(asset: Asset, targetDept: string): boolean {
+  if (!targetDept || targetDept === 'All' || targetDept === 'ALL') {
+    return true;
+  }
+
+  const isTargetIt = isItDepartment(targetDept);
+  const assetIsIt = isItAsset(asset);
+
+  if (isTargetIt) {
+    return assetIsIt;
+  }
+
+  // Non-IT Department / Category (e.g. ODU, Production, Quality, Maintenance, Electrical, etc.)
+  // Crucial: IT hardware assets (laptops/desktops/monitors) assigned to ODU/Production staff
+  // belong to the IT Technical Export, NOT the industrial machinery template!
+  if (assetIsIt) {
+    return false;
+  }
+
+  const normTarget = targetDept.trim().toLowerCase();
+  const mainCat = resolveAssetMainCategory(asset).trim().toLowerCase();
+  const rawMain = String(asset.mainCategory || '').trim().toLowerCase();
+  const dept = String(asset.department || '').trim().toLowerCase();
+
+  return (
+    mainCat === normTarget ||
+    rawMain === normTarget ||
+    dept === normTarget ||
+    assetMatchesSidebarCategory(asset, targetDept)
   );
 }
 
@@ -26,17 +67,10 @@ export function exportDepartmentToNewAems(options: DepartmentExportOptions): { c
   const isAll = !department || department === 'All' || department === 'ALL';
   const isIt = !isAll && isItDepartment(department);
 
-  // Filter assets by department if a specific department is chosen
+  // Filter assets by department / category matching dashboard logic
   const filteredAssets = isAll
     ? assets
-    : assets.filter((a) => {
-        const d = String(a.department || '').trim().toLowerCase();
-        const target = department.trim().toLowerCase();
-        if (isIt) {
-          return isItDepartment(a.department || '') || String(a.mainCategory || '').toLowerCase().includes('it');
-        }
-        return d === target || d.includes(target);
-      });
+    : assets.filter((a) => matchAssetToDepartmentOrCategory(a, department));
 
   const empMapById = new Map<string, Employee>();
   const empMapByName = new Map<string, Employee>();

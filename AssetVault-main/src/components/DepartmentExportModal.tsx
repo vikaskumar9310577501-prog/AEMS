@@ -17,7 +17,12 @@ import {
 } from 'lucide-react';
 import type { Asset } from '../types';
 import type { Employee } from '../types/employee';
-import { exportDepartmentToNewAems, isItDepartment } from '../lib/newAemsExport';
+import {
+  exportDepartmentToNewAems,
+  isItDepartment,
+  isItAsset,
+  matchAssetToDepartmentOrCategory,
+} from '../lib/newAemsExport';
 import toast from 'react-hot-toast';
 
 export interface PlantOptionItem {
@@ -108,22 +113,24 @@ export function DepartmentExportModal({
     });
   }, [assets, selectedLocation, selectedPlant, availablePlants]);
 
-  // Extract all distinct departments and their asset counts for scoped assets
+  // Extract all distinct departments/categories and their asset counts for scoped assets
   const departmentStats = useMemo(() => {
     const counts = new Map<string, number>();
     let itCount = 0;
 
     scopedAssets.forEach((a) => {
-      const dept = String(a.department || '').trim();
-      if (!dept) {
+      if (isItAsset(a)) {
+        itCount++;
+        return;
+      }
+
+      // Non-IT asset: identify by category or department
+      const deptName = String(a.mainCategory || a.department || '').trim();
+      if (!deptName) {
         counts.set('Unassigned', (counts.get('Unassigned') || 0) + 1);
         return;
       }
-      counts.set(dept, (counts.get(dept) || 0) + 1);
-
-      if (isItDepartment(dept) || String(a.mainCategory || '').toLowerCase().includes('it')) {
-        itCount++;
-      }
+      counts.set(deptName, (counts.get(deptName) || 0) + 1);
     });
 
     const list = Array.from(counts.entries())
@@ -136,18 +143,11 @@ export function DepartmentExportModal({
   const isCurrentIt = isItDepartment(selectedDept);
   const isAll = selectedDept === 'ALL';
 
-  // Count of assets for selected department & scope
+  // Count of assets for selected department & scope matching exact dashboard logic
   const currentCount = useMemo(() => {
     if (isAll) return scopedAssets.length;
-    if (isCurrentIt) {
-      return scopedAssets.filter(
-        (a) => isItDepartment(a.department || '') || String(a.mainCategory || '').toLowerCase().includes('it')
-      ).length;
-    }
-    return scopedAssets.filter(
-      (a) => String(a.department || '').trim().toLowerCase() === selectedDept.trim().toLowerCase()
-    ).length;
-  }, [scopedAssets, selectedDept, isAll, isCurrentIt]);
+    return scopedAssets.filter((a) => matchAssetToDepartmentOrCategory(a, selectedDept)).length;
+  }, [scopedAssets, selectedDept, isAll]);
 
   if (!isOpen) return null;
 
@@ -171,26 +171,32 @@ export function DepartmentExportModal({
     }
   };
 
-  // Top quick departments
+  // Top quick departments (including ODU, Production, Maintenance, Quality, IT)
   const quickDepts = [
     { label: 'IT Department', value: 'IT', icon: Cpu, badge: `${departmentStats.itCount}` },
+    {
+      label: 'ODU',
+      value: 'ODU',
+      icon: Layers,
+      badge: `${scopedAssets.filter((a) => matchAssetToDepartmentOrCategory(a, 'ODU')).length}`,
+    },
     {
       label: 'Production',
       value: 'Production',
       icon: Layers,
-      badge: `${scopedAssets.filter((a) => String(a.department || '').toLowerCase().includes('prod')).length}`,
+      badge: `${scopedAssets.filter((a) => matchAssetToDepartmentOrCategory(a, 'Production')).length}`,
     },
     {
       label: 'Maintenance',
       value: 'Maintenance',
       icon: Wrench,
-      badge: `${scopedAssets.filter((a) => String(a.department || '').toLowerCase().includes('maint')).length}`,
+      badge: `${scopedAssets.filter((a) => matchAssetToDepartmentOrCategory(a, 'Maintenance')).length}`,
     },
     {
       label: 'Quality',
       value: 'Quality',
       icon: ShieldCheck,
-      badge: `${scopedAssets.filter((a) => String(a.department || '').toLowerCase().includes('qual')).length}`,
+      badge: `${scopedAssets.filter((a) => matchAssetToDepartmentOrCategory(a, 'Quality')).length}`,
     },
     { label: 'All Assets', value: 'ALL', icon: Package, badge: `${scopedAssets.length}` },
   ];
