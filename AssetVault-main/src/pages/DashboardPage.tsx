@@ -1503,6 +1503,10 @@ function DashboardPageContent() {
                   ? selectedCategory
                   : 'IT'
           }
+          initialLocation={selectedLocation}
+          initialPlant={selectedPlant}
+          locationOptions={locationOptions}
+          plantOptions={plantsFiltered}
         />
       )}
 

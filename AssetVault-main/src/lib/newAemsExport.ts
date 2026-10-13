@@ -17,10 +17,12 @@ export interface DepartmentExportOptions {
   department: string;
   assets: Asset[];
   employees: Employee[];
+  location?: string;
+  plant?: string;
 }
 
 export function exportDepartmentToNewAems(options: DepartmentExportOptions): { count: number; filename: string } {
-  const { department, assets, employees } = options;
+  const { department, assets, employees, location, plant } = options;
   const isAll = !department || department === 'All' || department === 'ALL';
   const isIt = !isAll && isItDepartment(department);
 
@@ -153,13 +155,17 @@ export function exportDepartmentToNewAems(options: DepartmentExportOptions): { c
   }
 
   const cleanDept = (isAll ? 'ALL ASSETS' : department).toUpperCase();
-  const sheetTitle = `${cleanDept.slice(0, 25)} Template`;
+  const cleanLoc = location && location !== 'All' ? `_${location.replace(/[^A-Za-z0-9]/g, '_')}` : '';
+  const cleanPlant = plant && plant !== 'All' ? `_${plant.replace(/[^A-Za-z0-9]/g, '_')}` : '';
+  const sheetTitle = `${cleanDept.slice(0, 20)} Template`;
   XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
 
   // Guidelines & Rules Sheet matching New AEMS v2 standard
   const guidelines = [
     ['AEMS v2 — SMART ASSET BATCH IMPORTER GUIDELINES'],
     ['Department:', cleanDept],
+    ['Location Scope:', location && location !== 'All' ? location : 'All Locations'],
+    ['Plant Scope:', plant && plant !== 'All' ? plant : 'All Plants'],
     ['Total Exported Rows:', filteredAssets.length],
     ['Export Timestamp:', new Date().toISOString()],
     [''],
@@ -176,7 +182,7 @@ export function exportDepartmentToNewAems(options: DepartmentExportOptions): { c
   wsGuide['!cols'] = [{ wch: 35 }, { wch: 75 }];
   XLSX.utils.book_append_sheet(wb, wsGuide, 'Guidelines & Rules');
 
-  const filename = `PGEL_${cleanDept.replace(/[^A-Z0-9]/g, '_')}_Import_Ready.xlsx`;
+  const filename = `PGEL_${cleanDept.replace(/[^A-Z0-9]/g, '_')}${cleanLoc}${cleanPlant}_Import_Ready.xlsx`;
   XLSX.writeFile(wb, filename);
 
   return { count: rows.length, filename };
